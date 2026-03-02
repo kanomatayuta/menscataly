@@ -36,6 +36,7 @@ export function PRDisclosure({
         className={`inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800 ${className}`}
         role="note"
         aria-label="広告・PR表記"
+        data-testid="pr-disclosure"
       >
         <span aria-hidden="true">PR</span>
         <span className="sr-only">広告掲載あり</span>
@@ -49,6 +50,7 @@ export function PRDisclosure({
         className={`rounded bg-amber-50 px-4 py-2 text-sm text-amber-800 ${className}`}
         role="note"
         aria-label="広告・PR表記"
+        data-testid="pr-disclosure"
       >
         <span className="font-semibold">{title}</span>{" "}
         <span>{body}</span>
@@ -61,6 +63,7 @@ export function PRDisclosure({
       className={`rounded-lg border border-amber-200 bg-amber-50 p-4 ${className}`}
       aria-label="広告・PR表記"
       role="note"
+      data-testid="pr-disclosure"
     >
       <div className="flex gap-3">
         {/* アイコン */}
