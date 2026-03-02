@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+/* ============================================================
+   MENS CATALY — ブランドテーマ (Tailwind CSS v4)
+   ============================================================ */
+
+@theme {
+  /* --- ブランドカラー --- */
+  --color-primary-50: #eef2f8;
+  --color-primary-100: #ccd8ec;
+  --color-primary-200: #99b1d9;
+  --color-primary-300: #668ac6;
+  --color-primary-400: #3363b3;
+  --color-primary-500: #1a365d;
+  --color-primary-600: #162d4e;
+  --color-primary-700: #11243e;
+  --color-primary-800: #0d1b2e;
+  --color-primary-900: #08121e;
+
+  --color-accent-50: #fdf8ec;
+  --color-accent-100: #f8edcc;
+  --color-accent-200: #f1db99;
+  --color-accent-300: #e9c966;
+  --color-accent-400: #d8b633;
+  --color-accent-500: #c8a951;
+  --color-accent-600: #a88c3f;
+  --color-accent-700: #87702e;
+  --color-accent-800: #66531e;
+  --color-accent-900: #44370f;
+
+  --color-neutral-50: #f9f9f9;
+  --color-neutral-100: #f0f0f0;
+  --color-neutral-200: #e0e0e0;
+  --color-neutral-300: #c8c8c8;
+  --color-neutral-400: #a0a0a0;
+  --color-neutral-500: #787878;
+  --color-neutral-600: #585858;
+  --color-neutral-700: #404040;
+  --color-neutral-800: #282828;
+  --color-neutral-900: #181818;
+
+  /* --- カテゴリカラー --- */
+  --color-category-aga: #2563eb;
+  --color-category-hair-removal: #7c3aed;
+  --color-category-skincare: #059669;
+  --color-category-ed: #dc2626;
+
+  /* --- セマンティックカラー --- */
+  --color-background: #ffffff;
+  --color-foreground: #181818;
+  --color-surface: #f9f9f9;
+  --color-border: #e0e0e0;
+  --color-muted: #787878;
+
+  /* --- フォント --- */
+  --font-sans: var(--font-noto-sans-jp), "Hiragino Kaku Gothic ProN",
+    "Hiragino Sans", Meiryo, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono",
+    monospace;
+}
+
+/* ============================================================
+   ベーススタイル
+   ============================================================ */
+
+:root {
+  --background: #ffffff;
+  --foreground: #181818;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* フォーカスリングのアクセシビリティ対応 */
+:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
