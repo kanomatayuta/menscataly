@@ -1,117 +1,164 @@
 // microCMS クライアント
-// 依存: microcms-js-sdk
-// インストール: npm install microcms-js-sdk
+// 依存: microcms-js-sdk v3
+//
+// 環境変数:
+//   MICROCMS_SERVICE_DOMAIN  — microCMS サービスドメイン (e.g. 'your-service')
+//   MICROCMS_API_KEY         — microCMS APIキー
 
-import { createClient } from 'microcms-js-sdk'
-import type {
-  Article,
-  ArticleSummary,
-  Author,
-  Category,
-  MicroCMSListResponse,
-} from '@/types/microcms'
-
-if (!process.env.MICROCMS_SERVICE_DOMAIN) {
-  throw new Error('MICROCMS_SERVICE_DOMAIN is not defined')
-}
-if (!process.env.MICROCMS_API_KEY) {
-  throw new Error('MICROCMS_API_KEY is not defined')
-}
-
-const client = createClient({
-  serviceDomain: process.env.MICROCMS_SERVICE_DOMAIN,
-  apiKey: process.env.MICROCMS_API_KEY,
-})
+import {
+  createClient as createMicroCMSClient,
+  type MicroCMSQueries,
+  type MicroCMSListResponse,
+} from 'microcms-js-sdk'
+import type { MicroCMSArticle, MicroCMSCategory, MicroCMSArticleQueries } from '@/types/microcms'
 
 // ============================================================
-// articles API
+// クライアント初期化
 // ============================================================
 
-export interface GetArticlesOptions {
-  limit?: number
-  offset?: number
-  fields?: (keyof ArticleSummary)[]
-  filters?: string
-  orders?: string
-  q?: string
+function getMicroCMSClient() {
+  const serviceDomain = process.env.MICROCMS_SERVICE_DOMAIN
+  const apiKey = process.env.MICROCMS_API_KEY
+
+  if (!serviceDomain) {
+    throw new Error('MICROCMS_SERVICE_DOMAIN is not defined')
+  }
+  if (!apiKey) {
+    throw new Error('MICROCMS_API_KEY is not defined')
+  }
+
+  return createMicroCMSClient({ serviceDomain, apiKey })
 }
 
+// ============================================================
+// API エンドポイント名
+// ============================================================
+
+const ENDPOINTS = {
+  articles: 'articles',
+  categories: 'categories',
+} as const
+
+// ============================================================
+// 記事 API
+// ============================================================
+
+/**
+ * 記事一覧を取得する
+ * @param params - クエリパラメータ (limit, offset, filters, orders, category 等)
+ */
 export async function getArticles(
-  options: GetArticlesOptions = {}
-): Promise<MicroCMSListResponse<ArticleSummary>> {
-  return client.getList<ArticleSummary>({
-    endpoint: 'articles',
-    queries: {
-      limit: options.limit ?? 10,
-      offset: options.offset ?? 0,
-      fields: options.fields?.join(','),
-      filters: options.filters,
-      orders: options.orders ?? '-updatedAt',
-      q: options.q,
-    },
+  params: MicroCMSArticleQueries = {}
+): Promise<MicroCMSListResponse<MicroCMSArticle>> {
+  const client = getMicroCMSClient()
+
+  // category クエリを microCMS filters 形式に変換
+  const { category, depth: _depth, ...rest } = params
+  const queries: MicroCMSQueries = { ...rest }
+
+  if (category) {
+    const categoryFilter = `category[equals]${category}`
+    queries.filters = queries.filters
+      ? `${queries.filters}[and]${categoryFilter}`
+      : categoryFilter
+  }
+
+  // デフォルト値
+  if (queries.limit === undefined) {
+    queries.limit = 10
+  }
+  if (queries.orders === undefined) {
+    queries.orders = '-publishedAt'
+  }
+
+  const response = await client.getList<MicroCMSArticle>({
+    endpoint: ENDPOINTS.articles,
+    queries,
   })
+
+  return response
 }
 
-export async function getArticle(id: string): Promise<Article> {
-  return client.getListDetail<Article>({
-    endpoint: 'articles',
-    contentId: id,
-  })
-}
+/**
+ * スラッグで記事を1件取得する
+ * microCMS では slug フィールドでフィルタして先頭1件を返す
+ * @param slug - 記事スラッグ
+ */
+export async function getArticleBySlug(slug: string): Promise<MicroCMSArticle | null> {
+  const client = getMicroCMSClient()
 
-export async function getArticleBySlug(slug: string): Promise<Article | null> {
-  const res = await client.getList<Article>({
-    endpoint: 'articles',
+  const response = await client.getList<MicroCMSArticle>({
+    endpoint: ENDPOINTS.articles,
     queries: {
       filters: `slug[equals]${slug}`,
       limit: 1,
     },
   })
-  return res.contents[0] ?? null
+
+  return response.contents[0] ?? null
 }
 
-export async function getArticlesByCategory(
-  categoryId: string,
-  options: Pick<GetArticlesOptions, 'limit' | 'offset'> = {}
-): Promise<MicroCMSListResponse<ArticleSummary>> {
-  return getArticles({
-    ...options,
-    filters: `category[equals]${categoryId}`,
-  })
-}
+/**
+ * microCMS コンテンツIDで記事を1件取得する
+ * @param id - microCMS コンテンツID
+ * @param draftKey - 下書きプレビュー用キー (省略可)
+ */
+export async function getArticleById(
+  id: string,
+  draftKey?: string
+): Promise<MicroCMSArticle> {
+  const client = getMicroCMSClient()
 
-// ============================================================
-// categories API
-// ============================================================
-
-export async function getCategories(): Promise<MicroCMSListResponse<Category>> {
-  return client.getList<Category>({
-    endpoint: 'categories',
-    queries: { limit: 100 },
-  })
-}
-
-export async function getCategory(id: string): Promise<Category> {
-  return client.getListDetail<Category>({
-    endpoint: 'categories',
+  const article = await client.getListDetail<MicroCMSArticle>({
+    endpoint: ENDPOINTS.articles,
     contentId: id,
+    queries: draftKey ? { draftKey } : undefined,
   })
+
+  return article
 }
 
 // ============================================================
-// authors API
+// カテゴリ API
 // ============================================================
 
-export async function getAuthors(): Promise<MicroCMSListResponse<Author>> {
-  return client.getList<Author>({
-    endpoint: 'authors',
-    queries: { limit: 100 },
+/**
+ * カテゴリ一覧を取得する
+ * @param params - クエリパラメータ
+ */
+export async function getCategories(
+  params: MicroCMSQueries = {}
+): Promise<MicroCMSListResponse<MicroCMSCategory>> {
+  const client = getMicroCMSClient()
+
+  const queries: MicroCMSQueries = {
+    limit: 100,
+    orders: 'display_order',
+    ...params,
+  }
+
+  const response = await client.getList<MicroCMSCategory>({
+    endpoint: ENDPOINTS.categories,
+    queries,
   })
+
+  return response
 }
 
-export async function getAuthor(id: string): Promise<Author> {
-  return client.getListDetail<Author>({
-    endpoint: 'authors',
-    contentId: id,
+/**
+ * スラッグでカテゴリを1件取得する
+ * @param slug - カテゴリスラッグ
+ */
+export async function getCategoryBySlug(slug: string): Promise<MicroCMSCategory | null> {
+  const client = getMicroCMSClient()
+
+  const response = await client.getList<MicroCMSCategory>({
+    endpoint: ENDPOINTS.categories,
+    queries: {
+      filters: `slug[equals]${slug}`,
+      limit: 1,
+    },
   })
+
+  return response.contents[0] ?? null
 }
