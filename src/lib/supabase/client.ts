@@ -1,14 +1,19 @@
 // Supabase クライアント
-// 依存: @supabase/supabase-js
-// インストール: npm install @supabase/supabase-js
+// 依存: @supabase/supabase-js v2
+//
+// 環境変数:
+//   NEXT_PUBLIC_SUPABASE_URL       — Supabase プロジェクトURL
+//   NEXT_PUBLIC_SUPABASE_ANON_KEY  — 匿名キー (RLS適用)
+//   SUPABASE_SERVICE_ROLE_KEY      — サービスロールキー (RLSバイパス)
 
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
-import type { Database } from '@/types/database'
+import type { Database, ArticleInsert, ArticleUpdate, ArticleRow } from '@/types/database'
 
 // ============================================================
 // ブラウザ用クライアント (anon key — RLS適用)
+// Client Components で使用
 // ============================================================
-export function createBrowserClient() {
+export function createBrowserSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   if (!supabaseUrl) throw new Error('NEXT_PUBLIC_SUPABASE_URL is not defined')
@@ -16,11 +21,14 @@ export function createBrowserClient() {
   return createSupabaseClient<Database>(supabaseUrl, supabaseAnonKey)
 }
 
+// 後方互換エイリアス
+export const createBrowserClient = createBrowserSupabaseClient
+
 // ============================================================
-// サーバーサイド用クライアント (service role — RLS bypass)
-// API Routes / Server Components / Server Actions で使用
+// サーバーサイド用クライアント (service role — RLSバイパス)
+// Server Components / Route Handlers / Server Actions で使用
 // ============================================================
-export function createServerClient() {
+export function createServerSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!supabaseUrl) throw new Error('NEXT_PUBLIC_SUPABASE_URL is not defined')
@@ -35,41 +43,156 @@ export function createServerClient() {
   })
 }
 
+// 後方互換エイリアス
+export const createServerClient = createServerSupabaseClient
+
 // ============================================================
-// ヘルパー関数
+// 型エイリアス
 // ============================================================
 
+export type SupabaseServerClient = ReturnType<typeof createServerSupabaseClient>
+export type SupabaseBrowserClient = ReturnType<typeof createBrowserSupabaseClient>
+
+// ============================================================
+// 型安全なクエリヘルパー
+// ============================================================
+
+/**
+ * 記事をUpsert (microCMS同期用)
+ * microcms_id の一致で重複排除する
+ *
+ * Note: supabase-js v2 の型推論が複雑なため、Insert 型を明示的にキャスト
+ */
 export async function upsertArticle(
-  supabase: ReturnType<typeof createServerClient>,
-  data: {
-    microcms_id: string
-    title: string
-    slug: string
-    category: string
-  }
+  supabase: SupabaseServerClient,
+  data: ArticleInsert & { microcms_id: string }
 ) {
-  const { data: result, error } = await supabase
+  const payload = {
+    ...data,
+    updated_at: new Date().toISOString(),
+  } satisfies ArticleInsert
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: result, error } = await (supabase as any)
     .from('articles')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .upsert(
-      { ...data, updated_at: new Date().toISOString() } as any,
-      { onConflict: 'microcms_id' }
-    )
+    .upsert(payload, { onConflict: 'microcms_id' })
     .select()
-    .single()
+    .single() as { data: ArticleRow | null; error: { message: string; code: string } | null }
 
   if (error) throw error
   return result
 }
 
+/**
+ * 記事を更新する
+ */
+export async function updateArticle(
+  supabase: SupabaseServerClient,
+  id: string,
+  data: ArticleUpdate
+) {
+  const payload = {
+    ...data,
+    updated_at: new Date().toISOString(),
+  } satisfies ArticleUpdate
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: result, error } = await (supabase as any)
+    .from('articles')
+    .update(payload)
+    .eq('id', id)
+    .select()
+    .single() as { data: ArticleRow | null; error: { message: string; code: string } | null }
+
+  if (error) throw error
+  return result
+}
+
+/**
+ * microcms_id で記事を削除する
+ */
 export async function deleteArticle(
-  supabase: ReturnType<typeof createServerClient>,
-  microcmId: string
+  supabase: SupabaseServerClient,
+  microcmsId: string
 ) {
   const { error } = await supabase
     .from('articles')
     .delete()
-    .eq('microcms_id', microcmId)
+    .eq('microcms_id', microcmsId)
 
   if (error) throw error
+}
+
+/**
+ * スラッグで公開済み記事を1件取得する
+ */
+export async function getArticleBySlug(
+  supabase: SupabaseServerClient | SupabaseBrowserClient,
+  slug: string
+) {
+  const { data, error } = await supabase
+    .from('articles')
+    .select('*')
+    .eq('slug', slug)
+    .eq('status', 'published')
+    .single()
+
+  if (error) {
+    if (error.code === 'PGRST116') return null // 0件
+    throw error
+  }
+  return data
+}
+
+/**
+ * 記事一覧を取得する (RLS適用 — 公開済みのみ)
+ */
+export async function getArticles(
+  supabase: SupabaseServerClient | SupabaseBrowserClient,
+  options: {
+    category?: string
+    limit?: number
+    offset?: number
+    orderBy?: keyof ArticleRow
+    ascending?: boolean
+  } = {}
+) {
+  const {
+    category,
+    limit = 10,
+    offset = 0,
+    orderBy = 'published_at',
+    ascending = false,
+  } = options
+
+  let query = supabase
+    .from('articles')
+    .select('*', { count: 'exact' })
+    .eq('status', 'published')
+    .order(orderBy, { ascending })
+    .range(offset, offset + limit - 1)
+
+  if (category) {
+    query = query.eq('category', category)
+  }
+
+  const { data, error, count } = await query
+
+  if (error) throw error
+  return { articles: data ?? [], total: count ?? 0 }
+}
+
+/**
+ * カテゴリ一覧を取得する
+ */
+export async function getCategories(
+  supabase: SupabaseServerClient | SupabaseBrowserClient
+) {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('*')
+    .order('display_order', { ascending: true })
+
+  if (error) throw error
+  return data ?? []
 }
