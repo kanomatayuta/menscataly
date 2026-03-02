@@ -1,65 +1,191 @@
-import Image from "next/image";
+import Link from "next/link";
+import { Card } from "@/components/ui/Card";
+import { ButtonLink } from "@/components/ui/Button";
+import { MOCK_ARTICLES } from "@/lib/mock/articles";
+import type { ArticleCategory } from "@/components/ui/Badge";
 
-export default function Home() {
+// TODO: microCMS接続後に差し替える
+const RECENT_ARTICLES = MOCK_ARTICLES.slice(0, 3);
+
+const CATEGORIES: { value: ArticleCategory; label: string; description: string; href: string }[] = [
+  {
+    value: "aga",
+    label: "AGA治療",
+    description: "フィナステリド・ミノキシジルなど薄毛治療の最新情報",
+    href: "/articles?category=aga",
+  },
+  {
+    value: "hair-removal",
+    label: "医療脱毛",
+    description: "クリニック選びから施術の流れまでわかりやすく解説",
+    href: "/articles?category=hair-removal",
+  },
+  {
+    value: "skincare",
+    label: "メンズスキンケア",
+    description: "男性肌に合った洗顔・保湿・UVケアの正しい方法",
+    href: "/articles?category=skincare",
+  },
+  {
+    value: "ed",
+    label: "ED治療",
+    description: "PDE5阻害薬の種類と特徴、受診のポイントを解説",
+    href: "/articles?category=ed",
+  },
+];
+
+export default function HomePage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <>
+      {/* ヒーローセクション */}
+      <section
+        className="py-16 sm:py-24"
+        style={{
+          background: "linear-gradient(135deg, var(--color-primary-500, #1a365d) 0%, #2c4f8a 100%)",
+        }}
+        aria-label="ヒーローセクション"
+      >
+        <div className="mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
+          <h1 className="text-3xl font-bold leading-tight text-white sm:text-4xl lg:text-5xl">
+            メンズ医療・美容の
+            <br className="sm:hidden" />
+            <span style={{ color: "var(--color-accent-400, #d8b633)" }}>
+              正しい情報
+            </span>
+            をお届け
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-blue-100 sm:text-lg">
+            AGA・ED・脱毛・スキンケアなど、メンズ医療・美容に関する情報を専門医監修のもとお届けします。
           </p>
+          <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <ButtonLink
+              href="/articles"
+              variant="secondary"
+              size="lg"
+            >
+              記事を読む
+            </ButtonLink>
+            <ButtonLink
+              href="/articles?category=aga"
+              variant="outline"
+              size="lg"
+              className="border-white text-white hover:bg-white/10"
+            >
+              AGA治療を知る
+            </ButtonLink>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+      </section>
+
+      {/* カテゴリセクション */}
+      <section className="bg-neutral-50 py-12 sm:py-16" aria-labelledby="category-heading">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <h2
+            id="category-heading"
+            className="mb-8 text-center text-2xl font-bold text-neutral-900"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            カテゴリから探す
+          </h2>
+          <ul
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+            role="list"
           >
-            Documentation
-          </a>
+            {CATEGORIES.map((cat) => (
+              <li key={cat.value}>
+                <Link
+                  href={cat.href}
+                  className="group block rounded-lg border border-neutral-200 bg-white p-6 text-center shadow-sm transition-shadow hover:shadow-md"
+                >
+                  <h3 className="mb-2 font-semibold text-neutral-900 group-hover:text-primary-600">
+                    {cat.label}
+                  </h3>
+                  <p className="text-sm leading-relaxed text-neutral-600">
+                    {cat.description}
+                  </p>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
-      </main>
-    </div>
+      </section>
+
+      {/* 最新記事セクション */}
+      <section className="bg-white py-12 sm:py-16" aria-labelledby="latest-articles-heading">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-8 flex items-center justify-between">
+            <h2
+              id="latest-articles-heading"
+              className="text-2xl font-bold text-neutral-900"
+            >
+              最新記事
+            </h2>
+            <Link
+              href="/articles"
+              className="text-sm font-medium text-primary-600 hover:underline"
+              style={{ color: "var(--color-primary-500, #1a365d)" }}
+            >
+              すべての記事を見る →
+            </Link>
+          </div>
+          <ul
+            className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
+            role="list"
+          >
+            {RECENT_ARTICLES.map((article) => (
+              <li key={article.slug}>
+                <Card article={article} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* 信頼性アピールセクション */}
+      <section
+        className="py-12 sm:py-16"
+        style={{ backgroundColor: "var(--color-primary-50, #eef2f8)" }}
+        aria-labelledby="trust-heading"
+      >
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <h2
+            id="trust-heading"
+            className="mb-10 text-center text-2xl font-bold text-neutral-900"
+          >
+            メンズカタリが選ばれる理由
+          </h2>
+          <ul
+            className="grid grid-cols-1 gap-6 sm:grid-cols-3"
+            role="list"
+          >
+            {[
+              {
+                title: "専門医監修",
+                body: "皮膚科・泌尿器科・美容外科の専門医が記事内容を監修。医学的に正確な情報をお届けします。",
+              },
+              {
+                title: "薬機法準拠",
+                body: "薬機法・景表法に基づいた適切な表現を使用。誇大広告のない正確な情報を提供しています。",
+              },
+              {
+                title: "定期的な情報更新",
+                body: "最新の研究・ガイドラインに基づき、記事を定期的に更新。常に最新の情報をお届けします。",
+              },
+            ].map((item) => (
+              <li
+                key={item.title}
+                className="rounded-lg bg-white p-6 text-center shadow-sm"
+              >
+                <h3 className="mb-3 font-semibold text-neutral-900">
+                  {item.title}
+                </h3>
+                <p className="text-sm leading-relaxed text-neutral-600">
+                  {item.body}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+    </>
   );
 }
