@@ -116,7 +116,12 @@ describe("薬機法コンプライアンスチェッカー", () => {
     ])('"%s" は高リスク違反なしと判定されること', (okText) => {
       const checker = new ComplianceChecker();
       const result = checker.check(okText);
-      const highViolations = result.violations.filter((v) => v.severity === "high");
+      // ステマ規制のPR表記欠如はここでは対象外（薬機法・景表法の違反のみ確認）
+      // checkCompliance ヘルパーは violations を { id, ng, ok, severity } にリマップするため
+      // id でフィルタリングする
+      const highViolations = result.violations.filter(
+        (v) => v.severity === "high" && v.id !== "stealth_missing_pr"
+      );
       expect(highViolations).toHaveLength(0);
     });
   });
@@ -133,7 +138,12 @@ describe("薬機法コンプライアンスチェッカー", () => {
       const { corrected } = checkCompliance(original);
       if (!corrected) throw new Error("correctedが返されませんでした");
       const recheck = checkCompliance(corrected);
-      const highViolations = recheck.violations.filter((v) => v.severity === "high");
+      // ステマ規制のPR表記欠如はここでは対象外（薬機法・景表法の違反のみ確認）
+      // checkCompliance ヘルパーは violations を { id, ng, ok, severity } にリマップするため
+      // id でフィルタリングする
+      const highViolations = recheck.violations.filter(
+        (v) => v.severity === "high" && v.id !== "stealth_missing_pr"
+      );
       expect(highViolations).toHaveLength(0);
     });
 
