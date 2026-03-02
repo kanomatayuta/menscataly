@@ -1,0 +1,652 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-03-01T00:00:00.000Z" agent="Claude" version="24.0.0" type="device">
+  <diagram id="arch" name="1. メディア全体アーキテクチャ">
+    <mxGraphModel dx="1800" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="title1" value="&lt;b&gt;メンズカタリ（MENS CATALY）&lt;/b&gt;&lt;br&gt;AI完全自動メディア アーキテクチャ全体図&lt;br&gt;&lt;i&gt;「変わるきっかけを、語る。」&lt;/i&gt;&lt;br&gt;menscataly.com / CatalyDesign" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="450" y="10" width="500" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- Layer 1: Data Sources (Top) -->
+        <mxCell id="layer1_bg" value="" style="rounded=1;whiteSpace=wrap;fillColor=#E8F5E9;strokeColor=#4CAF50;strokeWidth=2;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="30" y="90" width="1540" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="layer1_label" value="&lt;b&gt;データ取得層&lt;/b&gt;&lt;br&gt;06:00 自動起動" style="text;html=1;align=left;fontSize=11;fontColor=#2E7D32;" vertex="1" parent="1">
+          <mxGeometry x="40" y="92" width="200" height="30" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="gtrends" value="&lt;b&gt;Google Trends&lt;/b&gt;&lt;br&gt;pytrends" style="rounded=1;whiteSpace=wrap;fillColor=#C8E6C9;strokeColor=#4CAF50;" vertex="1" parent="1">
+          <mxGeometry x="50" y="130" width="140" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="newsrss" value="&lt;b&gt;News RSS&lt;/b&gt;&lt;br&gt;feedparser" style="rounded=1;whiteSpace=wrap;fillColor=#C8E6C9;strokeColor=#4CAF50;" vertex="1" parent="1">
+          <mxGeometry x="210" y="130" width="140" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="ga4data" value="&lt;b&gt;GA4 Data API&lt;/b&gt;&lt;br&gt;PV・滞在時間・直帰率" style="rounded=1;whiteSpace=wrap;fillColor=#C8E6C9;strokeColor=#4CAF50;" vertex="1" parent="1">
+          <mxGeometry x="370" y="130" width="160" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="aspapi" value="&lt;b&gt;ASP API&lt;/b&gt;&lt;br&gt;afb / A8.net / アクセストレード" style="rounded=1;whiteSpace=wrap;fillColor=#C8E6C9;strokeColor=#4CAF50;" vertex="1" parent="1">
+          <mxGeometry x="550" y="130" width="180" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="searchcon" value="&lt;b&gt;Search Console&lt;/b&gt;&lt;br&gt;順位・CTR" style="rounded=1;whiteSpace=wrap;fillColor=#C8E6C9;strokeColor=#4CAF50;" vertex="1" parent="1">
+          <mxGeometry x="750" y="130" width="140" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="scheduler" value="&lt;b&gt;Cloud Scheduler&lt;/b&gt;&lt;br&gt;定期トリガー&lt;br&gt;06:00 / 23:00" style="rounded=1;whiteSpace=wrap;fillColor=#FFF9C4;strokeColor=#F9A825;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="920" y="130" width="160" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="cloudrun" value="&lt;b&gt;Cloud Run&lt;/b&gt;&lt;br&gt;記事生成コンテナ&lt;br&gt;~300円/月" style="rounded=1;whiteSpace=wrap;fillColor=#FFF9C4;strokeColor=#F9A825;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="130" width="160" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="xapi" value="&lt;b&gt;X (Twitter) API&lt;/b&gt;&lt;br&gt;Phase5以降追加" style="rounded=1;whiteSpace=wrap;fillColor=#E0E0E0;strokeColor=#9E9E9E;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="130" width="140" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Layer 2: AI Core Engine -->
+        <mxCell id="layer2_bg" value="" style="rounded=1;whiteSpace=wrap;fillColor=#E3F2FD;strokeColor=#1976D2;strokeWidth=2;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="30" y="230" width="1540" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="layer2_label" value="&lt;b&gt;AI処理層&lt;/b&gt;&lt;br&gt;06:10-07:30 自動実行" style="text;html=1;align=left;fontSize=11;fontColor=#1565C0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="232" width="200" height="30" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="claude_haiku" value="&lt;b&gt;Claude Haiku&lt;/b&gt;&lt;br&gt;・トレンドスコアリング&lt;br&gt;・フィルタリング&lt;br&gt;・健全性スコア算出" style="rounded=1;whiteSpace=wrap;fillColor=#BBDEFB;strokeColor=#1976D2;" vertex="1" parent="1">
+          <mxGeometry x="50" y="270" width="200" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="claude_sonnet" value="&lt;b&gt;Claude Sonnet&lt;/b&gt;&lt;br&gt;・記事生成（5,000-7,000字）&lt;br&gt;・薬機法チェック内蔵&lt;br&gt;・CTA配置（3箇所）&lt;br&gt;・内部リンク自動挿入" style="rounded=1;whiteSpace=wrap;fillColor=#BBDEFB;strokeColor=#1976D2;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="280" y="265" width="230" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="ideogram" value="&lt;b&gt;Ideogram API&lt;/b&gt;&lt;br&gt;サムネイル自動生成&lt;br&gt;~500円/月" style="rounded=1;whiteSpace=wrap;fillColor=#BBDEFB;strokeColor=#1976D2;" vertex="1" parent="1">
+          <mxGeometry x="540" y="275" width="160" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="cloudinary" value="&lt;b&gt;Cloudinary&lt;/b&gt;&lt;br&gt;画像最適化&lt;br&gt;WebP変換&lt;br&gt;無料枠" style="rounded=1;whiteSpace=wrap;fillColor=#BBDEFB;strokeColor=#1976D2;" vertex="1" parent="1">
+          <mxGeometry x="730" y="275" width="140" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="yakkilaw" value="&lt;b&gt;薬機法チェッカー&lt;/b&gt;&lt;br&gt;NGワード検出&lt;br&gt;→ OK表現自動置換&lt;br&gt;景表法準拠確認" style="rounded=1;whiteSpace=wrap;fillColor=#FFCDD2;strokeColor=#D32F2F;" vertex="1" parent="1">
+          <mxGeometry x="900" y="270" width="180" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="ai_judge" value="&lt;b&gt;AI判断エンジン&lt;/b&gt;&lt;br&gt;新規記事5本/日&lt;br&gt;改善記事3本/日&lt;br&gt;優先度自動決定" style="rounded=1;whiteSpace=wrap;fillColor=#BBDEFB;strokeColor=#1976D2;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="1110" y="270" width="180" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="sheets_api" value="&lt;b&gt;Sheets API&lt;/b&gt;&lt;br&gt;ASPリンク管理" style="rounded=1;whiteSpace=wrap;fillColor=#BBDEFB;strokeColor=#1976D2;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="280" width="130" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Layer 3: CMS & Hosting -->
+        <mxCell id="layer3_bg" value="" style="rounded=1;whiteSpace=wrap;fillColor=#FFF3E0;strokeColor=#F57C00;strokeWidth=2;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="30" y="390" width="1540" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="layer3_label" value="&lt;b&gt;CMS・公開層&lt;/b&gt;&lt;br&gt;07:30 自動公開" style="text;html=1;align=left;fontSize=11;fontColor=#E65100;" vertex="1" parent="1">
+          <mxGeometry x="40" y="392" width="200" height="30" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="microcms" value="&lt;b&gt;microCMS&lt;/b&gt;&lt;br&gt;ヘッドレスCMS&lt;br&gt;JSON記事管理&lt;br&gt;無料〜990円/月" style="rounded=1;whiteSpace=wrap;fillColor=#FFE0B2;strokeColor=#F57C00;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="150" y="420" width="180" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="nextjs" value="&lt;b&gt;Next.js 14+ (App Router)&lt;/b&gt;&lt;br&gt;SSG / ISR&lt;br&gt;動的コンポーネント&lt;br&gt;ArticleImage / MapEmbed / ProductCard" style="rounded=1;whiteSpace=wrap;fillColor=#FFE0B2;strokeColor=#F57C00;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="400" y="415" width="280" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="vercel" value="&lt;b&gt;Vercel&lt;/b&gt;&lt;br&gt;ホスティング&lt;br&gt;ISR即時公開&lt;br&gt;無料枠" style="rounded=1;whiteSpace=wrap;fillColor=#FFE0B2;strokeColor=#F57C00;" vertex="1" parent="1">
+          <mxGeometry x="750" y="420" width="150" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="supabase" value="&lt;b&gt;Supabase&lt;/b&gt;&lt;br&gt;PostgreSQL&lt;br&gt;ユーザーデータ&lt;br&gt;無料枠" style="rounded=1;whiteSpace=wrap;fillColor=#FFE0B2;strokeColor=#F57C00;" vertex="1" parent="1">
+          <mxGeometry x="950" y="420" width="150" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="domain" value="&lt;b&gt;menscataly.com&lt;/b&gt;&lt;br&gt;menscataly.jp(保護)&lt;br&gt;~100円/月" style="rounded=1;whiteSpace=wrap;fillColor=#FFE0B2;strokeColor=#F57C00;" vertex="1" parent="1">
+          <mxGeometry x="1150" y="420" width="160" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- Layer 4: User & Monetization -->
+        <mxCell id="layer4_bg" value="" style="rounded=1;whiteSpace=wrap;fillColor=#F3E5F5;strokeColor=#7B1FA2;strokeWidth=2;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="30" y="530" width="1540" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="layer4_label" value="&lt;b&gt;ユーザー・収益化層&lt;/b&gt;" style="text;html=1;align=left;fontSize=11;fontColor=#6A1B9A;" vertex="1" parent="1">
+          <mxGeometry x="40" y="532" width="200" height="30" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="user_seo" value="&lt;b&gt;検索ユーザー&lt;/b&gt;&lt;br&gt;Google検索流入&lt;br&gt;目標: 100,000 PV/月" style="rounded=1;whiteSpace=wrap;fillColor=#CE93D8;strokeColor=#7B1FA2;" vertex="1" parent="1">
+          <mxGeometry x="50" y="565" width="180" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="user_sns" value="&lt;b&gt;SNSユーザー&lt;/b&gt;&lt;br&gt;X / Instagram&lt;br&gt;コラム記事拡散" style="rounded=1;whiteSpace=wrap;fillColor=#CE93D8;strokeColor=#7B1FA2;" vertex="1" parent="1">
+          <mxGeometry x="260" y="565" width="160" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="asp_afb" value="&lt;b&gt;afb&lt;/b&gt;&lt;br&gt;AGA独占案件&lt;br&gt;10,750〜30,000円" style="rounded=1;whiteSpace=wrap;fillColor=#E1BEE7;strokeColor=#7B1FA2;" vertex="1" parent="1">
+          <mxGeometry x="480" y="565" width="150" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="asp_a8" value="&lt;b&gt;A8.net&lt;/b&gt;&lt;br&gt;案件数最大&lt;br&gt;3,000〜30,000円" style="rounded=1;whiteSpace=wrap;fillColor=#E1BEE7;strokeColor=#7B1FA2;" vertex="1" parent="1">
+          <mxGeometry x="650" y="565" width="150" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="asp_access" value="&lt;b&gt;アクセストレード&lt;/b&gt;&lt;br&gt;高額報酬案件" style="rounded=1;whiteSpace=wrap;fillColor=#E1BEE7;strokeColor=#7B1FA2;" vertex="1" parent="1">
+          <mxGeometry x="820" y="565" width="150" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="asp_vc" value="&lt;b&gt;バリューコマース&lt;/b&gt;&lt;br&gt;EC連携&lt;br&gt;3〜10%" style="rounded=1;whiteSpace=wrap;fillColor=#E1BEE7;strokeColor=#7B1FA2;" vertex="1" parent="1">
+          <mxGeometry x="990" y="565" width="150" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="asp_moshimo" value="&lt;b&gt;もしもAF&lt;/b&gt;&lt;br&gt;W報酬12%追加&lt;br&gt;Amazon・楽天" style="rounded=1;whiteSpace=wrap;fillColor=#E1BEE7;strokeColor=#7B1FA2;" vertex="1" parent="1">
+          <mxGeometry x="1160" y="565" width="150" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="adsense" value="&lt;b&gt;Google AdSense&lt;/b&gt;&lt;br&gt;RPM 500円&lt;br&gt;目標: 50,000円/月" style="rounded=1;whiteSpace=wrap;fillColor=#E1BEE7;strokeColor=#7B1FA2;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="565" width="160" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- Layer 5: Analytics & PDCA -->
+        <mxCell id="layer5_bg" value="" style="rounded=1;whiteSpace=wrap;fillColor=#ECEFF1;strokeColor=#455A64;strokeWidth=2;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="30" y="680" width="1540" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="layer5_label" value="&lt;b&gt;分析・PDCA層&lt;/b&gt;&lt;br&gt;23:00 自動集計" style="text;html=1;align=left;fontSize=11;fontColor=#37474F;" vertex="1" parent="1">
+          <mxGeometry x="40" y="682" width="200" height="30" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="ga4" value="&lt;b&gt;GA4&lt;/b&gt;&lt;br&gt;PV・滞在時間&lt;br&gt;直帰率・CTR" style="rounded=1;whiteSpace=wrap;fillColor=#CFD8DC;strokeColor=#455A64;" vertex="1" parent="1">
+          <mxGeometry x="50" y="715" width="150" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="bigquery" value="&lt;b&gt;BigQuery&lt;/b&gt;&lt;br&gt;データウェアハウス&lt;br&gt;記事×収益集計" style="rounded=1;whiteSpace=wrap;fillColor=#CFD8DC;strokeColor=#455A64;" vertex="1" parent="1">
+          <mxGeometry x="230" y="715" width="160" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="looker" value="&lt;b&gt;Looker Studio&lt;/b&gt;&lt;br&gt;リアルタイムダッシュボード&lt;br&gt;カテゴリ別KPI" style="rounded=1;whiteSpace=wrap;fillColor=#CFD8DC;strokeColor=#455A64;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="420" y="715" width="200" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="score" value="&lt;b&gt;健全性スコア&lt;/b&gt;&lt;br&gt;順位変動 / UX品質&lt;br&gt;ASP CTR・CV率" style="rounded=1;whiteSpace=wrap;fillColor=#CFD8DC;strokeColor=#455A64;" vertex="1" parent="1">
+          <mxGeometry x="650" y="715" width="170" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="alert" value="&lt;b&gt;自動アラート&lt;/b&gt;&lt;br&gt;順位±5位&lt;br&gt;CTR 50%以下&lt;br&gt;薬機法フラグ→自動非公開" style="rounded=1;whiteSpace=wrap;fillColor=#FFCDD2;strokeColor=#D32F2F;" vertex="1" parent="1">
+          <mxGeometry x="850" y="710" width="190" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="report_weekly" value="&lt;b&gt;週次レポート&lt;/b&gt;&lt;br&gt;毎月曜 08:00&lt;br&gt;Slack + メール自動配信" style="rounded=1;whiteSpace=wrap;fillColor=#CFD8DC;strokeColor=#455A64;" vertex="1" parent="1">
+          <mxGeometry x="1070" y="715" width="180" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="report_monthly" value="&lt;b&gt;月次レポート&lt;/b&gt;&lt;br&gt;毎月1日 09:00&lt;br&gt;PDF自動保存&lt;br&gt;事業計画書自動更新" style="rounded=1;whiteSpace=wrap;fillColor=#CFD8DC;strokeColor=#455A64;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="710" width="180" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- PDCA Feedback Arrow (big curved arrow from bottom to top) -->
+        <mxCell id="pdca_arrow" value="&lt;b&gt;AI自律PDCAループ&lt;/b&gt;&lt;br&gt;分析→計画→実行→検証" style="shape=curlyBracket;whiteSpace=wrap;rounded=1;flipH=1;size=0.5;fillColor=none;strokeColor=#D32F2F;strokeWidth=2;fontSize=10;fontColor=#D32F2F;" vertex="1" parent="1">
+          <mxGeometry x="1480" y="230" width="30" height="560" as="geometry"/>
+        </mxCell>
+
+        <!-- Key Arrows between layers -->
+        <mxCell id="a1" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#4CAF50;strokeWidth=2;" edge="1" parent="1" source="scheduler" target="claude_haiku">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="a2" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#1976D2;strokeWidth=2;" edge="1" parent="1" source="claude_sonnet" target="microcms">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="a3" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#F57C00;strokeWidth=2;" edge="1" parent="1" source="microcms" target="nextjs">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="a4" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#F57C00;strokeWidth=2;" edge="1" parent="1" source="nextjs" target="vercel">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Cost Summary Box -->
+        <mxCell id="cost_box" value="&lt;b&gt;月間コスト: 約3,000〜4,000円&lt;/b&gt;&lt;br&gt;Claude API: 1,500円 / Ideogram: 500円&lt;br&gt;Cloud Run: 300円 / ドメイン: 100円&lt;br&gt;他: 無料枠で運用&lt;br&gt;&lt;b&gt;目標ROI: 7,400%&lt;/b&gt;" style="shape=note;whiteSpace=wrap;fillColor=#FFF9C4;strokeColor=#F9A825;size=14;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="30" y="820" width="250" height="100" as="geometry"/>
+        </mxCell>
+
+        <!-- KGI Box -->
+        <mxCell id="kgi_box" value="&lt;b&gt;KGI: 12ヶ月で月収30万円&lt;/b&gt;&lt;br&gt;360記事 / 100,000 PV/月&lt;br&gt;AF収益: 250,000円 + AdSense: 50,000円&lt;br&gt;累計収益見込み: 約168万円" style="shape=note;whiteSpace=wrap;fillColor=#FFCDD2;strokeColor=#D32F2F;size=14;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="310" y="820" width="280" height="100" as="geometry"/>
+        </mxCell>
+
+        <!-- Compliance Box -->
+        <mxCell id="compliance_box" value="&lt;b&gt;コンプライアンス&lt;/b&gt;&lt;br&gt;薬機法第66条・第67条 準拠&lt;br&gt;景表法 準拠&lt;br&gt;NGワード自動検出→OK表現置換&lt;br&gt;月1回 人によるコンテンツ監査" style="shape=note;whiteSpace=wrap;fillColor=#E8EAF6;strokeColor=#3F51B5;size=14;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="620" y="820" width="260" height="100" as="geometry"/>
+        </mxCell>
+
+        <!-- E-E-A-T Box -->
+        <mxCell id="eeat_box" value="&lt;b&gt;E-E-A-T対策（YMYL領域）&lt;/b&gt;&lt;br&gt;Experience: 使用者視点の記事構成&lt;br&gt;Expertise: 医師監修表記&lt;br&gt;Authoritativeness: 厚労省・学術論文引用&lt;br&gt;Trustworthiness: 運営者情報・更新日明示" style="shape=note;whiteSpace=wrap;fillColor=#E8EAF6;strokeColor=#3F51B5;size=14;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="910" y="820" width="280" height="100" as="geometry"/>
+        </mxCell>
+
+        <!-- Tech Stack Summary -->
+        <mxCell id="tech_box" value="&lt;b&gt;テックスタック&lt;/b&gt;&lt;br&gt;Next.js 14+ / microCMS / Vercel&lt;br&gt;Supabase / Cloudinary / BigQuery&lt;br&gt;Claude API / Ideogram API&lt;br&gt;Cloud Scheduler / Cloud Run" style="shape=note;whiteSpace=wrap;fillColor=#FFF3E0;strokeColor=#F57C00;size=14;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1220" y="820" width="250" height="100" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="pipeline" name="2. AI自律PDCAパイプライン">
+    <mxGraphModel dx="1800" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="t2" value="&lt;b&gt;AI自律PDCAループ &amp; 日次パイプライン&lt;/b&gt;&lt;br&gt;Claudeが分析・判断・実行・検証まで自律的に回す継続改善サイクル" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="350" y="10" width="600" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Timeline bar -->
+        <mxCell id="timeline" value="" style="rounded=0;whiteSpace=wrap;fillColor=#37474F;" vertex="1" parent="1">
+          <mxGeometry x="50" y="70" width="1500" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_06" value="&lt;font color='#FFFFFF'&gt;&lt;b&gt;06:00&lt;/b&gt;&lt;/font&gt;" style="text;html=1;align=center;fontColor=#FFFFFF;" vertex="1" parent="1">
+          <mxGeometry x="50" y="72" width="80" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_0610" value="&lt;font color='#FFFFFF'&gt;&lt;b&gt;06:10&lt;/b&gt;&lt;/font&gt;" style="text;html=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="250" y="72" width="80" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_0625" value="&lt;font color='#FFFFFF'&gt;&lt;b&gt;06:25&lt;/b&gt;&lt;/font&gt;" style="text;html=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="470" y="72" width="80" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_0630" value="&lt;font color='#FFFFFF'&gt;&lt;b&gt;06:30&lt;/b&gt;&lt;/font&gt;" style="text;html=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="660" y="72" width="80" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_0730" value="&lt;font color='#FFFFFF'&gt;&lt;b&gt;07:30&lt;/b&gt;&lt;/font&gt;" style="text;html=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="950" y="72" width="80" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_2300" value="&lt;font color='#FFFFFF'&gt;&lt;b&gt;23:00&lt;/b&gt;&lt;/font&gt;" style="text;html=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="1250" y="72" width="80" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_next" value="&lt;font color='#FFFFFF'&gt;&lt;b&gt;翌朝→&lt;/b&gt;&lt;/font&gt;" style="text;html=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="1430" y="72" width="80" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- Phase 1: Data Collection -->
+        <mxCell id="p1" value="&lt;b&gt;① データ取得&lt;/b&gt;&lt;br&gt;&lt;br&gt;Google Trends&lt;br&gt;News RSS&lt;br&gt;GA4 Data API&lt;br&gt;ASP API&lt;br&gt;&lt;br&gt;&lt;i&gt;◆ PDCA入力&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#C8E6C9;strokeColor=#2E7D32;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="50" y="120" width="180" height="150" as="geometry"/>
+        </mxCell>
+
+        <!-- Phase 2: Analysis -->
+        <mxCell id="p2" value="&lt;b&gt;② 分析&lt;/b&gt;&lt;br&gt;&lt;br&gt;トレンドスコアリング&lt;br&gt;記事パフォーマンス分析&lt;br&gt;競合ギャップ分析&lt;br&gt;ASP収益分析&lt;br&gt;&lt;br&gt;&lt;i&gt;Claude Haiku + BigQuery&lt;/i&gt;&lt;br&gt;&lt;i&gt;◆ PDCAコア&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#BBDEFB;strokeColor=#1565C0;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="260" y="120" width="190" height="170" as="geometry"/>
+        </mxCell>
+
+        <!-- Phase 3: AI Judgment -->
+        <mxCell id="p3" value="&lt;b&gt;③ AI判断&lt;/b&gt;&lt;br&gt;&lt;br&gt;新規記事5本を選定&lt;br&gt;改善記事3本を選定&lt;br&gt;優先KW指定&lt;br&gt;高RPMパターン適用&lt;br&gt;&lt;br&gt;&lt;i&gt;Claude Sonnet&lt;/i&gt;&lt;br&gt;&lt;i&gt;◆ PDCA中核&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#D1C4E9;strokeColor=#4527A0;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="480" y="120" width="180" height="170" as="geometry"/>
+        </mxCell>
+
+        <!-- Phase 4: Content Generation -->
+        <mxCell id="p4" value="&lt;b&gt;④ 記事生成&lt;/b&gt;&lt;br&gt;&lt;br&gt;新規記事生成（5,000-7,000字）&lt;br&gt;リライト（旧版バックアップ）&lt;br&gt;薬機法チェック内蔵&lt;br&gt;ASPリンク自動挿入&lt;br&gt;サムネイル生成&lt;br&gt;&lt;br&gt;&lt;i&gt;Claude Sonnet + Ideogram&lt;/i&gt;&lt;br&gt;&lt;i&gt;◆ PDCA実行&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#FFE0B2;strokeColor=#E65100;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="690" y="110" width="230" height="190" as="geometry"/>
+        </mxCell>
+
+        <!-- Phase 5: Publish -->
+        <mxCell id="p5" value="&lt;b&gt;⑤ 公開&lt;/b&gt;&lt;br&gt;&lt;br&gt;microCMS自動投稿&lt;br&gt;Vercel ISR即時公開&lt;br&gt;Search Consoleリクエスト&lt;br&gt;SNS自動投稿（Phase5〜）&lt;br&gt;&lt;br&gt;&lt;i&gt;microCMS API + Vercel&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#F8BBD0;strokeColor=#C2185B;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="950" y="120" width="200" height="170" as="geometry"/>
+        </mxCell>
+
+        <!-- Phase 6: Measure -->
+        <mxCell id="p6" value="&lt;b&gt;⑥ 計測&lt;/b&gt;&lt;br&gt;&lt;br&gt;GA4日次集計&lt;br&gt;ASP成果取得&lt;br&gt;順位トラッキング&lt;br&gt;健全性スコア算出&lt;br&gt;&lt;br&gt;&lt;i&gt;GA4 API + Claude Haiku&lt;/i&gt;&lt;br&gt;&lt;i&gt;◆ PDCA入力&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#CFD8DC;strokeColor=#37474F;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="1180" y="120" width="190" height="170" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrows between phases -->
+        <mxCell id="pa1" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#333333;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="p1" target="p2">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="pa2" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#333333;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="p2" target="p3">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="pa3" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#333333;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="p3" target="p4">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="pa4" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#333333;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="p4" target="p5">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="pa5" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#333333;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="p5" target="p6">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- PDCA Cycle Section -->
+        <mxCell id="pdca_title" value="&lt;b&gt;AI自律 PDCA サイクル詳細&lt;/b&gt;" style="text;html=1;align=center;fontSize=13;fontColor=#D32F2F;" vertex="1" parent="1">
+          <mxGeometry x="550" y="320" width="300" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- PLAN -->
+        <mxCell id="pdca_p" value="&lt;b&gt;P - PLAN（計画）&lt;/b&gt;&lt;br&gt;&lt;br&gt;トレンドスコアTop5→新規記事候補&lt;br&gt;健全性スコア低下→改善候補&lt;br&gt;競合ギャップ大きいKW優先&lt;br&gt;高RPMパターンを新規に適用&lt;br&gt;&lt;b&gt;日次上限: 新規5本 + 改善3本&lt;/b&gt;&lt;br&gt;&lt;br&gt;毎日 06:00 / Claude自動生成" style="rounded=1;whiteSpace=wrap;fillColor=#C8E6C9;strokeColor=#2E7D32;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="50" y="370" width="340" height="160" as="geometry"/>
+        </mxCell>
+
+        <!-- DO -->
+        <mxCell id="pdca_d" value="&lt;b&gt;D - DO（実行）&lt;/b&gt;&lt;br&gt;&lt;br&gt;最適プロンプトで記事生成&lt;br&gt;薬機法チェック内蔵&lt;br&gt;競合ギャップ追記・補完&lt;br&gt;リライト時は旧版バックアップ&lt;br&gt;microCMS→Vercel ISR公開&lt;br&gt;&lt;br&gt;毎日 06:30-07:30 / Claude Sonnet" style="rounded=1;whiteSpace=wrap;fillColor=#BBDEFB;strokeColor=#1565C0;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="420" y="370" width="340" height="160" as="geometry"/>
+        </mxCell>
+
+        <!-- CHECK -->
+        <mxCell id="pdca_c" value="&lt;b&gt;C - CHECK（検証）&lt;/b&gt;&lt;br&gt;&lt;br&gt;公開7日後: 順位変動計測&lt;br&gt;ASP CTR・CV率を記事別集計&lt;br&gt;滞在時間・直帰率でUX品質判定&lt;br&gt;健全性スコア基準値以下→改善フラグ&lt;br&gt;順位±5位以上→即時アラート&lt;br&gt;&lt;br&gt;毎日 23:00 / GA4 API + Claude Haiku" style="rounded=1;whiteSpace=wrap;fillColor=#FFE0B2;strokeColor=#E65100;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="790" y="370" width="340" height="160" as="geometry"/>
+        </mxCell>
+
+        <!-- ACT -->
+        <mxCell id="pdca_a" value="&lt;b&gt;A - ACT（改善）&lt;/b&gt;&lt;br&gt;&lt;br&gt;競合ギャップを埋める追記&lt;br&gt;CTA位置・文言を最適化&lt;br&gt;見出し構成・内部リンク再設計&lt;br&gt;成功パターン→次の記事に反映&lt;br&gt;失敗パターン→プロンプトから除外&lt;br&gt;&lt;br&gt;翌朝自動実行 / Claude自律判断" style="rounded=1;whiteSpace=wrap;fillColor=#F8BBD0;strokeColor=#C2185B;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="1160" y="370" width="340" height="160" as="geometry"/>
+        </mxCell>
+
+        <!-- PDCA circular arrows -->
+        <mxCell id="pca1" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#D32F2F;strokeWidth=3;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="pdca_p" target="pdca_d">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="pca2" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#D32F2F;strokeWidth=3;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="pdca_d" target="pdca_c">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="pca3" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#D32F2F;strokeWidth=3;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="pdca_c" target="pdca_a">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="pca4" value="翌日の PLAN へ" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#D32F2F;strokeWidth=3;dashed=1;exitX=0.5;exitY=1;entryX=0.5;entryY=1;" edge="1" parent="1" source="pdca_a" target="pdca_p">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1330" y="560"/>
+              <mxPoint x="220" y="560"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Report Design Section -->
+        <mxCell id="report_title" value="&lt;b&gt;自動レポート設計&lt;/b&gt;" style="text;html=1;align=center;fontSize=12;fontColor=#37474F;" vertex="1" parent="1">
+          <mxGeometry x="550" y="580" width="300" height="25" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="rep_weekly" value="&lt;b&gt;週次レポート&lt;/b&gt;&lt;br&gt;毎週月曜 08:00 配信&lt;br&gt;&lt;br&gt;【分析】総PV・前週比 / ASP収益・RPM&lt;br&gt;TOP10記事 / 順位変動一覧&lt;br&gt;【改善】リライト記事一覧 / CTA変更箇所&lt;br&gt;【予定】今週の新規候補 / リライト3本" style="rounded=1;whiteSpace=wrap;fillColor=#E8EAF6;strokeColor=#3F51B5;" vertex="1" parent="1">
+          <mxGeometry x="50" y="620" width="340" height="130" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="rep_monthly" value="&lt;b&gt;月次レポート&lt;/b&gt;&lt;br&gt;毎月1日 09:00 配信&lt;br&gt;&lt;br&gt;【分析】月間KPI実績 / ROI計算&lt;br&gt;AIコスト実績 / 記事平均順位&lt;br&gt;【改善】リライト本数 / 順位改善幅&lt;br&gt;【計画】翌月目標 / Phase移行判断&lt;br&gt;PDF化→Google Drive自動保存" style="rounded=1;whiteSpace=wrap;fillColor=#E8EAF6;strokeColor=#3F51B5;" vertex="1" parent="1">
+          <mxGeometry x="420" y="620" width="340" height="140" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="rep_alert" value="&lt;b&gt;即時アラート&lt;/b&gt;&lt;br&gt;&lt;br&gt;順位±5位以上の変動&lt;br&gt;ASP CTR 50%以下&lt;br&gt;薬機法フラグ発生→自動非公開&lt;br&gt;圏外落ち→リライト自動起動&lt;br&gt;&lt;br&gt;Slack通知 + メール（重大案件）" style="rounded=1;whiteSpace=wrap;fillColor=#FFCDD2;strokeColor=#D32F2F;" vertex="1" parent="1">
+          <mxGeometry x="790" y="620" width="340" height="130" as="geometry"/>
+        </mxCell>
+
+        <!-- Human Intervention Note -->
+        <mxCell id="human_note" value="&lt;b&gt;🧑 人間の介入ポイント&lt;/b&gt;&lt;br&gt;&lt;br&gt;① ASP登録・提携申請（初期1回のみ）&lt;br&gt;② プロンプトチューニング（月1回）&lt;br&gt;③ クリニック情報の正確性確認（月1回）&lt;br&gt;④ コンテンツ品質監査（月1回・YMYL対策）&lt;br&gt;&lt;br&gt;&lt;i&gt;上記以外は全て自動化&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#FFF9C4;strokeColor=#F9A825;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="1160" y="620" width="340" height="140" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="revenue" name="3. 収益化 &amp; 12ヶ月シミュレーション">
+    <mxGraphModel dx="1800" dy="1400" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1300" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="t3" value="&lt;b&gt;収益化戦略 &amp; 12ヶ月ロードマップ&lt;/b&gt;&lt;br&gt;KGI: 12ヶ月以内に月次収益30万円達成 / 累計収益168万円" style="text;html=1;align=center;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="350" y="10" width="600" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Phase Timeline -->
+        <mxCell id="ph0" value="&lt;b&gt;Phase 0&lt;/b&gt;&lt;br&gt;基盤構築&lt;br&gt;1-2週目&lt;br&gt;&lt;br&gt;ドメイン取得&lt;br&gt;Vercel設定&lt;br&gt;Next.js×microCMS&lt;br&gt;GA4・SC設定&lt;br&gt;&lt;br&gt;&lt;b&gt;記事0本&lt;/b&gt;&lt;br&gt;&lt;b&gt;収益: 0円&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#E0E0E0;strokeColor=#616161;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="30" y="80" width="140" height="200" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="ph1" value="&lt;b&gt;Phase 1&lt;/b&gt;&lt;br&gt;AI自動化構築&lt;br&gt;3-4週目&lt;br&gt;&lt;br&gt;Claude API連携&lt;br&gt;Ideogram連携&lt;br&gt;Cloud Scheduler&lt;br&gt;自動投稿確認&lt;br&gt;&lt;br&gt;&lt;b&gt;記事30本&lt;/b&gt;&lt;br&gt;&lt;b&gt;収益: 0円&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#C8E6C9;strokeColor=#2E7D32;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="190" y="80" width="140" height="200" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="ph2" value="&lt;b&gt;Phase 2&lt;/b&gt;&lt;br&gt;初期コンテンツ&lt;br&gt;2ヶ月目&lt;br&gt;&lt;br&gt;AGA・ED記事優先&lt;br&gt;ASP登録&lt;br&gt;（A8・バリューコマース）&lt;br&gt;AFリンク設置&lt;br&gt;&lt;br&gt;&lt;b&gt;累計60本&lt;/b&gt;&lt;br&gt;&lt;b&gt;収益: 0円&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#BBDEFB;strokeColor=#1565C0;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="350" y="80" width="150" height="200" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="ph3" value="&lt;b&gt;Phase 3&lt;/b&gt;&lt;br&gt;SEO強化&lt;br&gt;3-4ヶ月目&lt;br&gt;&lt;br&gt;検索流入開始&lt;br&gt;内部リンク最適化&lt;br&gt;SC順位モニタリング&lt;br&gt;&lt;br&gt;&lt;b&gt;累計120本&lt;/b&gt;&lt;br&gt;&lt;b&gt;月収: 34,000円&lt;/b&gt;&lt;br&gt;&lt;b&gt;PV 8,000&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#D1C4E9;strokeColor=#4527A0;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="520" y="80" width="150" height="200" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="ph4" value="&lt;b&gt;Phase 4&lt;/b&gt;&lt;br&gt;収益化開始&lt;br&gt;5-6ヶ月目&lt;br&gt;&lt;br&gt;初回AF収益発生&lt;br&gt;AdSense承認&lt;br&gt;Looker Studio構築&lt;br&gt;&lt;br&gt;&lt;b&gt;累計180本&lt;/b&gt;&lt;br&gt;&lt;b&gt;月収: 115,000円&lt;/b&gt;&lt;br&gt;&lt;b&gt;PV 30,000&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#FFE0B2;strokeColor=#E65100;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="690" y="80" width="160" height="200" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="ph5" value="&lt;b&gt;Phase 5&lt;/b&gt;&lt;br&gt;スケールアップ&lt;br&gt;7-9ヶ月目&lt;br&gt;&lt;br&gt;全カテゴリ拡張&lt;br&gt;楽天API自動記事&lt;br&gt;ASP別収益分析&lt;br&gt;&lt;br&gt;&lt;b&gt;累計270本&lt;/b&gt;&lt;br&gt;&lt;b&gt;月収: 236,000円&lt;/b&gt;&lt;br&gt;&lt;b&gt;PV 72,000&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#F8BBD0;strokeColor=#C2185B;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="870" y="80" width="160" height="200" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="ph6" value="&lt;b&gt;★ Phase 6&lt;/b&gt;&lt;br&gt;KGI達成&lt;br&gt;10-12ヶ月目&lt;br&gt;&lt;br&gt;リライト自動化&lt;br&gt;SNS自動投稿&lt;br&gt;収益ポートフォリオ最適化&lt;br&gt;&lt;br&gt;&lt;b&gt;★ 360本&lt;/b&gt;&lt;br&gt;&lt;b&gt;★ 月収: 300,000円&lt;/b&gt;&lt;br&gt;&lt;b&gt;★ PV 100,000&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#FFCDD2;strokeColor=#D32F2F;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="80" width="180" height="200" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="ph7" value="&lt;b&gt;Phase 7+&lt;/b&gt;&lt;br&gt;拡張&lt;br&gt;13ヶ月目〜&lt;br&gt;&lt;br&gt;固定報酬型広告&lt;br&gt;（月15万円〜）&lt;br&gt;タイアップ記事&lt;br&gt;純広告展開&lt;br&gt;&lt;br&gt;&lt;b&gt;500本+&lt;/b&gt;&lt;br&gt;&lt;b&gt;月収: 50万円+&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#E8EAF6;strokeColor=#3F51B5;strokeWidth=2;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="80" width="160" height="200" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrows between phases -->
+        <mxCell id="pha1" style="strokeColor=#666;strokeWidth=2;" edge="1" parent="1" source="ph0" target="ph1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="pha2" style="strokeColor=#666;strokeWidth=2;" edge="1" parent="1" source="ph1" target="ph2"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="pha3" style="strokeColor=#666;strokeWidth=2;" edge="1" parent="1" source="ph2" target="ph3"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="pha4" style="strokeColor=#666;strokeWidth=2;" edge="1" parent="1" source="ph3" target="ph4"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="pha5" style="strokeColor=#666;strokeWidth=2;" edge="1" parent="1" source="ph4" target="ph5"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="pha6" style="strokeColor=#D32F2F;strokeWidth=3;" edge="1" parent="1" source="ph5" target="ph6"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="pha7" style="strokeColor=#666;strokeWidth=2;dashed=1;" edge="1" parent="1" source="ph6" target="ph7"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- Revenue Breakdown (12ヶ月目) -->
+        <mxCell id="rev_title" value="&lt;b&gt;収益構造の内訳（12ヶ月目時点: 月収300,000円）&lt;/b&gt;" style="text;html=1;align=center;fontSize=12;fontColor=#D32F2F;" vertex="1" parent="1">
+          <mxGeometry x="400" y="300" width="500" height="25" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="rev_aga" value="&lt;b&gt;AGA クリニックAF&lt;/b&gt;&lt;br&gt;80,000円（26.7%）&lt;br&gt;月8件×10,000円" style="rounded=1;whiteSpace=wrap;fillColor=#C8E6C9;strokeColor=#2E7D32;" vertex="1" parent="1">
+          <mxGeometry x="30" y="340" width="180" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="rev_ed" value="&lt;b&gt;ED クリニックAF&lt;/b&gt;&lt;br&gt;70,000円（23.3%）&lt;br&gt;月5件×14,000円" style="rounded=1;whiteSpace=wrap;fillColor=#BBDEFB;strokeColor=#1565C0;" vertex="1" parent="1">
+          <mxGeometry x="230" y="340" width="180" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="rev_datsu" value="&lt;b&gt;ヒゲ脱毛AF&lt;/b&gt;&lt;br&gt;60,000円（20%）&lt;br&gt;月8件×7,500円" style="rounded=1;whiteSpace=wrap;fillColor=#D1C4E9;strokeColor=#4527A0;" vertex="1" parent="1">
+          <mxGeometry x="430" y="340" width="180" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="rev_skin" value="&lt;b&gt;スキンケア定期AF&lt;/b&gt;&lt;br&gt;30,000円（10%）&lt;br&gt;月30件×1,000円" style="rounded=1;whiteSpace=wrap;fillColor=#FFE0B2;strokeColor=#E65100;" vertex="1" parent="1">
+          <mxGeometry x="630" y="340" width="180" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="rev_hair" value="&lt;b&gt;ヘアケア・楽天AF&lt;/b&gt;&lt;br&gt;10,000円（3.3%）&lt;br&gt;月100クリック×100円" style="rounded=1;whiteSpace=wrap;fillColor=#F8BBD0;strokeColor=#C2185B;" vertex="1" parent="1">
+          <mxGeometry x="830" y="340" width="180" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="rev_ads" value="&lt;b&gt;Google AdSense&lt;/b&gt;&lt;br&gt;50,000円（16.7%）&lt;br&gt;10万PV×RPM500円" style="rounded=1;whiteSpace=wrap;fillColor=#CFD8DC;strokeColor=#455A64;" vertex="1" parent="1">
+          <mxGeometry x="1030" y="340" width="180" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="rev_total" value="&lt;b&gt;合計: 300,000円/月&lt;/b&gt;&lt;br&gt;AF: 250,000円&lt;br&gt;広告: 50,000円" style="rounded=1;whiteSpace=wrap;fillColor=#FFCDD2;strokeColor=#D32F2F;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="1250" y="340" width="160" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- Monthly Simulation Bar Chart (Simplified) -->
+        <mxCell id="sim_title" value="&lt;b&gt;月次収益シミュレーション（12ヶ月）&lt;/b&gt;" style="text;html=1;align=center;fontSize=12;fontColor=#37474F;" vertex="1" parent="1">
+          <mxGeometry x="400" y="430" width="500" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- Bar chart baseline -->
+        <mxCell id="bar_base" value="" style="rounded=0;whiteSpace=wrap;fillColor=#ECEFF1;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="80" y="470" width="1350" height="300" as="geometry"/>
+        </mxCell>
+
+        <!-- Grid lines -->
+        <mxCell id="grid_30" value="&lt;font color='#D32F2F'&gt;&lt;b&gt;★300,000円&lt;/b&gt;&lt;/font&gt;" style="text;html=1;align=right;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="0" y="473" width="75" height="15" as="geometry"/>
+        </mxCell>
+        <mxCell id="grid_20" value="200,000円" style="text;html=1;align=right;fontSize=9;fontColor=#666;" vertex="1" parent="1">
+          <mxGeometry x="0" y="573" width="75" height="15" as="geometry"/>
+        </mxCell>
+        <mxCell id="grid_10" value="100,000円" style="text;html=1;align=right;fontSize=9;fontColor=#666;" vertex="1" parent="1">
+          <mxGeometry x="0" y="673" width="75" height="15" as="geometry"/>
+        </mxCell>
+
+        <!-- Bars (Month 1-12) -->
+        <mxCell id="b1" value="&lt;font size='1'&gt;M1&lt;br&gt;0円&lt;/font&gt;" style="rounded=0;fillColor=#E0E0E0;strokeColor=#9E9E9E;" vertex="1" parent="1">
+          <mxGeometry x="110" y="765" width="80" height="5" as="geometry"/>
+        </mxCell>
+        <mxCell id="b2" value="&lt;font size='1'&gt;M2&lt;br&gt;0円&lt;/font&gt;" style="rounded=0;fillColor=#E0E0E0;strokeColor=#9E9E9E;" vertex="1" parent="1">
+          <mxGeometry x="210" y="765" width="80" height="5" as="geometry"/>
+        </mxCell>
+        <mxCell id="b3" value="&lt;font size='1'&gt;M3&lt;br&gt;11,500&lt;/font&gt;" style="rounded=0;fillColor=#C8E6C9;strokeColor=#2E7D32;" vertex="1" parent="1">
+          <mxGeometry x="310" y="759" width="80" height="11" as="geometry"/>
+        </mxCell>
+        <mxCell id="b4" value="&lt;font size='1'&gt;M4&lt;br&gt;34,000&lt;/font&gt;" style="rounded=0;fillColor=#BBDEFB;strokeColor=#1565C0;" vertex="1" parent="1">
+          <mxGeometry x="410" y="736" width="80" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="b5" value="&lt;font size='1'&gt;M5&lt;br&gt;79,000&lt;/font&gt;" style="rounded=0;fillColor=#D1C4E9;strokeColor=#4527A0;" vertex="1" parent="1">
+          <mxGeometry x="510" y="691" width="80" height="79" as="geometry"/>
+        </mxCell>
+        <mxCell id="b6" value="&lt;font size='1'&gt;M6&lt;br&gt;115,000&lt;/font&gt;" style="rounded=0;fillColor=#FFE0B2;strokeColor=#E65100;" vertex="1" parent="1">
+          <mxGeometry x="610" y="655" width="80" height="115" as="geometry"/>
+        </mxCell>
+        <mxCell id="b7" value="&lt;font size='1'&gt;M7&lt;br&gt;162,500&lt;/font&gt;" style="rounded=0;fillColor=#FFE0B2;strokeColor=#E65100;" vertex="1" parent="1">
+          <mxGeometry x="710" y="607" width="80" height="163" as="geometry"/>
+        </mxCell>
+        <mxCell id="b8" value="&lt;font size='1'&gt;M8&lt;br&gt;200,000&lt;/font&gt;" style="rounded=0;fillColor=#F8BBD0;strokeColor=#C2185B;" vertex="1" parent="1">
+          <mxGeometry x="810" y="570" width="80" height="200" as="geometry"/>
+        </mxCell>
+        <mxCell id="b9" value="&lt;font size='1'&gt;M9&lt;br&gt;236,000&lt;/font&gt;" style="rounded=0;fillColor=#F8BBD0;strokeColor=#C2185B;" vertex="1" parent="1">
+          <mxGeometry x="910" y="534" width="80" height="236" as="geometry"/>
+        </mxCell>
+        <mxCell id="b10" value="&lt;font size='1'&gt;M10&lt;br&gt;261,000&lt;/font&gt;" style="rounded=0;fillColor=#F8BBD0;strokeColor=#C2185B;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="509" width="80" height="261" as="geometry"/>
+        </mxCell>
+        <mxCell id="b11" value="&lt;font size='1'&gt;M11&lt;br&gt;286,000&lt;/font&gt;" style="rounded=0;fillColor=#E1BEE7;strokeColor=#7B1FA2;" vertex="1" parent="1">
+          <mxGeometry x="1110" y="484" width="80" height="286" as="geometry"/>
+        </mxCell>
+        <mxCell id="b12" value="&lt;b&gt;★M12&lt;br&gt;300,000円&lt;/b&gt;" style="rounded=0;fillColor=#FFCDD2;strokeColor=#D32F2F;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="1210" y="470" width="100" height="300" as="geometry"/>
+        </mxCell>
+
+        <!-- Cost vs Revenue -->
+        <mxCell id="cost_title" value="&lt;b&gt;コスト vs 利益（12ヶ月目）&lt;/b&gt;" style="text;html=1;align=center;fontSize=12;fontColor=#37474F;" vertex="1" parent="1">
+          <mxGeometry x="400" y="790" width="500" height="25" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="cost1" value="&lt;b&gt;Claude API&lt;/b&gt;&lt;br&gt;1,500円/月&lt;br&gt;月30本×50円" style="rounded=1;whiteSpace=wrap;fillColor=#FFF9C4;strokeColor=#F9A825;" vertex="1" parent="1">
+          <mxGeometry x="50" y="830" width="140" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="cost2" value="&lt;b&gt;Ideogram&lt;/b&gt;&lt;br&gt;500円/月&lt;br&gt;月30枚×15円" style="rounded=1;whiteSpace=wrap;fillColor=#FFF9C4;strokeColor=#F9A825;" vertex="1" parent="1">
+          <mxGeometry x="210" y="830" width="140" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="cost3" value="&lt;b&gt;microCMS&lt;/b&gt;&lt;br&gt;無料〜990円" style="rounded=1;whiteSpace=wrap;fillColor=#FFF9C4;strokeColor=#F9A825;" vertex="1" parent="1">
+          <mxGeometry x="370" y="830" width="120" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="cost4" value="&lt;b&gt;Cloud Run&lt;/b&gt;&lt;br&gt;~300円/月" style="rounded=1;whiteSpace=wrap;fillColor=#FFF9C4;strokeColor=#F9A825;" vertex="1" parent="1">
+          <mxGeometry x="510" y="830" width="120" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="cost5" value="&lt;b&gt;ドメイン&lt;/b&gt;&lt;br&gt;~100円/月" style="rounded=1;whiteSpace=wrap;fillColor=#FFF9C4;strokeColor=#F9A825;" vertex="1" parent="1">
+          <mxGeometry x="650" y="830" width="120" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="cost_total" value="&lt;b&gt;月間コスト合計&lt;/b&gt;&lt;br&gt;約3,000〜4,000円" style="rounded=1;whiteSpace=wrap;fillColor=#FFF9C4;strokeColor=#F9A825;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="800" y="830" width="160" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="profit" value="&lt;b&gt;実質利益: 約296,000円/月&lt;/b&gt;&lt;br&gt;&lt;b&gt;ROI: 約7,400%&lt;/b&gt;&lt;br&gt;累計12ヶ月: 約168万円" style="rounded=1;whiteSpace=wrap;fillColor=#FFCDD2;strokeColor=#D32F2F;strokeWidth=3;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="820" width="250" height="80" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="content" name="4. カテゴリ &amp; コンテンツ戦略">
+    <mxGraphModel dx="1800" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="t4" value="&lt;b&gt;カテゴリ・コンテンツ戦略 &amp; 記事設計&lt;/b&gt;&lt;br&gt;初期70本 → 12ヶ月360本 / 6カテゴリ構成" style="text;html=1;align=center;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="350" y="10" width="600" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Category Cards -->
+        <mxCell id="cat_a" value="&lt;b&gt;A: 理容・ヘアスタイル&lt;/b&gt;&lt;br&gt;&lt;br&gt;目標: 40本 / 7,000PV&lt;br&gt;月収目標: 10,000円&lt;br&gt;収益源: ヘアケア・楽天物販&lt;br&gt;単価: 500〜2,000円/件&lt;br&gt;&lt;br&gt;役割: SNS拡散の入口&lt;br&gt;→ AGA記事への内部リンク" style="rounded=1;whiteSpace=wrap;fillColor=#C8E6C9;strokeColor=#2E7D32;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="30" y="80" width="230" height="180" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="cat_b" value="&lt;b&gt;B: AGA・薄毛（★主力）&lt;/b&gt;&lt;br&gt;&lt;br&gt;目標: 80本 / 30,000PV&lt;br&gt;月収目標: 80,000円&lt;br&gt;収益源: AGAクリニック・育毛剤&lt;br&gt;単価: 8,000〜20,000円/件&lt;br&gt;&lt;br&gt;役割: 収益の中核&lt;br&gt;オンライン診療CVR最大化" style="rounded=1;whiteSpace=wrap;fillColor=#FFCDD2;strokeColor=#D32F2F;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="280" y="80" width="230" height="180" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="cat_c" value="&lt;b&gt;C: メンズ脱毛・ヒゲ&lt;/b&gt;&lt;br&gt;&lt;br&gt;目標: 70本 / 25,000PV&lt;br&gt;月収目標: 60,000円&lt;br&gt;収益源: 脱毛クリニック・サロン&lt;br&gt;単価: 5,000〜20,000円/件&lt;br&gt;&lt;br&gt;役割: 成長カテゴリ&lt;br&gt;CVR安定" style="rounded=1;whiteSpace=wrap;fillColor=#D1C4E9;strokeColor=#4527A0;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="530" y="80" width="230" height="180" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="cat_d" value="&lt;b&gt;D: ED治療（★最高単価）&lt;/b&gt;&lt;br&gt;&lt;br&gt;目標: 60本 / 20,000PV&lt;br&gt;月収目標: 70,000円&lt;br&gt;収益源: EDクリニック・オンライン&lt;br&gt;単価: 10,000〜30,000円/件&lt;br&gt;&lt;br&gt;役割: 最高単価カテゴリ&lt;br&gt;プライバシー配慮設計" style="rounded=1;whiteSpace=wrap;fillColor=#FFCDD2;strokeColor=#D32F2F;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="780" y="80" width="230" height="180" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="cat_e" value="&lt;b&gt;E: スキンケア&lt;/b&gt;&lt;br&gt;&lt;br&gt;目標: 80本 / 15,000PV&lt;br&gt;月収目標: 30,000円&lt;br&gt;収益源: 定期購入商品&lt;br&gt;単価: 1,000〜3,000円/件&lt;br&gt;&lt;br&gt;役割: 物販収益&lt;br&gt;AGA/脱毛への橋渡し" style="rounded=1;whiteSpace=wrap;fillColor=#FFE0B2;strokeColor=#E65100;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="1030" y="80" width="230" height="180" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="cat_f" value="&lt;b&gt;F: コラム（集客用）&lt;/b&gt;&lt;br&gt;&lt;br&gt;目標: 30本 / 3,000PV&lt;br&gt;月収目標: 0円（集客のみ）&lt;br&gt;内部リンク経由CV&lt;br&gt;&lt;br&gt;役割: 各カテゴリへの&lt;br&gt;振り分けハブ記事&lt;br&gt;検索意図が広いユーザー獲得" style="rounded=1;whiteSpace=wrap;fillColor=#BBDEFB;strokeColor=#1565C0;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="80" width="230" height="180" as="geometry"/>
+        </mxCell>
+
+        <!-- Internal Link Strategy -->
+        <mxCell id="link_title" value="&lt;b&gt;内部リンク戦略（カテゴリ間の導線設計）&lt;/b&gt;" style="text;html=1;align=center;fontSize=12;fontColor=#37474F;" vertex="1" parent="1">
+          <mxGeometry x="450" y="280" width="400" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- Link flow: Column → Hub → High CVR categories -->
+        <mxCell id="link_col" value="&lt;b&gt;コラム&lt;/b&gt;&lt;br&gt;（入口・SNS拡散）" style="ellipse;whiteSpace=wrap;fillColor=#BBDEFB;strokeColor=#1565C0;" vertex="1" parent="1">
+          <mxGeometry x="100" y="320" width="140" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="link_hair" value="&lt;b&gt;理容&lt;/b&gt;&lt;br&gt;（入口・あるある系）" style="ellipse;whiteSpace=wrap;fillColor=#C8E6C9;strokeColor=#2E7D32;" vertex="1" parent="1">
+          <mxGeometry x="100" y="410" width="140" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="link_skin" value="&lt;b&gt;スキンケア&lt;/b&gt;&lt;br&gt;（橋渡し）" style="ellipse;whiteSpace=wrap;fillColor=#FFE0B2;strokeColor=#E65100;" vertex="1" parent="1">
+          <mxGeometry x="350" y="360" width="140" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="link_aga" value="&lt;b&gt;★ AGA&lt;/b&gt;&lt;br&gt;（高CVR）" style="ellipse;whiteSpace=wrap;fillColor=#FFCDD2;strokeColor=#D32F2F;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="600" y="310" width="150" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="link_datsu" value="&lt;b&gt;脱毛&lt;/b&gt;&lt;br&gt;（成長）" style="ellipse;whiteSpace=wrap;fillColor=#D1C4E9;strokeColor=#4527A0;" vertex="1" parent="1">
+          <mxGeometry x="600" y="410" width="150" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="link_ed" value="&lt;b&gt;★ ED&lt;/b&gt;&lt;br&gt;（最高単価）" style="ellipse;whiteSpace=wrap;fillColor=#FFCDD2;strokeColor=#D32F2F;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="860" y="360" width="150" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="link_cv" value="&lt;b&gt;★ CV（成約）&lt;/b&gt;&lt;br&gt;クリニック予約&lt;br&gt;商品購入" style="ellipse;whiteSpace=wrap;fillColor=#FFF9C4;strokeColor=#F9A825;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="350" width="160" height="90" as="geometry"/>
+        </mxCell>
+
+        <!-- Link arrows -->
+        <mxCell id="la1" style="strokeColor=#666;strokeWidth=2;" edge="1" parent="1" source="link_col" target="link_skin"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="la2" style="strokeColor=#666;strokeWidth=2;" edge="1" parent="1" source="link_hair" target="link_skin"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="la3" style="strokeColor=#666;strokeWidth=2;" edge="1" parent="1" source="link_hair" target="link_aga"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="la4" style="strokeColor=#D32F2F;strokeWidth=3;" edge="1" parent="1" source="link_skin" target="link_aga"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="la5" style="strokeColor=#D32F2F;strokeWidth=3;" edge="1" parent="1" source="link_skin" target="link_datsu"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="la6" style="strokeColor=#D32F2F;strokeWidth=3;" edge="1" parent="1" source="link_aga" target="link_cv"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="la7" style="strokeColor=#D32F2F;strokeWidth=3;" edge="1" parent="1" source="link_datsu" target="link_cv"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="la8" style="strokeColor=#D32F2F;strokeWidth=3;" edge="1" parent="1" source="link_ed" target="link_cv"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="la9" style="strokeColor=#666;strokeWidth=2;" edge="1" parent="1" source="link_col" target="link_aga"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="la10" style="strokeColor=#666;strokeWidth=2;" edge="1" parent="1" source="link_col" target="link_ed"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- Article Types -->
+        <mxCell id="art_title" value="&lt;b&gt;記事タイプ &amp; Claude プロンプト設計&lt;/b&gt;" style="text;html=1;align=center;fontSize=12;fontColor=#37474F;" vertex="1" parent="1">
+          <mxGeometry x="450" y="510" width="400" height="25" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="art1" value="&lt;b&gt;タイプ①: クリニック比較記事&lt;/b&gt;&lt;br&gt;（最頻出・CVR最高）&lt;br&gt;&lt;br&gt;文字数: 5,000〜7,000字&lt;br&gt;H2: 6〜8個 / H3: 15〜25個&lt;br&gt;必須: 比較表・FAQ5問&lt;br&gt;CTA: 本文中3箇所&lt;br&gt;クリニック情報自動注入" style="rounded=1;whiteSpace=wrap;fillColor=#FFCDD2;strokeColor=#D32F2F;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="30" y="550" width="240" height="170" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="art2" value="&lt;b&gt;タイプ②: 断言コラム記事&lt;/b&gt;&lt;br&gt;（SNS拡散・入口記事）&lt;br&gt;&lt;br&gt;文字数: 2,500〜4,000字&lt;br&gt;トーン: 断言調&lt;br&gt;「〜すべき」「〜は損している」&lt;br&gt;CTA: 本文中2箇所+末尾1箇所&lt;br&gt;共感→断言→解決策→行動促進" style="rounded=1;whiteSpace=wrap;fillColor=#BBDEFB;strokeColor=#1565C0;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="300" y="550" width="240" height="170" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="art3" value="&lt;b&gt;タイプ③: ロングテール記事&lt;/b&gt;&lt;br&gt;（競合回避・CVR高）&lt;br&gt;&lt;br&gt;例:&lt;br&gt;「ワックス 髪 立ち上がらない AGA」&lt;br&gt;「婚活 うまくいかない 髪」&lt;br&gt;「青髭 コンプレックス 解消」&lt;br&gt;「[地域名] AGA クリニック 安い」&lt;br&gt;「[クリニック名] 口コミ 評判」" style="rounded=1;whiteSpace=wrap;fillColor=#C8E6C9;strokeColor=#2E7D32;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="570" y="550" width="240" height="170" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="art4" value="&lt;b&gt;記事生成品質管理&lt;/b&gt;&lt;br&gt;&lt;br&gt;薬機法NGワード自動検出:&lt;br&gt;「治る」→「改善をサポート」&lt;br&gt;「必ず効く」→「多くの方に効果」&lt;br&gt;「副作用なし」→「医師に相談」&lt;br&gt;&lt;br&gt;免責事項テンプレート自動挿入&lt;br&gt;月1回 人によるプロンプト改善" style="rounded=1;whiteSpace=wrap;fillColor=#FFF9C4;strokeColor=#F9A825;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="840" y="550" width="240" height="170" as="geometry"/>
+        </mxCell>
+
+        <!-- Brand Identity -->
+        <mxCell id="brand" value="&lt;b&gt;ブランドアイデンティティ&lt;/b&gt;&lt;br&gt;&lt;br&gt;名称: メンズカタリ（MENS CATALY）&lt;br&gt;コピー: 「変わるきっかけを、語る。」&lt;br&gt;ダブルミーニング: catalyst（触媒）× 語り（katari）&lt;br&gt;&lt;br&gt;編集方針: 断言・煽り・共感の3パターン&lt;br&gt;「男は〇〇しろ」「〜は損している」「実は知らなかった」" style="rounded=1;whiteSpace=wrap;fillColor=#E8EAF6;strokeColor=#3F51B5;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="1110" y="550" width="280" height="170" as="geometry"/>
+        </mxCell>
+
+        <!-- Initial 70 Articles Plan -->
+        <mxCell id="init_title" value="&lt;b&gt;初期70本 投稿計画（Phase 1: 0〜3ヶ月）&lt;/b&gt;" style="text;html=1;align=center;fontSize=12;fontColor=#37474F;" vertex="1" parent="1">
+          <mxGeometry x="450" y="740" width="400" height="25" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="w14" value="&lt;b&gt;Week 1-4&lt;/b&gt;&lt;br&gt;ロングテール記事 30本&lt;br&gt;難易度低&lt;br&gt;月間検索1,000〜3,000&lt;br&gt;（カテゴリA・G中心）" style="rounded=1;whiteSpace=wrap;fillColor=#C8E6C9;strokeColor=#2E7D32;" vertex="1" parent="1">
+          <mxGeometry x="150" y="780" width="300" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="w58" value="&lt;b&gt;Week 5-8&lt;/b&gt;&lt;br&gt;ミドルワード記事 20本&lt;br&gt;難易度中&lt;br&gt;月間検索3,000〜10,000&lt;br&gt;（カテゴリB・C・D）" style="rounded=1;whiteSpace=wrap;fillColor=#BBDEFB;strokeColor=#1565C0;" vertex="1" parent="1">
+          <mxGeometry x="550" y="780" width="300" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="w912" value="&lt;b&gt;Week 9-12&lt;/b&gt;&lt;br&gt;クリニック口コミ系 20本&lt;br&gt;指名検索 / CVR最高&lt;br&gt;（カテゴリG後半）" style="rounded=1;whiteSpace=wrap;fillColor=#FFCDD2;strokeColor=#D32F2F;" vertex="1" parent="1">
+          <mxGeometry x="950" y="780" width="300" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="wa1" style="strokeColor=#666;strokeWidth=2;" edge="1" parent="1" source="w14" target="w58"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="wa2" style="strokeColor=#666;strokeWidth=2;" edge="1" parent="1" source="w58" target="w912"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
