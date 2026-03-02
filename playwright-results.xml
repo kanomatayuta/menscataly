@@ -1,0 +1,58 @@
+<testsuites id="" name="" tests="25" failures="0" skipped="0" errors="0" time="11.449457">
+<testsuite name="accessibility.spec.ts" timestamp="2026-03-02T03:37:51.116Z" hostname="chromium" tests="10" failures="0" skipped="0" time="14.185" errors="0">
+<testcase name="アクセシビリティ (WCAG 2.1 AA) › トップページ (/): 画像にalt属性が設定されていること" classname="accessibility.spec.ts" time="1.464">
+</testcase>
+<testcase name="アクセシビリティ (WCAG 2.1 AA) › トップページ (/): h1が1つだけ存在すること" classname="accessibility.spec.ts" time="1.395">
+</testcase>
+<testcase name="アクセシビリティ (WCAG 2.1 AA) › トップページ (/): フォーカス時にアウトラインが表示されること" classname="accessibility.spec.ts" time="1.493">
+</testcase>
+<testcase name="アクセシビリティ (WCAG 2.1 AA) › 記事一覧 (/articles): 画像にalt属性が設定されていること" classname="accessibility.spec.ts" time="1.386">
+</testcase>
+<testcase name="アクセシビリティ (WCAG 2.1 AA) › 記事一覧 (/articles): h1が1つだけ存在すること" classname="accessibility.spec.ts" time="1.359">
+</testcase>
+<testcase name="アクセシビリティ (WCAG 2.1 AA) › 記事一覧 (/articles): フォーカス時にアウトラインが表示されること" classname="accessibility.spec.ts" time="1.431">
+</testcase>
+<testcase name="アクセシビリティ (WCAG 2.1 AA) › 記事詳細 (/articles/aga-treatment-guide): 画像にalt属性が設定されていること" classname="accessibility.spec.ts" time="1.397">
+</testcase>
+<testcase name="アクセシビリティ (WCAG 2.1 AA) › 記事詳細 (/articles/aga-treatment-guide): h1が1つだけ存在すること" classname="accessibility.spec.ts" time="1.431">
+</testcase>
+<testcase name="アクセシビリティ (WCAG 2.1 AA) › 記事詳細 (/articles/aga-treatment-guide): フォーカス時にアウトラインが表示されること" classname="accessibility.spec.ts" time="1.439">
+</testcase>
+<testcase name="アクセシビリティ (WCAG 2.1 AA) › 記事ページ: 見出し階層が正しいこと (h1→h2→h3)" classname="accessibility.spec.ts" time="1.39">
+</testcase>
+</testsuite>
+<testsuite name="compliance.spec.ts" timestamp="2026-03-02T03:37:51.116Z" hostname="chromium" tests="6" failures="0" skipped="0" time="9.802" errors="0">
+<testcase name="P0: 薬機法コンプライアンス — 公開サイトスキャン › トップページにNG表現が含まれないこと" classname="compliance.spec.ts" time="1.399">
+</testcase>
+<testcase name="P0: 薬機法コンプライアンス — 公開サイトスキャン › 記事一覧ページにNG表現が含まれないこと" classname="compliance.spec.ts" time="1.34">
+</testcase>
+<testcase name="P0: 薬機法コンプライアンス — 公開サイトスキャン › 記事詳細ページをスキャンしNG表現がないこと" classname="compliance.spec.ts" time="3.251">
+</testcase>
+<testcase name="P0: ステマ規制 — PR表記確認 › /articles/aga-treatment-guide: PR表記が記事ページに表示されること" classname="compliance.spec.ts" time="1.177">
+</testcase>
+<testcase name="P0: ステマ規制 — PR表記確認 › /articles/mens-skincare-basics: PR表記が記事ページに表示されること" classname="compliance.spec.ts" time="1.314">
+</testcase>
+<testcase name="P0: アフィリリンク確認 › target=&quot;_blank&quot;のリンクにrel=&quot;noopener&quot;が設定されていること" classname="compliance.spec.ts" time="1.321">
+</testcase>
+</testsuite>
+<testsuite name="performance.spec.ts" timestamp="2026-03-02T03:37:51.116Z" hostname="chromium" tests="9" failures="0" skipped="0" time="21.833" errors="0">
+<testcase name="Core Web Vitals › トップページ (/): ページが正常にロードされること" classname="performance.spec.ts" time="1.319">
+</testcase>
+<testcase name="Core Web Vitals › トップページ (/): TTFB・FCPが基準内であること" classname="performance.spec.ts" time="1.278">
+</testcase>
+<testcase name="Core Web Vitals › トップページ (/): CLSが基準内であること" classname="performance.spec.ts" time="5.285">
+</testcase>
+<testcase name="Core Web Vitals › 記事一覧 (/articles): ページが正常にロードされること" classname="performance.spec.ts" time="1.14">
+</testcase>
+<testcase name="Core Web Vitals › 記事一覧 (/articles): TTFB・FCPが基準内であること" classname="performance.spec.ts" time="1.133">
+</testcase>
+<testcase name="Core Web Vitals › 記事一覧 (/articles): CLSが基準内であること" classname="performance.spec.ts" time="5.246">
+</testcase>
+<testcase name="Core Web Vitals › 記事詳細 (/articles/aga-treatment-guide): ページが正常にロードされること" classname="performance.spec.ts" time="1.17">
+</testcase>
+<testcase name="Core Web Vitals › 記事詳細 (/articles/aga-treatment-guide): TTFB・FCPが基準内であること" classname="performance.spec.ts" time="0.553">
+</testcase>
+<testcase name="Core Web Vitals › 記事詳細 (/articles/aga-treatment-guide): CLSが基準内であること" classname="performance.spec.ts" time="4.709">
+</testcase>
+</testsuite>
+</testsuites>
