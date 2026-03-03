@@ -13,7 +13,15 @@ export type {
 export { insertPRDisclosure, hasPRDisclosure, PR_TEMPLATES } from "./templates/pr-disclosure";
 export { checkPharmaceuticalLawPatterns, checkRequiredElements } from "./rules/pharmaceutical-law";
 export { checkRepresentationLawPatterns } from "./rules/representation-law";
-export { checkStealthMarketingPatterns, checkPRDisclosure } from "./rules/stealth-marketing";
+export { checkStealthMarketingPatterns, checkPRDisclosure, checkLinkDensity, checkRelSponsored } from "./rules/stealth-marketing";
+export { EEATValidator } from "./rules/eeat-validation";
+export type { EEATScore } from "./rules/eeat-validation";
+export { BatchComplianceReporter } from "./batch-reporter";
+export type {
+  SingleArticleReport,
+  BatchReportSummary,
+  BatchReport,
+} from "./batch-reporter";
 export { processAffiliateLinks } from "./utils/affiliate-links";
 export type {
   Category,

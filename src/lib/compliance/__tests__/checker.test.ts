@@ -193,6 +193,32 @@ describe("薬機法コンプライアンスチェッカー", () => {
     });
   });
 
+  describe("ComplianceResult の eeatScore 統合", () => {
+    test("ComplianceResultにscoreフィールドが含まれること", () => {
+      const checker = new ComplianceChecker();
+      const result = checker.check("発毛を促進する効果が期待できるAGA治療");
+      expect(typeof result.score).toBe("number");
+      expect(result.score).toBeGreaterThanOrEqual(0);
+      expect(result.score).toBeLessThanOrEqual(100);
+    });
+
+    test("クリーンなテキストはスコアが返されること", () => {
+      const checker = new ComplianceChecker();
+      const result = checker.check("発毛を促進する効果が期待できるAGA治療をご紹介します。※個人差があります。");
+      // スコアはPR表記欠如などで減点される場合があるが、値自体は返される
+      expect(typeof result.score).toBe("number");
+      expect(result.score).toBeGreaterThanOrEqual(0);
+      expect(result.score).toBeLessThanOrEqual(100);
+    });
+
+    test("違反のあるテキストはスコアが下がること", () => {
+      const checker = new ComplianceChecker();
+      const cleanResult = checker.check("発毛を促進する効果が期待できる");
+      const violatingResult = checker.check("確実に髪が生えるAGA治療。副作用なし。業界最安値。");
+      expect(violatingResult.score).toBeLessThan(cleanResult.score);
+    });
+  });
+
   describe("ステマ規制: アフィリリンクのrel属性", () => {
     test('アフィリリンクに rel="sponsored" が付与されること', () => {
       const html =

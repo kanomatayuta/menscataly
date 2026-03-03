@@ -74,6 +74,12 @@ export class PipelineExecutor {
         finalStatus = 'failed'
         finalError = stepResult.log.error
         console.error(`[Pipeline] Step "${step.name}" failed — aborting pipeline`)
+
+        // パイプライン失敗アラートを作成
+        this.createFailureAlert(step.name, stepResult.log.error, context.runId).catch(
+          (err) => console.error('[Pipeline] Failed to create alert:', err)
+        )
+
         break
       }
 
@@ -228,6 +234,29 @@ export class PipelineExecutor {
     } catch (err) {
       // Supabase記録失敗はパイプライン全体を止めない
       console.error('[Pipeline] Supabase recording error:', err)
+    }
+  }
+
+  /**
+   * パイプライン失敗時のアラートを作成する (動的インポート)
+   */
+  private async createFailureAlert(
+    stepName: string,
+    error: string | null,
+    runId: string
+  ): Promise<void> {
+    try {
+      const { AlertManager } = await import('@/lib/monitoring/alert-manager')
+      const alertManager = new AlertManager()
+      await alertManager.createAlert({
+        type: 'pipeline_failure',
+        severity: 'critical',
+        title: `パイプラインステップ "${stepName}" が失敗しました`,
+        message: error ?? 'Unknown error',
+        metadata: { runId, stepName },
+      })
+    } catch (err) {
+      console.error('[Pipeline] AlertManager import/create error:', err)
     }
   }
 
