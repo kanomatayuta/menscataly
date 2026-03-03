@@ -2,14 +2,14 @@
 // POST /api/webhook/microcms
 //
 // 記事の公開・更新・削除時に Supabase articles テーブルを同期し、
-// Next.js ISRキャッシュを revalidate する
+// Next.js キャッシュを即座に無効化する (revalidatePath + revalidateTag)
 //
 // microCMS管理画面のWebhook設定:
 //   URL: https://your-domain.com/api/webhook/microcms
 //   シークレット: MICROCMS_WEBHOOK_SECRET に設定
 
 import { NextRequest, NextResponse } from 'next/server'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { createServerSupabaseClient, upsertArticle, deleteArticle } from '@/lib/supabase/client'
 import type { MicroCMSWebhookPayload } from '@/types/microcms'
 
@@ -117,26 +117,44 @@ export async function POST(req: NextRequest) {
           published_at: new Date().toISOString(),
         })
 
-        // ISRキャッシュ revalidate
+        // revalidatePath: 該当ページのキャッシュを即座に無効化
         revalidatePath('/articles')
         revalidatePath(`/articles/${slug}`)
+        revalidatePath('/', 'layout')
+
+        // revalidateTag: cacheTag を使用しているキャッシュを無効化
+        // Next.js 16 Cache Components の revalidateTag は第2引数にキャッシュプロファイルが必要
+        revalidateTag('articles', 'default')
+        revalidateTag(`article-${slug}`, 'default')
+        revalidateTag(`article-${payload.id}`, 'default')
 
         return NextResponse.json({
           message: `Article ${payload.type === 'new' ? 'created' : 'updated'}`,
           id: payload.id,
           slug,
+          revalidated: {
+            paths: ['/articles', `/articles/${slug}`, '/'],
+            tags: ['articles', `article-${slug}`, `article-${payload.id}`],
+          },
         })
       }
 
       case 'delete': {
         await deleteArticle(supabase, payload.id)
 
-        // ISRキャッシュ revalidate (スラッグ不明のため全体を revalidate)
+        // キャッシュ revalidate (スラッグ不明のため全体を revalidate)
         revalidatePath('/articles')
+        revalidatePath('/', 'layout')
+        revalidateTag('articles', 'default')
+        revalidateTag(`article-${payload.id}`, 'default')
 
         return NextResponse.json({
           message: 'Article deleted',
           id: payload.id,
+          revalidated: {
+            paths: ['/articles', '/'],
+            tags: ['articles', `article-${payload.id}`],
+          },
         })
       }
 
