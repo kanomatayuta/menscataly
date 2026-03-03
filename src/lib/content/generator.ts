@@ -425,6 +425,15 @@ export class ArticleGenerator {
       article = this.injectAffiliateLinks(article, request);
     }
 
+    // コスト記録 (動的インポート — CostTracker が利用可能な場合のみ)
+    this.recordGenerationCost(
+      aiResponse.tokenUsage,
+      aiResponse.model,
+      article.id ?? null
+    ).catch((err) =>
+      console.error('[ArticleGenerator] Failed to record cost:', err)
+    );
+
     return {
       article,
       seo: article.seo,
@@ -433,6 +442,34 @@ export class ArticleGenerator {
       generatedAt: now,
       processingTimeMs: Date.now() - startTime,
     };
+  }
+
+  // ============================================================
+  // コスト記録ヘルパー
+  // ============================================================
+
+  /**
+   * 記事生成コストを CostTracker に記録する (動的インポート)
+   */
+  private async recordGenerationCost(
+    tokenUsage: { inputTokens: number; outputTokens: number; estimatedCostUsd?: number },
+    model: string,
+    articleId: string | null
+  ): Promise<void> {
+    try {
+      const { CostTracker } = await import('@/lib/batch/cost-tracker');
+      const tracker = new CostTracker();
+      await tracker.recordCost({
+        articleId,
+        costType: 'article_generation',
+        inputTokens: tokenUsage.inputTokens,
+        outputTokens: tokenUsage.outputTokens,
+        costUsd: tokenUsage.estimatedCostUsd ?? 0,
+        model,
+      });
+    } catch (err) {
+      console.error('[ArticleGenerator] CostTracker error:', err);
+    }
   }
 
   // ============================================================

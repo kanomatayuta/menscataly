@@ -74,8 +74,32 @@ const ASP_CONFIGS: Record<AspName, { envKey: string; baseUrl: string }> = {
 
 /**
  * モックのASP収益データを生成する
+ * ASPセレクターからプログラム情報を取得して、より正確なモックデータを生成する
  */
-function generateMockAspData(): AspRevenueData[] {
+async function generateMockAspData(): Promise<AspRevenueData[]> {
+  const today = new Date().toISOString().split('T')[0]
+
+  try {
+    // ASPセレクターからプログラム情報を取得して精度の高いモックデータを生成
+    const { getPrograms } = await import('@/lib/asp/config')
+    const programs = getPrograms()
+
+    if (programs.length > 0) {
+      return programs.slice(0, 8).map((program) => ({
+        aspName: program.aspName,
+        programName: program.programName,
+        clicks: Math.floor(Math.random() * 200) + 50,
+        conversions: Math.floor(Math.random() * 5) + 1,
+        revenue: program.rewardAmount * (Math.floor(Math.random() * 3) + 1),
+        date: today,
+      }))
+    }
+  } catch {
+    // ASPセレクターが利用不可の場合はフォールバック
+    console.warn('[fetch-asp] ASP selector unavailable, using hardcoded mock data')
+  }
+
+  // フォールバック: ハードコードされたモックデータ
   const mockData: AspRevenueData[] = [
     {
       aspName: 'afb',
@@ -83,7 +107,7 @@ function generateMockAspData(): AspRevenueData[] {
       clicks: 145,
       conversions: 3,
       revenue: 45000,
-      date: new Date().toISOString().split('T')[0],
+      date: today,
     },
     {
       aspName: 'a8',
@@ -91,7 +115,7 @@ function generateMockAspData(): AspRevenueData[] {
       clicks: 89,
       conversions: 2,
       revenue: 20000,
-      date: new Date().toISOString().split('T')[0],
+      date: today,
     },
     {
       aspName: 'accesstrade',
@@ -99,7 +123,7 @@ function generateMockAspData(): AspRevenueData[] {
       clicks: 67,
       conversions: 1,
       revenue: 15000,
-      date: new Date().toISOString().split('T')[0],
+      date: today,
     },
     {
       aspName: 'afb',
@@ -107,7 +131,7 @@ function generateMockAspData(): AspRevenueData[] {
       clicks: 201,
       conversions: 5,
       revenue: 12500,
-      date: new Date().toISOString().split('T')[0],
+      date: today,
     },
   ]
 
@@ -183,7 +207,7 @@ export const fetchAspStep: PipelineStep<unknown, AspRevenueData[]> = {
 
     if (!hasAnyConfig) {
       console.log('[fetch-asp] No ASP API keys configured — using mock data')
-      const mockData = generateMockAspData()
+      const mockData = await generateMockAspData()
       results.push(...mockData)
     }
 
