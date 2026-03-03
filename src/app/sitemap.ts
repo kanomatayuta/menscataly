@@ -7,7 +7,7 @@
 import type { MetadataRoute } from 'next'
 import { getArticles, getCategories } from '@/lib/microcms/client'
 
-const BASE_URL = 'https://menscataly.com'
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://menscataly.com'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // ── カテゴリページ & 記事ページ (動的データ取得) ──────────────
