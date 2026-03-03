@@ -65,6 +65,48 @@ export {
 export type { CharCountOptions, ExcerptOptions } from "./utils/text-utils";
 
 // ============================================================
+// キーワードターゲット
+// ============================================================
+
+export {
+  KEYWORD_TARGETS,
+  getAllKeywords,
+  getKeywordsByCategory,
+  getKeywordsByPriority,
+  getKeywordById,
+} from "./keywords/index";
+
+// ============================================================
+// テンプレート
+// ============================================================
+
+export { ARTICLE_TEMPLATES } from "./templates/article-templates";
+export type {
+  ArticleTemplate,
+  TemplateSectionDef,
+  CtaPosition,
+  AffiliateInsertionPoint,
+} from "./templates/article-templates";
+
+export { CTA_TEMPLATES } from "./templates/cta-templates";
+export type {
+  CtaTemplate,
+  CtaPlacement,
+  CtaVariant,
+} from "./templates/cta-templates";
+
+// ============================================================
+// ASPコンテンツガイド
+// ============================================================
+
+export {
+  ASP_CONTENT_GUIDES,
+  getContentGuide,
+  getSafeCTAs,
+} from "./asp-content-guide";
+export type { AspContentGuide } from "./asp-content-guide";
+
+// ============================================================
 // 記事生成エンジン
 // ============================================================
 
