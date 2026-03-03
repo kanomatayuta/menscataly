@@ -1,10 +1,11 @@
-export type ArticleCategory = "aga" | "hair-removal" | "skincare" | "ed";
+export type ArticleCategory = "aga" | "hair-removal" | "skincare" | "ed" | "column";
 
 const CATEGORY_LABELS: Record<ArticleCategory, string> = {
-  aga: "AGA治療",
-  "hair-removal": "医療脱毛",
-  skincare: "メンズスキンケア",
+  aga: "AGA・薄毛",
+  "hair-removal": "メンズ脱毛",
+  skincare: "スキンケア",
   ed: "ED治療",
+  column: "コラム",
 };
 
 const CATEGORY_STYLE_VARS: Record<ArticleCategory, string> = {
@@ -12,6 +13,7 @@ const CATEGORY_STYLE_VARS: Record<ArticleCategory, string> = {
   "hair-removal": "bg-purple-100 text-purple-800",
   skincare: "bg-emerald-100 text-emerald-800",
   ed: "bg-red-100 text-red-800",
+  column: "bg-amber-100 text-amber-800",
 };
 
 type BadgeProps = {

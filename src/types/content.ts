@@ -11,7 +11,7 @@ import type { ComplianceResult } from "@/lib/compliance/types";
 // ============================================================
 
 /** コンテンツカテゴリ */
-export type ContentCategory = "aga" | "hair-removal" | "skincare" | "ed";
+export type ContentCategory = "aga" | "hair-removal" | "skincare" | "ed" | "column";
 
 // ============================================================
 // 記事構成要素

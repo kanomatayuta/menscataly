@@ -133,4 +133,15 @@ export const CTA_TEMPLATES: Record<ContentCategory, CtaTemplate[]> = {
       variant: 'secondary',
     },
   ],
+
+  // =========================================================
+  // コラム
+  // =========================================================
+  column: [
+    {
+      text: '関連する記事もあわせてご覧ください。',
+      position: 'block',
+      variant: 'secondary',
+    },
+  ],
 }

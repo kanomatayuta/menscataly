@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const title = article.seo_title ?? article.title;
-  const description = article.seo_description ?? article.excerpt ?? "";
+  const description = article.excerpt ?? "";
   const articleSlug = article.slug ?? article.id;
 
   return {
@@ -178,7 +178,7 @@ function ArticleJsonLd({
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
     />
   );
 }
@@ -365,9 +365,9 @@ async function ArticleContent({
           <p className="mb-2 text-sm font-medium text-neutral-700">タグ:</p>
           <ul className="flex flex-wrap gap-2" role="list">
             {article.tags.map((tag) => (
-              <li key={tag}>
+              <li key={tag.id}>
                 <span className="inline-flex items-center rounded-full bg-neutral-100 px-3 py-1 text-xs text-neutral-700">
-                  #{tag}
+                  #{tag.name}
                 </span>
               </li>
             ))}

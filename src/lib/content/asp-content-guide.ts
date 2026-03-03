@@ -207,6 +207,20 @@ export const ASP_CONTENT_GUIDES: Record<ContentCategory, AspContentGuide> = {
       '医薬品並みの効果',
     ],
   },
+
+  // =========================================================
+  // コラム
+  // =========================================================
+  column: {
+    naturalMentionTemplates: [],
+    ctaGuidelines: [
+      'コラム記事では直接的なアフィリエイト誘導は控え、関連記事への内部リンクを活用する',
+    ],
+    complianceSafePhrases: [
+      '※本記事は一般的な情報提供を目的としています',
+    ],
+    forbiddenPhrases: [],
+  },
 }
 
 // ============================================================
@@ -405,6 +419,7 @@ export function getRelatedMoshimoCategories(category: ContentCategory): MoshimoP
     'hair-removal': ['grooming_tool'],
     skincare: ['skincare_product'],
     ed: ['health_supplement'],
+    column: [],
   }
   return mapping[category]
 }

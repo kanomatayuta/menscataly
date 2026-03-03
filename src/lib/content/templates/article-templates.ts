@@ -366,4 +366,37 @@ export const ARTICLE_TEMPLATES: Record<ContentCategory, ArticleTemplate> = {
     ],
     wordCountTarget: 4000,
   },
+
+  // =========================================================
+  // コラム
+  // =========================================================
+  column: {
+    sections: [
+      {
+        heading: '導入',
+        level: 'h2',
+        description: '読者の興味を引くリード文。トピックの概要。',
+      },
+      {
+        heading: '本題',
+        level: 'h2',
+        description: 'コラムの本題。読みやすくカジュアルなトーンで展開。',
+        subsections: [
+          { heading: 'ポイント1', level: 'h3', description: '最も重要なポイント' },
+          { heading: 'ポイント2', level: 'h3', description: '補足ポイント' },
+          { heading: 'ポイント3', level: 'h3', description: '追加情報' },
+        ],
+      },
+      {
+        heading: 'まとめ',
+        level: 'h2',
+        description: '要点まとめ。関連記事への誘導。',
+      },
+    ],
+    ctaPositions: [
+      { afterSectionIndex: 2, variant: 'secondary' },
+    ],
+    affiliateInsertionPoints: [],
+    wordCountTarget: 2500,
+  },
 }

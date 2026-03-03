@@ -124,6 +124,7 @@ function getCategoryRevenuePotential(category: ContentCategory): number {
     aga: 75,             // AGA治療も高報酬
     ed: 70,              // ED治療
     skincare: 55,        // スキンケアは比較的低め
+    column: 30,          // コラムは収益化よりSEO・流入目的
   }
   return categoryScores[category]
 }

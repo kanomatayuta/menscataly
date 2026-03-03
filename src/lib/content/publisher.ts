@@ -49,6 +49,7 @@ const CATEGORY_ID_MAP: Record<ContentCategory, string> = {
   "hair-removal": "hair-removal",
   skincare: "skincare",
   ed: "ed",
+  column: "column",
 };
 
 /**
@@ -87,9 +88,10 @@ function articleToMicroCMSBody(
     content: fullHtml,
     excerpt: article.lead,
     seo_title: article.seo.title,
-    seo_description: article.seo.description,
     author_name: article.author.name,
-    tags: article.tags ?? [],
+    // tags は microCMS 複数コンテンツ参照 — 投稿時はタグIDの配列が必要
+    // TODO: タグ名→タグID変換ロジックを実装 (getTags() でID解決)
+    // 現時点ではタグフィールドは投稿時に除外し、管理画面で設定する運用
     status,
     is_pr: article.hasPRDisclosure,
     // カテゴリは参照フィールドのためIDで渡す

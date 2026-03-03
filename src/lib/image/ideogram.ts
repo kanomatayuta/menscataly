@@ -76,6 +76,12 @@ const CATEGORY_STYLE_CONFIG: Record<
     mood: "discreet, professional, calm, trustworthy",
     colors: "navy blue, grey, subtle gradient",
   },
+  column: {
+    subject: "modern lifestyle flat lay, coffee cup, notebook, stylish accessories, casual elegant",
+    style: "lifestyle photography, overhead shot, warm natural lighting",
+    mood: "casual, trendy, approachable, inspirational",
+    colors: "warm earth tones, amber, cream, soft brown",
+  },
 };
 
 /** アスペクト比マッピング（Ideogram API形式） */
@@ -217,6 +223,7 @@ export class IdeogramClient {
       "hair-removal": { bg: "c8a951", text: "ffffff" },
       skincare: { bg: "4a7c59", text: "ffffff" },
       ed: { bg: "2d3748", text: "c8a951" },
+      column: { bg: "d97706", text: "ffffff" },
     };
 
     const colors = colorMap[category];

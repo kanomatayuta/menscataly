@@ -10,7 +10,7 @@ import {
   type MicroCMSQueries,
   type MicroCMSListResponse,
 } from 'microcms-js-sdk'
-import type { MicroCMSArticle, MicroCMSCategory, MicroCMSArticleQueries } from '@/types/microcms'
+import type { MicroCMSArticle, MicroCMSCategory, MicroCMSTag, MicroCMSArticleQueries } from '@/types/microcms'
 import {
   MOCK_ARTICLES,
   getArticlesByCategory as getMockArticlesByCategory,
@@ -42,10 +42,11 @@ function mockToMicroCMSArticle(mock: ReturnType<typeof getMockArticleBySlug>): M
   })
 
   const categoryMap: Record<string, ReturnType<typeof makeCat>> = {
-    aga: makeCat('aga', 'AGA治療'),
-    'hair-removal': makeCat('hair-removal', '医療脱毛'),
-    skincare: makeCat('skincare', 'メンズスキンケア'),
+    aga: makeCat('aga', 'AGA・薄毛'),
+    'hair-removal': makeCat('hair-removal', 'メンズ脱毛'),
+    skincare: makeCat('skincare', 'スキンケア'),
     ed: makeCat('ed', 'ED治療'),
+    column: makeCat('column', 'コラム'),
   }
 
   return {
@@ -61,8 +62,10 @@ function mockToMicroCMSArticle(mock: ReturnType<typeof getMockArticleBySlug>): M
     category: categoryMap[mock.category] ?? { id: mock.category, name: mock.category, slug: mock.category, createdAt: fallbackDate, updatedAt: fallbackDate, publishedAt: fallbackDate, revisedAt: fallbackDate },
     thumbnail: mock.eyecatch ? { url: mock.eyecatch.url, height: mock.eyecatch.height, width: mock.eyecatch.width } : undefined,
     author_name: mock.supervisor?.name,
-    tags: mock.tags,
-    status: 'published',
+    tags: mock.tags?.map((t) => ({
+      id: t, name: t, slug: t,
+      createdAt: fallbackDate, updatedAt: fallbackDate, publishedAt: fallbackDate, revisedAt: fallbackDate,
+    })),
   }
 }
 
@@ -91,6 +94,7 @@ function getMicroCMSClient() {
 const ENDPOINTS = {
   articles: 'articles',
   categories: 'categories',
+  tags: 'tags',
 } as const
 
 // ============================================================
@@ -148,7 +152,15 @@ export async function getArticles(
  * microCMS では slug フィールドでフィルタして先頭1件を返す
  * @param slug - 記事スラッグ
  */
+/** slug バリデーション — microCMS filters インジェクション防止 */
+function isValidSlug(slug: string): boolean {
+  return /^[a-zA-Z0-9][a-zA-Z0-9-]{0,128}$/.test(slug)
+}
+
 export async function getArticleBySlug(slug: string, draftKey?: string): Promise<MicroCMSArticle | null> {
+  // slug バリデーション (filters クエリインジェクション防止)
+  if (!isValidSlug(slug)) return null
+
   // 環境変数未設定時はモックデータにフォールバック
   if (!isMicroCMSConfigured()) {
     const mock = getMockArticleBySlug(slug)
@@ -170,7 +182,13 @@ export async function getArticleBySlug(slug: string, draftKey?: string): Promise
     queries,
   })
 
-  return response.contents[0] ?? null
+  const article = response.contents[0] ?? null
+  // microCMS に記事が見つからない場合はモックデータにフォールバック
+  if (!article) {
+    const mock = getMockArticleBySlug(slug)
+    return mock ? mockToMicroCMSArticle(mock) : null
+  }
+  return article
 }
 
 /**
@@ -205,7 +223,12 @@ export async function getAllArticleSlugs(): Promise<string[]> {
     endpoint: ENDPOINTS.articles,
     queries: { fields: 'id,slug', limit: 100, orders: '-publishedAt' },
   })
-  return response.contents.map((a) => a.slug ?? a.id)
+  const slugs = response.contents.map((a) => a.slug ?? a.id)
+  // microCMS に記事が0件の場合はモックデータにフォールバック (ビルドエラー回避)
+  if (slugs.length === 0) {
+    return MOCK_ARTICLES.map((a) => a.slug)
+  }
+  return slugs
 }
 
 // ============================================================
@@ -218,10 +241,11 @@ export async function getCategories(
   if (!isMicroCMSConfigured()) {
     const ts = '2024-01-01T00:00:00.000Z'  // 静的フォールバック（new Date() はプリレンダリング時禁止）
     const fallback: MicroCMSCategory[] = [
-      { id: 'aga', name: 'AGA治療', slug: 'aga', display_order: 1, createdAt: ts, updatedAt: ts, publishedAt: ts, revisedAt: ts },
-      { id: 'hair-removal', name: '医療脱毛', slug: 'hair-removal', display_order: 2, createdAt: ts, updatedAt: ts, publishedAt: ts, revisedAt: ts },
-      { id: 'skincare', name: 'メンズスキンケア', slug: 'skincare', display_order: 3, createdAt: ts, updatedAt: ts, publishedAt: ts, revisedAt: ts },
+      { id: 'aga', name: 'AGA・薄毛', slug: 'aga', display_order: 1, createdAt: ts, updatedAt: ts, publishedAt: ts, revisedAt: ts },
+      { id: 'hair-removal', name: 'メンズ脱毛', slug: 'hair-removal', display_order: 2, createdAt: ts, updatedAt: ts, publishedAt: ts, revisedAt: ts },
+      { id: 'skincare', name: 'スキンケア', slug: 'skincare', display_order: 3, createdAt: ts, updatedAt: ts, publishedAt: ts, revisedAt: ts },
       { id: 'ed', name: 'ED治療', slug: 'ed', display_order: 4, createdAt: ts, updatedAt: ts, publishedAt: ts, revisedAt: ts },
+      { id: 'column', name: 'コラム', slug: 'column', display_order: 5, createdAt: ts, updatedAt: ts, publishedAt: ts, revisedAt: ts },
     ]
     return { contents: fallback, totalCount: fallback.length, offset: 0, limit: 100 }
   }
@@ -241,4 +265,19 @@ export async function getCategoryBySlug(slug: string): Promise<MicroCMSCategory 
     queries: { filters: `slug[equals]${slug}`, limit: 1 },
   })
   return response.contents[0] ?? null
+}
+
+// ============================================================
+// タグ API
+// ============================================================
+
+export async function getTags(
+  params: MicroCMSQueries = {}
+): Promise<MicroCMSListResponse<MicroCMSTag>> {
+  if (!isMicroCMSConfigured()) {
+    return { contents: [], totalCount: 0, offset: 0, limit: 100 }
+  }
+  const client = getMicroCMSClient()
+  const queries: MicroCMSQueries = { limit: 100, ...params }
+  return await client.getList<MicroCMSTag>({ endpoint: ENDPOINTS.tags, queries })
 }

@@ -13,18 +13,20 @@ const CATEGORY_MAP: Record<string, ArticleCategory> = {
 };
 
 const CATEGORY_PAGE_TITLES: Record<ArticleCategory, string> = {
-  aga: "AGA治療",
-  "hair-removal": "医療脱毛",
-  skincare: "メンズスキンケア",
+  aga: "AGA・薄毛",
+  "hair-removal": "メンズ脱毛",
+  skincare: "スキンケア",
   ed: "ED治療",
+  column: "コラム",
 };
 
 const ALL_CATEGORIES: { value: ArticleCategory | ""; label: string }[] = [
   { value: "", label: "すべて" },
-  { value: "aga", label: "AGA治療" },
-  { value: "hair-removal", label: "医療脱毛" },
-  { value: "skincare", label: "メンズスキンケア" },
+  { value: "aga", label: "AGA・薄毛" },
+  { value: "hair-removal", label: "メンズ脱毛" },
+  { value: "skincare", label: "スキンケア" },
   { value: "ed", label: "ED治療" },
+  { value: "column", label: "コラム" },
 ];
 
 const ARTICLES_PER_PAGE = 12;

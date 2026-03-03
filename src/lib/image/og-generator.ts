@@ -28,10 +28,11 @@ const BRAND_COLORS = {
 
 /** カテゴリ表示名 */
 const CATEGORY_LABELS: Record<ContentCategory, string> = {
-  aga: "AGA・薄毛治療",
-  "hair-removal": "医療脱毛",
+  aga: "AGA・薄毛",
+  "hair-removal": "メンズ脱毛",
   skincare: "スキンケア",
   ed: "ED治療",
+  column: "コラム",
 };
 
 /** カテゴリアクセントカラー */
@@ -40,6 +41,7 @@ const CATEGORY_COLORS: Record<ContentCategory, string> = {
   "hair-removal": "#c8a951",
   skincare: "#4a7c59",
   ed: "#6b7280",
+  column: "#d97706",
 };
 
 // ============================================================

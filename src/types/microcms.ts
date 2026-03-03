@@ -40,6 +40,29 @@ export interface MicroCMSCategory extends MicroCMSDate {
   slug: string
   description?: string
   display_order?: number
+  color?: string         // UIバッジの色指定 (例: #D32F2F)
+}
+
+// ============================================================
+// タグ
+// ============================================================
+
+export interface MicroCMSTag extends MicroCMSDate {
+  id: string
+  name: string
+  slug: string
+}
+
+// ============================================================
+// 参考文献 (繰り返しフィールド)
+// ============================================================
+
+export interface MicroCMSReference {
+  fieldId: string
+  ref_title?: string
+  ref_url?: string
+  ref_publisher?: string
+  ref_year?: string
 }
 
 // ============================================================
@@ -48,18 +71,31 @@ export interface MicroCMSCategory extends MicroCMSDate {
 
 export interface MicroCMSArticle extends MicroCMSDate {
   id: string
+  // 基本情報
   title: string
-  slug?: string         // カスタムスラッグ (未設定時は id を使用)
-  content: string       // リッチテキスト HTML
-  excerpt?: string      // 抜粋 (プレーンテキスト)
-  category?: MicroCMSCategory
-  thumbnail?: MicroCMSImage
-  seo_title?: string
-  seo_description?: string
-  author_name?: string
-  tags?: string[]
-  status?: 'published' | 'draft'
-  is_pr?: boolean       // PR記事フラグ (ステマ規制対応)
+  slug?: string                // カスタムスラッグ (未設定時は id を使用)
+  content: string              // リッチテキスト HTML
+  excerpt?: string             // 抜粋 (プレーンテキスト, 最大160文字)
+  category?: MicroCMSCategory  // コンテンツ参照
+  article_type?: string        // セレクト: クリニック比較/ロングテール/コラム/レビュー・体験談/ガイド・まとめ
+  tags?: MicroCMSTag[]         // 複数コンテンツ参照 (tags API)
+  thumbnail?: MicroCMSImage    // OGP・カード用 (1200×630px)
+  // SEO
+  seo_title?: string           // 検索結果用タイトル (最大60文字)
+  target_keyword?: string      // メインキーワード (管理用)
+  reading_time?: number        // 読了時間 (分)
+  // 著者・監修者 (E-E-A-T)
+  author_name?: string         // 通常「MENS CATALY 編集部」
+  supervisor_name?: string     // 医師・専門家の氏名
+  supervisor_creds?: string    // 監修者資格 (例: 皮膚科専門医)
+  supervisor_bio?: string      // 監修者プロフィール
+  supervisor_image?: MicroCMSImage // 監修者画像 (400×400px)
+  // 参考文献 (E-E-A-T)
+  references?: MicroCMSReference[] // 繰り返しフィールド
+  // コンプライアンス
+  is_pr?: boolean              // PR記事フラグ (景表法・ステマ規制対応)
+  disclaimer_type?: string     // セレクト: 医療行為に関する免責/一般的な医療情報免責/化粧品・効果の免責/免責なし
+  compliance_score?: number    // 0-100 (AI生成時に自動算出)
 }
 
 // ============================================================

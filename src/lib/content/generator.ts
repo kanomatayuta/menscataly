@@ -47,12 +47,13 @@ const DEFAULT_AUTHOR: AuthorInfo = {
 /** カテゴリと監修者タイプのマッピング */
 const CATEGORY_SUPERVISOR_MAP: Record<
   ContentCategory,
-  "dermatologist" | "urologist" | "pharmacist"
+  "dermatologist" | "urologist" | "pharmacist" | "none"
 > = {
   aga: "dermatologist",
   "hair-removal": "dermatologist",
   skincare: "dermatologist",
   ed: "urologist",
+  column: "none",
 };
 
 // ============================================================
@@ -586,12 +587,13 @@ ${ctaPositionList}
    */
   private mapCategory(
     category: ContentCategory
-  ): "aga" | "hair_removal" | "skincare" | "ed" {
-    const map: Record<ContentCategory, "aga" | "hair_removal" | "skincare" | "ed"> = {
+  ): "aga" | "hair_removal" | "skincare" | "ed" | "column" {
+    const map: Record<ContentCategory, "aga" | "hair_removal" | "skincare" | "ed" | "column"> = {
       aga: "aga",
       "hair-removal": "hair_removal",
       skincare: "skincare",
       ed: "ed",
+      column: "column",
     };
     return map[category];
   }
