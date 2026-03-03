@@ -1,11 +1,12 @@
 /**
  * テストヘルパー: モックファクトリ
- * microCMS / Supabase / Phase2 型のテスト用スタブを生成する
+ * microCMS / Supabase / Pipeline / Phase2 型のテスト用スタブを生成する
  */
 
 import type { AspProgram, ItpMitigationConfig } from '@/types/asp-config'
 import type { ArticleReviewItem, BatchGenerationJob, MonitoringAlert, RevenueSummary } from '@/types/admin'
 import type { BatchGenerationProgress, GenerationCostRecord, KeywordTarget } from '@/types/batch-generation'
+import type { PipelineContext, PipelineStep, PipelineConfig } from '@/lib/pipeline/types'
 
 // =============================================================================
 // microCMS モックファクトリ
@@ -298,6 +299,81 @@ export function createMockItpMitigationConfig(overrides?: Partial<ItpMitigationC
     scriptAttributes: { 'data-asp': 'afb', async: 'true' },
     lazyLoad: true,
     sameSiteCookie: 'None',
+    ...overrides,
+  }
+}
+
+// =============================================================================
+// Phase 2a: Pipeline / Health モックファクトリ
+// =============================================================================
+
+/**
+ * PipelineContext モックを生成する
+ */
+export function createMockPipelineContext(
+  overrides?: Partial<PipelineContext>
+): PipelineContext {
+  const defaultConfig: PipelineConfig = {
+    type: 'manual',
+    maxConcurrentSteps: 1,
+    retryDelayMs: 0,
+    timeoutMs: 1800000,
+    enableSupabaseLogging: false,
+    dryRun: false,
+  }
+
+  return {
+    runId: 'test-run-001',
+    type: 'manual',
+    startedAt: '2026-03-01T00:00:00Z',
+    config: defaultConfig,
+    stepLogs: [],
+    sharedData: {},
+    ...overrides,
+  }
+}
+
+/**
+ * PipelineStep モックを生成する
+ */
+export function createMockPipelineStep(
+  overrides?: Partial<PipelineStep> & { execute?: ReturnType<typeof vi.fn> }
+): PipelineStep {
+  return {
+    name: 'mock-step',
+    description: 'A mock pipeline step for testing',
+    maxRetries: 3,
+    execute: vi.fn().mockResolvedValue({ mock: true }),
+    ...overrides,
+  }
+}
+
+/**
+ * ヘルスチェックスコアモックを生成する
+ */
+export interface MockHealthScore {
+  status: 'healthy' | 'degraded' | 'unhealthy'
+  services: Array<{
+    name: string
+    status: 'up' | 'down'
+    latencyMs: number | null
+    error?: string
+  }>
+  timestamp: string
+  version: string
+}
+
+export function createMockHealthScore(
+  overrides?: Partial<MockHealthScore>
+): MockHealthScore {
+  return {
+    status: 'healthy',
+    services: [
+      { name: 'microCMS', status: 'up', latencyMs: 45 },
+      { name: 'Supabase', status: 'up', latencyMs: 32 },
+    ],
+    timestamp: '2026-03-01T00:00:00Z',
+    version: '0.1.0',
     ...overrides,
   }
 }
