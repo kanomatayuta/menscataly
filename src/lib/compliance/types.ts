@@ -48,6 +48,15 @@ export interface ComplianceResult {
   hasPRDisclosure: boolean;
   missingItems: string[];
   score: number; // 0-100 (100 = 完全準拠)
+  /** E-E-A-T スコア（記事データが利用可能な場合のみ） */
+  eeatScore?: {
+    total: number;
+    experience: number;
+    expertise: number;
+    authoritativeness: number;
+    trustworthiness: number;
+    details: string[];
+  };
 }
 
 export interface CheckerOptions {

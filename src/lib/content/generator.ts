@@ -16,6 +16,8 @@ import {
 } from "@/lib/content/index";
 import { slugify, extractExcerpt } from "@/lib/content/utils/text-utils";
 import { calculateReadingTime } from "@/lib/content/utils/reading-time";
+import { ARTICLE_TEMPLATES } from "@/lib/content/templates/article-templates";
+import { CTA_TEMPLATES } from "@/lib/content/templates/cta-templates";
 import type {
   Article,
   ArticleSection,
@@ -460,7 +462,11 @@ export class ArticleGenerator {
 
     const eeatPrompt = buildEEATPrompt(request.category, now, now);
 
-    return [basePrompt, categoryPrompt, seoPrompt, eeatPrompt].join("\n\n---\n\n");
+    // テンプレートベースのセクション構成指示を追加
+    const template = ARTICLE_TEMPLATES[request.category];
+    const templatePrompt = this.buildTemplatePrompt(template, request.category);
+
+    return [basePrompt, categoryPrompt, seoPrompt, eeatPrompt, templatePrompt].join("\n\n---\n\n");
   }
 
   private buildUserMessage(request: ContentGenerationRequest): string {
@@ -490,9 +496,52 @@ export class ArticleGenerator {
       );
     }
 
+    // CTA テンプレートを追加
+    const ctaTemplates = CTA_TEMPLATES[request.category];
+    if (ctaTemplates && ctaTemplates.length > 0) {
+      const primaryCtas = ctaTemplates.filter((c) => c.variant === "primary");
+      if (primaryCtas.length > 0) {
+        parts.push(
+          `CTA（行動喚起）テキストの参考例:\n${primaryCtas.map((c) => `- ${c.text}`).join("\n")}\n※ CTAは上記を参考に、薬機法・景表法に準拠した表現で記述してください。`
+        );
+      }
+    }
+
     parts.push("前述のJSONフォーマットで出力してください。");
 
     return parts.join("\n\n");
+  }
+
+  /**
+   * 記事テンプレートからセクション構成プロンプトを構築する
+   */
+  private buildTemplatePrompt(
+    template: (typeof ARTICLE_TEMPLATES)[ContentCategory],
+    category: ContentCategory
+  ): string {
+    const sectionList = template.sections
+      .map((s, i) => {
+        const sub = s.subsections
+          ? "\n" + s.subsections.map((ss) => `    - ${ss.heading}: ${ss.description}`).join("\n")
+          : "";
+        return `  ${i + 1}. **${s.heading}** (${s.level}): ${s.description}${sub}`;
+      })
+      .join("\n");
+
+    const ctaPositionList = template.ctaPositions
+      .map((p) => `  - セクション${p.afterSectionIndex + 1}の後 (${p.variant})`)
+      .join("\n");
+
+    return `## カテゴリ別テンプレート構成（${category}）
+
+以下のセクション構成に従って記事を作成してください:
+
+${sectionList}
+
+### CTA配置位置
+${ctaPositionList}
+
+### 目標文字数: ${template.wordCountTarget}文字`;
   }
 
   /**

@@ -11,7 +11,9 @@ import commonDictionary from "./dictionaries/common.json";
 import { checkPharmaceuticalLawPatterns, checkRequiredElements } from "./rules/pharmaceutical-law";
 import { checkRepresentationLawPatterns } from "./rules/representation-law";
 import { checkStealthMarketingPatterns } from "./rules/stealth-marketing";
+import { EEATValidator } from "./rules/eeat-validation";
 import { hasPRDisclosure, insertPRDisclosure } from "./templates/pr-disclosure";
+import type { Article } from "@/types/content";
 import type {
   Category,
   CheckerOptions,
@@ -493,6 +495,48 @@ export class ComplianceChecker {
         severity: v.severity,
         tip: tipsTemplate[v.type] ?? "コンプライアンス違反が検出されました。修正テキストを参考に表現を変更してください。",
       }));
+  }
+  /**
+   * テキストと記事データの両方を使ったコンプライアンスチェック（E-E-A-T スコアリング付き）
+   *
+   * 通常の check() に加え、Article データを使った E-E-A-T バリデーションを実行する。
+   * check() の後方互換性を保ちつつ、記事データが利用可能な場合に拡張チェックを行う。
+   *
+   * @param text チェック対象テキスト
+   * @param article 記事データ（E-E-A-T 評価用）
+   * @param options オプション
+   * @returns E-E-A-T スコアを含むコンプライアンス結果
+   *
+   * @example
+   * ```ts
+   * const checker = new ComplianceChecker();
+   * const result = checker.checkWithArticle(article.content, article);
+   * console.log(result.eeatScore?.total); // 75
+   * ```
+   */
+  checkWithArticle(
+    text: string,
+    article: Article,
+    options?: Partial<CheckerOptions>
+  ): ComplianceResult {
+    // 通常のコンプライアンスチェックを実行
+    const result = this.check(text, options);
+
+    // E-E-A-T バリデーションを実行
+    const eeatValidator = new EEATValidator();
+    const eeatScore = eeatValidator.validate(article);
+
+    return {
+      ...result,
+      eeatScore: {
+        total: eeatScore.total,
+        experience: eeatScore.experience,
+        expertise: eeatScore.expertise,
+        authoritativeness: eeatScore.authoritativeness,
+        trustworthiness: eeatScore.trustworthiness,
+        details: eeatScore.details,
+      },
+    };
   }
 }
 
