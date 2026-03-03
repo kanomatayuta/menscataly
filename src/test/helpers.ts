@@ -1,7 +1,11 @@
 /**
  * テストヘルパー: モックファクトリ
- * microCMS / Supabase のテスト用スタブを生成する
+ * microCMS / Supabase / Phase2 型のテスト用スタブを生成する
  */
+
+import type { AspProgram, ItpMitigationConfig } from '@/types/asp-config'
+import type { ArticleReviewItem, BatchGenerationJob, MonitoringAlert, RevenueSummary } from '@/types/admin'
+import type { BatchGenerationProgress, GenerationCostRecord, KeywordTarget } from '@/types/batch-generation'
 
 // =============================================================================
 // microCMS モックファクトリ
@@ -121,4 +125,179 @@ export function createMockSupabaseQuery<T>(data: T[], error: null | Error = null
   };
 
   return query;
+}
+
+// =============================================================================
+// Phase 2: ASP / Admin / Batch モックファクトリ
+// =============================================================================
+
+/**
+ * ASPプログラムモックを生成する
+ */
+export function createMockAspProgram(overrides?: Partial<AspProgram>): AspProgram {
+  return {
+    id: 'asp-001',
+    aspName: 'afb',
+    programName: 'AGAクリニック テスト',
+    programId: 'afb-aga-001',
+    category: 'aga',
+    affiliateUrl: 'https://t.afb.ne.jp/test',
+    rewardAmount: 15000,
+    rewardType: 'fixed',
+    approvalRate: 45,
+    epc: 120,
+    itpSupport: true,
+    cookieDuration: 30,
+    isActive: true,
+    recommendedAnchors: ['AGAクリニックの詳細を見る'],
+    landingPageUrl: 'https://example.com/aga',
+    ...overrides,
+  }
+}
+
+/**
+ * バッチ生成ジョブモックを生成する
+ */
+export function createMockBatchGenerationJob(overrides?: Partial<BatchGenerationJob>): BatchGenerationJob {
+  return {
+    id: 'job-001',
+    status: 'queued',
+    totalKeywords: 5,
+    completedCount: 0,
+    failedCount: 0,
+    startedAt: '2026-03-01T00:00:00Z',
+    completedAt: null,
+    totalCostUsd: 0,
+    createdBy: 'admin',
+    errorMessages: [],
+    ...overrides,
+  }
+}
+
+/**
+ * 記事レビューアイテムモックを生成する
+ */
+export function createMockArticleReviewItem(overrides?: Partial<ArticleReviewItem>): ArticleReviewItem {
+  return {
+    id: 'review-001',
+    articleId: 'article-001',
+    microcmsId: 'mc-001',
+    title: 'AGA治療の基礎知識',
+    slug: 'aga-basics',
+    category: 'aga',
+    complianceScore: 96,
+    status: 'pending',
+    authorName: 'MENS CATALY 編集部',
+    generatedAt: '2026-03-01T00:00:00Z',
+    reviewedAt: null,
+    reviewedBy: null,
+    reviewNotes: null,
+    ...overrides,
+  }
+}
+
+/**
+ * モニタリングアラートモックを生成する
+ */
+export function createMockMonitoringAlert(overrides?: Partial<MonitoringAlert>): MonitoringAlert {
+  return {
+    id: 'alert-001',
+    type: 'pipeline_failure',
+    severity: 'warning',
+    status: 'active',
+    title: 'Pipeline step failed',
+    message: 'fetch-trends step failed after 3 retries',
+    metadata: {},
+    createdAt: '2026-03-01T00:00:00Z',
+    acknowledgedAt: null,
+    resolvedAt: null,
+    ...overrides,
+  }
+}
+
+/**
+ * 収益サマリモックを生成する
+ */
+export function createMockRevenueSummary(overrides?: Partial<RevenueSummary>): RevenueSummary {
+  return {
+    aspName: 'afb',
+    programCount: 4,
+    totalClicks: 500,
+    totalConversions: 5,
+    totalRevenue: 50000,
+    conversionRate: 1.0,
+    period: { startDate: '2026-02-01', endDate: '2026-03-01' },
+    ...overrides,
+  }
+}
+
+/**
+ * バッチ生成進捗モックを生成する
+ */
+export function createMockBatchGenerationProgress(overrides?: Partial<BatchGenerationProgress>): BatchGenerationProgress {
+  return {
+    jobId: 'job-001',
+    status: 'running',
+    totalKeywords: 10,
+    completedCount: 3,
+    failedCount: 0,
+    inProgressCount: 2,
+    progress: [],
+    totalCostUsd: 0.15,
+    estimatedRemainingMs: 60000,
+    startedAt: '2026-03-01T00:00:00Z',
+    updatedAt: '2026-03-01T00:05:00Z',
+    ...overrides,
+  }
+}
+
+/**
+ * 生成コストレコードモックを生成する
+ */
+export function createMockGenerationCostRecord(overrides?: Partial<GenerationCostRecord>): GenerationCostRecord {
+  return {
+    id: 'cost-001',
+    jobId: 'job-001',
+    articleId: 'article-001',
+    costType: 'article_generation',
+    inputTokens: 1500,
+    outputTokens: 4000,
+    costUsd: 0.05,
+    model: 'claude-sonnet-4-6',
+    createdAt: '2026-03-01T00:00:00Z',
+    ...overrides,
+  }
+}
+
+/**
+ * キーワードターゲットモックを生成する
+ */
+export function createMockKeywordTarget(overrides?: Partial<KeywordTarget>): KeywordTarget {
+  return {
+    id: 'kw-001',
+    keyword: 'AGA治療 おすすめ',
+    subKeywords: ['AGA クリニック', 'AGA 費用'],
+    category: 'aga',
+    priority: 'high',
+    searchVolume: 5400,
+    difficulty: 45,
+    targetAudience: '20代〜40代男性',
+    tone: 'informative',
+    targetLength: 3000,
+    ...overrides,
+  }
+}
+
+/**
+ * ITPミティゲーション設定モックを生成する
+ */
+export function createMockItpMitigationConfig(overrides?: Partial<ItpMitigationConfig>): ItpMitigationConfig {
+  return {
+    aspName: 'afb',
+    scriptUrl: 'https://t.afb.ne.jp/itp.js',
+    scriptAttributes: { 'data-asp': 'afb', async: 'true' },
+    lazyLoad: true,
+    sameSiteCookie: 'None',
+    ...overrides,
+  }
 }

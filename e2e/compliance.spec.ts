@@ -95,4 +95,21 @@ test.describe('P0: アフィリリンク確認', () => {
       expect(rel).toContain('noopener');
     }
   });
+
+  test('ASPアフィリエイトリンクにrel="sponsored"が設定されていること', async ({ page }) => {
+    await page.goto('/articles/aga-treatment-guide');
+
+    // ASPドメインパターン
+    const aspPatterns = ['px.a8.net', 't.afb.ne.jp', 'h.accesstrade.net', 'ck.jp.ap.valuecommerce.com', 't.felmat.net'];
+
+    const allLinks = await page.locator('a[href]').all();
+    for (const link of allLinks) {
+      const href = await link.getAttribute('href') ?? '';
+      const isAffiliate = aspPatterns.some(pattern => href.includes(pattern));
+      if (isAffiliate) {
+        const rel = await link.getAttribute('rel') ?? '';
+        expect(rel, `Affiliate link ${href} is missing rel="sponsored"`).toContain('sponsored');
+      }
+    }
+  });
 });
