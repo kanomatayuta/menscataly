@@ -9,7 +9,7 @@ import type { ContentCategory } from './content'
 // ASPプログラム
 // ============================================================
 
-export type AspName = 'afb' | 'a8' | 'accesstrade' | 'valuecommerce' | 'felmat'
+export type AspName = 'afb' | 'a8' | 'accesstrade' | 'valuecommerce' | 'felmat' | 'moshimo'
 
 export interface AspProgram {
   id: string

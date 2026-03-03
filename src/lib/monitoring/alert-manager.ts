@@ -24,14 +24,20 @@ const inMemoryAlerts = new Map<string, MonitoringAlert>()
 export class AlertManager {
   /**
    * 新しいアラートを作成する
+   * @param params アラートパラメータ
+   * @param options オプション設定
+   * @param options.skipNotification true の場合、外部通知を送信しない（バッチ操作時に使用）
    */
-  async createAlert(params: {
-    type: AlertType
-    severity: AlertSeverity
-    title: string
-    message: string
-    metadata?: Record<string, unknown>
-  }): Promise<MonitoringAlert> {
+  async createAlert(
+    params: {
+      type: AlertType
+      severity: AlertSeverity
+      title: string
+      message: string
+      metadata?: Record<string, unknown>
+    },
+    options?: { skipNotification?: boolean }
+  ): Promise<MonitoringAlert> {
     const alert: MonitoringAlert = {
       id: randomUUID(),
       type: params.type,
@@ -83,6 +89,14 @@ export class AlertManager {
     console.log(
       `[AlertManager] Created ${alert.severity} alert: ${alert.title}`
     )
+
+    // 外部通知を送信（skipNotification が true でない場合）
+    if (!options?.skipNotification) {
+      this.sendNotification(alert).catch((err) => {
+        console.error('[AlertManager] Notification dispatch error:', err)
+      })
+    }
+
     return alert
   }
 
@@ -212,6 +226,26 @@ export class AlertManager {
       return Array.from(inMemoryAlerts.values()).filter(
         (a) => a.status === 'active'
       )
+    }
+  }
+
+  /**
+   * NotificationRouter を使って外部通知を送信する
+   * 通知失敗はログに記録するがスローしない
+   */
+  private async sendNotification(alert: MonitoringAlert): Promise<void> {
+    try {
+      const { NotificationRouter } = await import('@/lib/notification')
+      const router = new NotificationRouter()
+      await router.notify({
+        severity: alert.severity,
+        title: alert.title,
+        message: alert.message,
+        metadata: alert.metadata,
+      })
+    } catch (err) {
+      // 通知送信失敗はアラート作成を妨げない
+      console.error('[AlertManager] Failed to send notification:', err)
     }
   }
 
