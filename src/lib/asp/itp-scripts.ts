@@ -62,6 +62,17 @@ export const ITP_TRACKING_SCRIPTS: Record<AspName, ItpMitigationConfig> = {
     lazyLoad: false,
     sameSiteCookie: 'None',
   },
+  moshimo: {
+    aspName: 'moshimo',
+    scriptUrl: 'https://af.moshimo.com/af/r/result.js',
+    scriptAttributes: {
+      'data-moshimo-id': 'moshimo-tracking',
+      'data-moshimo-itp': 'true',
+      async: 'true',
+    },
+    lazyLoad: true,
+    sameSiteCookie: 'Lax',
+  },
 }
 
 // ============================================================

@@ -276,12 +276,14 @@ export class PipelineExecutor {
 export async function getDailyPipelineSteps(): Promise<PipelineStep<any, any>[]> {
   const { fetchTrendsStep } = await import('./steps/fetch-trends')
   const { fetchAnalyticsStep } = await import('./steps/fetch-analytics')
+  const { complianceGateStep } = await import('./steps/compliance-gate')
   const { publishToMicroCMSStep } = await import('./steps/publish-to-microcms')
   const { syncToSupabaseStep } = await import('./steps/sync-to-supabase')
 
   return [
     fetchTrendsStep,
     fetchAnalyticsStep,
+    complianceGateStep,
     publishToMicroCMSStep,
     syncToSupabaseStep,
   ]
