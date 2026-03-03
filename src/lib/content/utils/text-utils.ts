@@ -188,23 +188,50 @@ export function normalizeWhitespace(text: string, maxNewlines = 2): string {
   return result.trim();
 }
 
+/** 日本語→英語のスラッグ変換用辞書 */
+const SLUG_DICT: Record<string, string> = {
+  治療: "treatment", クリニック: "clinic", 比較: "comparison",
+  費用: "cost", 相場: "price", 効果: "effect", 副作用: "side-effects",
+  おすすめ: "recommended", ランキング: "ranking", 口コミ: "reviews",
+  選び方: "guide", 原因: "causes", 対策: "solutions", 予防: "prevention",
+  オンライン: "online", 診療: "medical", 処方: "prescription",
+  薄毛: "hair-loss", 脱毛: "hair-removal", 発毛: "hair-growth",
+  育毛: "hair-care", スキンケア: "skincare", 美容: "beauty",
+  メンズ: "mens", 男性: "mens", 医療: "medical", 保険: "insurance",
+  価格: "price", 安い: "affordable", 最新: "latest", 徹底: "thorough",
+  解説: "explained", 完全: "complete", ガイド: "guide", まとめ: "summary",
+  体験: "experience", レビュー: "review", 初心者: "beginner",
+};
+
 /**
- * スラッグ生成（URLセーフな文字列に変換）
+ * スラッグ生成（URLセーフな英語文字列に変換）
+ * 日本語テキストは辞書ベースで英語に変換し、変換不能な文字は除去する
  * @param text 変換対象テキスト
  */
 export function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    // 全角英数を半角に変換
-    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
+  let result = text.toLowerCase();
+
+  // 全角英数を半角に変換
+  result = result.replace(/[Ａ-Ｚａ-ｚ０-９]/g, (c) =>
+    String.fromCharCode(c.charCodeAt(0) - 0xfee0)
+  );
+
+  // 日本語キーワードを英語に変換
+  for (const [ja, en] of Object.entries(SLUG_DICT)) {
+    result = result.replace(new RegExp(ja, "g"), ` ${en} `);
+  }
+
+  return result
     // スペース・アンダースコアをハイフンに変換
     .replace(/[\s_　]+/g, "-")
-    // URLに使えない記号を除去（日本語はそのまま）
-    .replace(/[!"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g, "")
+    // ASCII英数字とハイフン以外を除去
+    .replace(/[^a-z0-9-]/g, "")
     // 連続するハイフンを1つに
     .replace(/-{2,}/g, "-")
     // 先頭・末尾のハイフンを除去
-    .replace(/^-+|-+$/g, "");
+    .replace(/^-+|-+$/g, "")
+    // 128文字に制限
+    .slice(0, 128);
 }
 
 // ============================================================

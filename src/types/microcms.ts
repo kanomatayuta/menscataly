@@ -79,7 +79,8 @@ export interface MicroCMSArticle extends MicroCMSDate {
   category?: MicroCMSCategory  // コンテンツ参照
   article_type?: string        // セレクト: クリニック比較/ロングテール/コラム/レビュー・体験談/ガイド・まとめ
   tags?: MicroCMSTag[]         // 複数コンテンツ参照 (tags API)
-  thumbnail?: MicroCMSImage    // OGP・カード用 (1200×630px)
+  thumbnail?: MicroCMSImage    // OGP・カード用 (1200×630px) — microCMS管理画面から手動設定用
+  thumbnail_url?: string       // 外部画像URL (Cloudinary等) — AI自動生成時に使用
   // SEO
   seo_title?: string           // 検索結果用タイトル (最大60文字)
   target_keyword?: string      // メインキーワード (管理用)

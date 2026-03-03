@@ -24,7 +24,6 @@ export const DEFAULT_ARTICLE_MODEL_CONFIG: ModelConfig = {
   modelId: process.env.ANTHROPIC_MODEL_ARTICLE ?? "claude-sonnet-4-6",
   maxTokens: 8192,
   temperature: 0.7,
-  topP: 0.9,
 };
 
 /** デフォルトモデル設定: Haiku 4.5 (分析) */

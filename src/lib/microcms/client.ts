@@ -61,6 +61,7 @@ function mockToMicroCMSArticle(mock: ReturnType<typeof getMockArticleBySlug>): M
     excerpt: mock.excerpt,
     category: categoryMap[mock.category] ?? { id: mock.category, name: mock.category, slug: mock.category, createdAt: fallbackDate, updatedAt: fallbackDate, publishedAt: fallbackDate, revisedAt: fallbackDate },
     thumbnail: mock.eyecatch ? { url: mock.eyecatch.url, height: mock.eyecatch.height, width: mock.eyecatch.width } : undefined,
+    thumbnail_url: mock.eyecatch?.url,
     author_name: mock.supervisor?.name,
     tags: mock.tags?.map((t) => ({
       id: t, name: t, slug: t,

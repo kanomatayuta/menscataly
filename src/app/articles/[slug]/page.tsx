@@ -10,6 +10,11 @@ import { getArticleBySlug, getAllArticleSlugs } from "@/lib/microcms/client";
 import type { MicroCMSArticle } from "@/types/microcms";
 import type { ArticleCategory } from "@/components/ui/Badge";
 
+/** thumbnail_url (Cloudinary) → thumbnail (microCMS画像) → null のフォールバック */
+function getImageUrl(article: MicroCMSArticle): string | null {
+  return article.thumbnail_url || article.thumbnail?.url || null;
+}
+
 type Props = {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ draftKey?: string }>;
@@ -48,12 +53,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: "article",
       publishedTime: article.publishedAt,
       modifiedTime: article.updatedAt,
-      ...(article.thumbnail && {
+      ...(getImageUrl(article) && {
         images: [
           {
-            url: article.thumbnail.url,
-            width: article.thumbnail.width,
-            height: article.thumbnail.height,
+            url: getImageUrl(article)!,
+            width: article.thumbnail?.width ?? 1200,
+            height: article.thumbnail?.height ?? 630,
             alt: title,
           },
         ],
@@ -63,8 +68,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       card: "summary_large_image",
       title,
       description,
-      ...(article.thumbnail && {
-        images: [article.thumbnail.url],
+      ...(getImageUrl(article) && {
+        images: [getImageUrl(article)!],
       }),
     },
   };
@@ -119,12 +124,12 @@ function ArticleJsonLd({
             url: `${baseUrl}/logo.png`,
           },
         },
-        ...(article.thumbnail && {
+        ...(getImageUrl(article) && {
           image: {
             "@type": "ImageObject",
-            url: article.thumbnail.url,
-            width: article.thumbnail.width,
-            height: article.thumbnail.height,
+            url: getImageUrl(article)!,
+            width: article.thumbnail?.width ?? 1200,
+            height: article.thumbnail?.height ?? 630,
           },
         }),
         mainEntityOfPage: {
