@@ -1,50 +1,60 @@
 /**
  * 管理画面 型定義
- * ダッシュボード、記事レビュー、収益サマリ、アラート管理
+ * ダッシュボード、記事レビュー、モニタリング用
  */
 
-import type { ContentCategory } from './content'
-import type { PipelineStatus } from '@/lib/pipeline/types'
+import type { ContentCategory } from "@/types/content";
 
 // ============================================================
 // 記事レビュー
 // ============================================================
 
-export type ReviewStatus = 'pending' | 'approved' | 'rejected'
+/** レビューステータス */
+export type ReviewStatus = "pending" | "approved" | "rejected" | "published";
 
+/** 記事レビューアイテム */
 export interface ArticleReviewItem {
-  id: string
-  articleId: string
-  microcmsId: string | null
-  title: string
-  slug: string
-  category: ContentCategory
-  complianceScore: number
-  status: ReviewStatus
-  authorName: string
-  generatedAt: string
-  reviewedAt: string | null
-  reviewedBy: string | null
-  reviewNotes: string | null
+  contentId: string;
+  title: string;
+  slug: string;
+  category: ContentCategory;
+  reviewStatus: ReviewStatus;
+  complianceScore: number;
+  eeatScore?: number;
+  generatedAt: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+  reviewComment?: string;
+  generationCostUsd?: number;
 }
 
 // ============================================================
 // バッチ生成ジョブ
 // ============================================================
 
-export type BatchJobStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled'
+export type BatchJobStatus = "queued" | "running" | "completed" | "failed" | "cancelled";
 
 export interface BatchGenerationJob {
-  id: string
-  status: BatchJobStatus
-  totalKeywords: number
-  completedCount: number
-  failedCount: number
-  startedAt: string
-  completedAt: string | null
-  totalCostUsd: number
-  createdBy: string
-  errorMessages: string[]
+  id: string;
+  status: BatchJobStatus;
+  totalKeywords: number;
+  completedCount: number;
+  failedCount: number;
+  startedAt: string;
+  completedAt?: string;
+  totalCostUsd: number;
+  results: BatchGenerationResult[];
+}
+
+export interface BatchGenerationResult {
+  keyword: string;
+  category: ContentCategory;
+  success: boolean;
+  contentId?: string;
+  complianceScore?: number;
+  error?: string;
+  processingTimeMs?: number;
+  costUsd?: number;
 }
 
 // ============================================================
@@ -52,78 +62,58 @@ export interface BatchGenerationJob {
 // ============================================================
 
 export interface RevenueSummary {
-  aspName: string
-  programCount: number
-  totalClicks: number
-  totalConversions: number
-  totalRevenue: number
-  conversionRate: number
-  period: {
-    startDate: string
-    endDate: string
-  }
+  aspName: string;
+  monthlyConversions: number;
+  monthlyRevenueJpy: number;
+  monthOverMonthChange: number;
+  topArticles: { slug: string; title: string; conversions: number }[];
 }
 
 // ============================================================
-// モニタリングアラート
+// モニタリング & アラート
 // ============================================================
 
-export type AlertSeverity = 'critical' | 'warning' | 'info'
-export type AlertStatus = 'active' | 'acknowledged' | 'resolved'
-export type AlertType =
-  | 'pipeline_failure'
-  | 'compliance_violation'
-  | 'cost_threshold'
-  | 'performance_degradation'
-  | 'api_error'
+export type AlertLevel = "info" | "warning" | "critical";
+export type AlertStatus = "active" | "acknowledged" | "resolved";
 
 export interface MonitoringAlert {
-  id: string
-  type: AlertType
-  severity: AlertSeverity
-  status: AlertStatus
-  title: string
-  message: string
-  metadata: Record<string, unknown>
-  createdAt: string
-  acknowledgedAt: string | null
-  resolvedAt: string | null
+  id: string;
+  level: AlertLevel;
+  status: AlertStatus;
+  title: string;
+  message: string;
+  source: string;
+  createdAt: string;
+  resolvedAt?: string;
 }
 
 // ============================================================
-// ダッシュボードデータ
+// ダッシュボード統合データ
 // ============================================================
 
 export interface AdminDashboardData {
-  /** パイプライン状態 */
-  pipelineStatus: {
-    currentStatus: PipelineStatus
-    lastRunAt: string | null
-    lastRunDurationMs: number | null
-    successRate7d: number
-  }
-  /** 記事統計 */
-  articleStats: {
-    totalArticles: number
-    publishedCount: number
-    draftCount: number
-    pendingReviewCount: number
-    avgComplianceScore: number
-  }
-  /** 収益概要 */
-  revenueSummary: {
-    totalRevenue30d: number
-    totalClicks30d: number
-    totalConversions30d: number
-    topAsp: string | null
-  }
-  /** アクティブアラート */
-  activeAlerts: MonitoringAlert[]
-  /** 直近のコスト */
-  costSummary: {
-    totalCost30d: number
-    articleGenerationCost: number
-    imageGenerationCost: number
-    avgCostPerArticle: number
-  }
+  articles: {
+    total: number;
+    published: number;
+    draft: number;
+    pendingReview: number;
+    avgComplianceScore: number;
+  };
+  pipeline: {
+    status: "idle" | "running" | "error";
+    lastRunAt?: string;
+    lastRunSuccess?: boolean;
+    totalRuns: number;
+  };
+  revenue: {
+    monthlyTotalJpy: number;
+    monthOverMonthChange: number;
+    byAsp: RevenueSummary[];
+  };
+  costs: {
+    monthlyTotalUsd: number;
+    articleAvgUsd: number;
+    budgetRemainingUsd: number;
+  };
+  alerts: MonitoringAlert[];
 }
