@@ -116,6 +116,13 @@ export function getITPMitigationScripts(
       lazyLoad: false,
       sameSiteCookie: 'None',
     },
+    moshimo: {
+      aspName: 'moshimo',
+      scriptUrl: 'https://af.moshimo.com/af/r/result.js',
+      scriptAttributes: { 'data-moshimo-id': 'moshimo-tracking' },
+      lazyLoad: true,
+      sameSiteCookie: 'Lax',
+    },
   }
 
   const uniqueNames = [...new Set(aspNames)]
