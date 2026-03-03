@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { ArticleListContent } from "./ArticleListContent";
 
-// TODO: microCMS接続後は src/lib/microcms/ のクライアントに差し替える
-
 export const metadata: Metadata = {
   title: "記事一覧",
   description:
@@ -12,6 +10,7 @@ export const metadata: Metadata = {
 
 type SearchParams = Promise<{
   category?: string;
+  page?: string;
 }>;
 
 type Props = {

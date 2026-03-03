@@ -11,6 +11,60 @@ import {
   type MicroCMSListResponse,
 } from 'microcms-js-sdk'
 import type { MicroCMSArticle, MicroCMSCategory, MicroCMSArticleQueries } from '@/types/microcms'
+import {
+  MOCK_ARTICLES,
+  getArticlesByCategory as getMockArticlesByCategory,
+  getArticleBySlug as getMockArticleBySlug,
+} from '@/lib/mock/articles'
+import type { ArticleCategory } from '@/components/ui/Badge'
+
+// ============================================================
+// 環境変数チェック
+// ============================================================
+
+export function isMicroCMSConfigured(): boolean {
+  return !!(process.env.MICROCMS_SERVICE_DOMAIN && process.env.MICROCMS_API_KEY)
+}
+
+// ============================================================
+// モックデータ → MicroCMSArticle 変換ヘルパー
+// ============================================================
+
+function mockToMicroCMSArticle(mock: ReturnType<typeof getMockArticleBySlug>): MicroCMSArticle | null {
+  if (!mock) return null
+
+  // Next.js 16 cacheComponents では new Date() がプリレンダリング時に禁止されるため
+  // mock の publishedAt をフォールバック日時として使用する
+  const fallbackDate = mock.publishedAt
+  const makeCat = (id: string, name: string) => ({
+    id, name, slug: id, createdAt: fallbackDate, updatedAt: fallbackDate,
+    publishedAt: fallbackDate, revisedAt: fallbackDate,
+  })
+
+  const categoryMap: Record<string, ReturnType<typeof makeCat>> = {
+    aga: makeCat('aga', 'AGA治療'),
+    'hair-removal': makeCat('hair-removal', '医療脱毛'),
+    skincare: makeCat('skincare', 'メンズスキンケア'),
+    ed: makeCat('ed', 'ED治療'),
+  }
+
+  return {
+    id: mock.slug,
+    createdAt: mock.publishedAt,
+    updatedAt: mock.updatedAt ?? mock.publishedAt,
+    publishedAt: mock.publishedAt,
+    revisedAt: mock.updatedAt ?? mock.publishedAt,
+    title: mock.title,
+    slug: mock.slug,
+    content: mock.content,
+    excerpt: mock.excerpt,
+    category: categoryMap[mock.category] ?? { id: mock.category, name: mock.category, slug: mock.category, createdAt: fallbackDate, updatedAt: fallbackDate, publishedAt: fallbackDate, revisedAt: fallbackDate },
+    thumbnail: mock.eyecatch ? { url: mock.eyecatch.url, height: mock.eyecatch.height, width: mock.eyecatch.width } : undefined,
+    author_name: mock.supervisor?.name,
+    tags: mock.tags,
+    status: 'published',
+  }
+}
 
 // ============================================================
 // クライアント初期化
@@ -50,6 +104,16 @@ const ENDPOINTS = {
 export async function getArticles(
   params: MicroCMSArticleQueries = {}
 ): Promise<MicroCMSListResponse<MicroCMSArticle>> {
+  // 環境変数未設定時はモックデータにフォールバック
+  if (!isMicroCMSConfigured()) {
+    const mocks = getMockArticlesByCategory(params.category as ArticleCategory | undefined)
+    const limit = params.limit ?? 10
+    const offset = params.offset ?? 0
+    const sliced = mocks.slice(offset, offset + limit)
+    const contents = sliced.map((m) => mockToMicroCMSArticle(m)).filter((a): a is MicroCMSArticle => a !== null)
+    return { contents, totalCount: mocks.length, offset, limit }
+  }
+
   const client = getMicroCMSClient()
 
   // category クエリを microCMS filters 形式に変換
@@ -84,15 +148,26 @@ export async function getArticles(
  * microCMS では slug フィールドでフィルタして先頭1件を返す
  * @param slug - 記事スラッグ
  */
-export async function getArticleBySlug(slug: string): Promise<MicroCMSArticle | null> {
+export async function getArticleBySlug(slug: string, draftKey?: string): Promise<MicroCMSArticle | null> {
+  // 環境変数未設定時はモックデータにフォールバック
+  if (!isMicroCMSConfigured()) {
+    const mock = getMockArticleBySlug(slug)
+    return mock ? mockToMicroCMSArticle(mock) : null
+  }
+
   const client = getMicroCMSClient()
+
+  const queries: MicroCMSQueries = {
+    filters: `slug[equals]${slug}`,
+    limit: 1,
+  }
+  if (draftKey) {
+    queries.draftKey = draftKey
+  }
 
   const response = await client.getList<MicroCMSArticle>({
     endpoint: ENDPOINTS.articles,
-    queries: {
-      filters: `slug[equals]${slug}`,
-      limit: 1,
-    },
+    queries,
   })
 
   return response.contents[0] ?? null
@@ -118,47 +193,52 @@ export async function getArticleById(
   return article
 }
 
+/**
+ * 全記事のスラッグ一覧を取得する (generateStaticParams 用)
+ */
+export async function getAllArticleSlugs(): Promise<string[]> {
+  if (!isMicroCMSConfigured()) {
+    return MOCK_ARTICLES.map((a) => a.slug)
+  }
+  const client = getMicroCMSClient()
+  const response = await client.getList<MicroCMSArticle>({
+    endpoint: ENDPOINTS.articles,
+    queries: { fields: 'id,slug', limit: 100, orders: '-publishedAt' },
+  })
+  return response.contents.map((a) => a.slug ?? a.id)
+}
+
 // ============================================================
 // カテゴリ API
 // ============================================================
 
-/**
- * カテゴリ一覧を取得する
- * @param params - クエリパラメータ
- */
 export async function getCategories(
   params: MicroCMSQueries = {}
 ): Promise<MicroCMSListResponse<MicroCMSCategory>> {
-  const client = getMicroCMSClient()
-
-  const queries: MicroCMSQueries = {
-    limit: 100,
-    orders: 'display_order',
-    ...params,
+  if (!isMicroCMSConfigured()) {
+    const ts = '2024-01-01T00:00:00.000Z'  // 静的フォールバック（new Date() はプリレンダリング時禁止）
+    const fallback: MicroCMSCategory[] = [
+      { id: 'aga', name: 'AGA治療', slug: 'aga', display_order: 1, createdAt: ts, updatedAt: ts, publishedAt: ts, revisedAt: ts },
+      { id: 'hair-removal', name: '医療脱毛', slug: 'hair-removal', display_order: 2, createdAt: ts, updatedAt: ts, publishedAt: ts, revisedAt: ts },
+      { id: 'skincare', name: 'メンズスキンケア', slug: 'skincare', display_order: 3, createdAt: ts, updatedAt: ts, publishedAt: ts, revisedAt: ts },
+      { id: 'ed', name: 'ED治療', slug: 'ed', display_order: 4, createdAt: ts, updatedAt: ts, publishedAt: ts, revisedAt: ts },
+    ]
+    return { contents: fallback, totalCount: fallback.length, offset: 0, limit: 100 }
   }
-
-  const response = await client.getList<MicroCMSCategory>({
-    endpoint: ENDPOINTS.categories,
-    queries,
-  })
-
-  return response
+  const client = getMicroCMSClient()
+  const queries: MicroCMSQueries = { limit: 100, orders: 'display_order', ...params }
+  return await client.getList<MicroCMSCategory>({ endpoint: ENDPOINTS.categories, queries })
 }
 
-/**
- * スラッグでカテゴリを1件取得する
- * @param slug - カテゴリスラッグ
- */
 export async function getCategoryBySlug(slug: string): Promise<MicroCMSCategory | null> {
+  if (!isMicroCMSConfigured()) {
+    const categories = await getCategories()
+    return categories.contents.find((c) => c.slug === slug) ?? null
+  }
   const client = getMicroCMSClient()
-
   const response = await client.getList<MicroCMSCategory>({
     endpoint: ENDPOINTS.categories,
-    queries: {
-      filters: `slug[equals]${slug}`,
-      limit: 1,
-    },
+    queries: { filters: `slug[equals]${slug}`, limit: 1 },
   })
-
   return response.contents[0] ?? null
 }
