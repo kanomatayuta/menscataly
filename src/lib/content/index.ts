@@ -103,8 +103,18 @@ export {
   ASP_CONTENT_GUIDES,
   getContentGuide,
   getSafeCTAs,
+  MOSHIMO_PRODUCT_TEMPLATES,
+  MOSHIMO_LINK_TEMPLATES,
+  getMoshimoTemplate,
+  getRandomMoshimoMention,
+  getMoshimoComplianceNotes,
+  getRelatedMoshimoCategories,
 } from "./asp-content-guide";
-export type { AspContentGuide } from "./asp-content-guide";
+export type {
+  AspContentGuide,
+  MoshimoProductTemplate,
+  MoshimoProductCategory,
+} from "./asp-content-guide";
 
 // ============================================================
 // 記事生成エンジン
@@ -118,3 +128,40 @@ export { ArticleGenerator } from "./generator";
 
 export { ArticlePublisher } from "./publisher";
 export type { PublishOptions, PublishResult, PublishStatus } from "./publisher";
+
+// ============================================================
+// ヘルススコアシステム
+// ============================================================
+
+export {
+  calculateHealthScore,
+  calculateBatchHealthScores,
+  getHealthStatusLabel,
+  getHealthScoreDistribution,
+} from "./health-score";
+export type { HealthScoreInput, HealthScore } from "./health-score";
+
+// ============================================================
+// AI記事プランナー
+// ============================================================
+
+export { ArticlePlanner } from "./article-planner";
+export type {
+  DailyArticlePlan,
+  PlannedNewArticle,
+  PlannedImprovementArticle,
+  ExistingArticleInfo,
+  TrendDataInput,
+  ArticlePlannerConfig,
+} from "./article-planner";
+
+// ============================================================
+// 自動非公開システム
+// ============================================================
+
+export { scanAndDepublish, checkShouldDepublish } from "./auto-depublish";
+export type {
+  DepublishCandidate,
+  DepublishResult,
+  AutoDepublishConfig,
+} from "./auto-depublish";

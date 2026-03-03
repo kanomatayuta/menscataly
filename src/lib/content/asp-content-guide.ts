@@ -2,6 +2,7 @@
  * ASPコンテンツガイド
  * カテゴリ別のアフィリエイト記事作成ガイドライン
  * 自然な文脈でのサービス言及、コンプライアンス準拠CTAテンプレート
+ * もしもアフィリエイト (Amazon/楽天) 物販レビューテンプレート含む
  */
 
 import type { ContentCategory } from '@/types/content'
@@ -21,6 +22,27 @@ export interface AspContentGuide {
   /** 使用禁止フレーズ */
   forbiddenPhrases: string[]
 }
+
+/** もしもアフィリエイト商品レビューテンプレート */
+export interface MoshimoProductTemplate {
+  /** テンプレートタイプ */
+  type: 'amazon' | 'rakuten' | 'amazon_rakuten'
+  /** 自然な言及テンプレート */
+  mentionTemplates: string[]
+  /** レビュー記事テンプレート */
+  reviewTemplates: string[]
+  /** 比較記事テンプレート */
+  comparisonTemplates: string[]
+  /** コンプライアンス注記 */
+  complianceNotes: string[]
+}
+
+/** もしもアフィリエイト商品カテゴリ */
+export type MoshimoProductCategory =
+  | 'aga_supplement'    // AGA関連サプリメント・シャンプー
+  | 'skincare_product'  // スキンケア商品
+  | 'grooming_tool'     // グルーミングツール
+  | 'health_supplement' // 健康サプリメント
 
 // ============================================================
 // カテゴリ別ガイド
@@ -188,6 +210,147 @@ export const ASP_CONTENT_GUIDES: Record<ContentCategory, AspContentGuide> = {
 }
 
 // ============================================================
+// もしもアフィリエイト (Amazon/楽天) コンテンツガイド
+// ============================================================
+
+/**
+ * もしもアフィリエイト商品レビュー用テンプレート
+ * Amazon・楽天の商品紹介を自然な文脈で記事に組み込むためのガイド
+ */
+export const MOSHIMO_PRODUCT_TEMPLATES: Record<MoshimoProductCategory, MoshimoProductTemplate> = {
+  // =========================================================
+  // AGA関連商品（育毛シャンプー・サプリ等）
+  // =========================================================
+  aga_supplement: {
+    type: 'amazon_rakuten',
+    mentionTemplates: [
+      'AGAクリニックでの治療と併せて、日常ケアとして{商品名}を使用している方も増えています。',
+      '自宅でのスカルプケアには、{商品名}のような{成分}配合のシャンプーが選択肢の一つです。',
+      '頭皮環境の改善を目的として、{商品名}を日々のケアに取り入れる方もいます。',
+      'サプリメントでの栄養補助として、{商品名}が口コミでも話題になっています。',
+      '医師の治療と並行して使用できるスカルプケア商品として、{商品名}があります。',
+    ],
+    reviewTemplates: [
+      '### {商品名}の使用感レビュー\n\n実際に{使用期間}使用した上での所感を共有します。※個人の感想であり、効果を保証するものではありません。',
+      '### {商品名}のメリット・デメリット\n\n- 使い心地: {評価}\n- コスパ: {評価}\n- 成分: {主要成分}\n\n※使用感には個人差があります。',
+    ],
+    comparisonTemplates: [
+      '### スカルプケア商品比較\n\n| 商品名 | 価格(税込) | 主要成分 | 特徴 |\n|--------|-----------|---------|------|\n| {商品A} | {価格A}円 | {成分A} | {特徴A} |\n| {商品B} | {価格B}円 | {成分B} | {特徴B} |\n\n※価格は{調査日}時点のものです。',
+    ],
+    complianceNotes: [
+      '※サプリメントは医薬品ではありません。AGA治療には専門医の受診をお勧めします',
+      '※効果・効能を保証するものではありません',
+      '※価格は{調査日}時点のAmazon/楽天市場での販売価格です',
+      '※本記事にはアフィリエイト広告が含まれます',
+    ],
+  },
+
+  // =========================================================
+  // スキンケア商品（化粧水・洗顔等）
+  // =========================================================
+  skincare_product: {
+    type: 'amazon_rakuten',
+    mentionTemplates: [
+      'メンズスキンケアの定番として、{商品名}は多くの男性に支持されています。',
+      '{肌悩み}が気になる方には、{成分}配合の{商品名}が選択肢になります。',
+      'コスパの良いメンズ化粧水として、{商品名}は口コミ評価も安定しています。',
+      'ドラッグストアで手軽に購入できる{商品名}は、スキンケア初心者にも使いやすいと評判です。',
+      'Amazon・楽天市場で人気の高い{商品名}は、{特徴}が特長です。',
+    ],
+    reviewTemplates: [
+      '### {商品名}を実際に使ってみた感想\n\n{使用期間}使用した上でのレビューです。\n\n**テクスチャー**: {評価}\n**保湿力**: {評価}\n**コスパ**: {評価}\n\n※個人の感想であり、全ての方に同じ効果があるとは限りません。',
+    ],
+    comparisonTemplates: [
+      '### メンズ化粧水おすすめ比較表\n\n| 商品名 | 価格 | 容量 | 主要成分 | おすすめ肌質 |\n|--------|------|------|---------|------------|\n| {商品A} | {価格A}円 | {容量A}ml | {成分A} | {肌質A} |\n\n※価格は{調査日}時点のものです。最新価格は各販売サイトでご確認ください。',
+    ],
+    complianceNotes: [
+      '※化粧品の効果には個人差があります',
+      '※価格は{調査日}時点のAmazon/楽天市場での販売価格です',
+      '※本記事にはアフィリエイト広告が含まれます',
+      '※肌に合わない場合は使用を中止し、皮膚科専門医にご相談ください',
+    ],
+  },
+
+  // =========================================================
+  // グルーミングツール（電気シェーバー・トリマー等）
+  // =========================================================
+  grooming_tool: {
+    type: 'amazon_rakuten',
+    mentionTemplates: [
+      '脱毛サロンに通う前の自己処理用として、{商品名}を使っている方もいます。',
+      'メンズグルーミングツールとして、{商品名}はAmazonでも高評価を得ています。',
+      '自宅でのヒゲ・ボディケアには、{商品名}のような{特徴}の製品が便利です。',
+      'シェーバーの選び方に迷う方には、{商品名}が入門モデルとしておすすめです。',
+    ],
+    reviewTemplates: [
+      '### {商品名}のレビュー\n\n**切れ味**: {評価}\n**使いやすさ**: {評価}\n**お手入れ**: {評価}\n**価格帯**: {価格}円前後\n\n※使用感には個人差があります。',
+    ],
+    comparisonTemplates: [
+      '### メンズシェーバー・トリマー比較\n\n| 商品名 | 価格 | タイプ | 防水 | 充電時間 |\n|--------|------|--------|------|----------|\n| {商品A} | {価格A}円 | {タイプA} | {防水A} | {充電A} |\n\n※価格は{調査日}時点のものです。',
+    ],
+    complianceNotes: [
+      '※価格は{調査日}時点のAmazon/楽天市場での販売価格です',
+      '※本記事にはアフィリエイト広告が含まれます',
+    ],
+  },
+
+  // =========================================================
+  // 健康サプリメント（亜鉛・ビタミン等）
+  // =========================================================
+  health_supplement: {
+    type: 'amazon_rakuten',
+    mentionTemplates: [
+      '不足しがちな{栄養素}の補給には、{商品名}のようなサプリメントが選択肢になります。',
+      '日々の栄養バランスをサポートする{商品名}は、Amazonでもベストセラーの一つです。',
+      '男性の健康維持に欠かせない{栄養素}を手軽に摂取できる{商品名}は、継続しやすい価格帯です。',
+      '食事だけでは不足しがちな{栄養素}を{商品名}で補う方も増えています。',
+    ],
+    reviewTemplates: [
+      '### {商品名}の基本情報\n\n- **主要成分**: {成分}\n- **1日あたりの摂取目安**: {摂取量}\n- **価格**: {価格}円（{日数}日分）\n- **1日あたりのコスト**: 約{日割}円\n\n※サプリメントは医薬品ではありません。効果を保証するものではありません。',
+    ],
+    comparisonTemplates: [
+      '### {栄養素}サプリメント比較\n\n| 商品名 | 価格 | 含有量 | 日数分 | 1日コスト |\n|--------|------|--------|--------|----------|\n| {商品A} | {価格A}円 | {含有量A} | {日数A}日 | 約{コストA}円 |\n\n※価格は{調査日}時点のものです。',
+    ],
+    complianceNotes: [
+      '※サプリメントは医薬品ではなく、特定の疾病の治療・予防を目的としたものではありません',
+      '※効果・効能を保証するものではありません',
+      '※価格は{調査日}時点のAmazon/楽天市場での販売価格です',
+      '※本記事にはアフィリエイト広告が含まれます',
+      '※持病がある方・薬を服用中の方は、医師に相談の上ご利用ください',
+    ],
+  },
+}
+
+/**
+ * もしもアフィリエイト Amazon/楽天 かんたんリンク テンプレート
+ * 記事中に埋め込むHTMLテンプレート
+ */
+export const MOSHIMO_LINK_TEMPLATES = {
+  /** Amazon + 楽天 両方のボタンを表示するテンプレート */
+  dualButton: `
+<div class="moshimo-product-card" style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; margin: 16px 0;">
+  <div style="display: flex; gap: 16px; align-items: center;">
+    <img src="{imageUrl}" alt="{商品名}" width="120" height="120" style="object-fit: contain;" />
+    <div>
+      <h4 style="margin: 0 0 8px;">{商品名}</h4>
+      <p style="color: #666; font-size: 14px; margin: 0 0 12px;">{商品説明}</p>
+      <div style="display: flex; gap: 8px;">
+        <a href="{amazonUrl}" rel="sponsored noopener" target="_blank" style="background: #FF9900; color: #fff; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-size: 14px;">Amazonで見る</a>
+        <a href="{rakutenUrl}" rel="sponsored noopener" target="_blank" style="background: #BF0000; color: #fff; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-size: 14px;">楽天市場で見る</a>
+      </div>
+    </div>
+  </div>
+  <p style="font-size: 11px; color: #999; margin: 8px 0 0;">※価格は{調査日}時点のものです。最新価格は各サイトでご確認ください。</p>
+</div>`.trim(),
+
+  /** Amazon単体ボタンテンプレート */
+  amazonOnly: `<a href="{amazonUrl}" rel="sponsored noopener" target="_blank" class="moshimo-amazon-link">Amazonで{商品名}を見る</a>`,
+
+  /** 楽天単体ボタンテンプレート */
+  rakutenOnly: `<a href="{rakutenUrl}" rel="sponsored noopener" target="_blank" class="moshimo-rakuten-link">楽天市場で{商品名}を見る</a>`,
+} as const
+
+// ============================================================
 // ユーティリティ関数
 // ============================================================
 
@@ -206,4 +369,42 @@ export function getContentGuide(category: ContentCategory): AspContentGuide {
  */
 export function getSafeCTAs(category: ContentCategory): string[] {
   return ASP_CONTENT_GUIDES[category].complianceSafePhrases
+}
+
+/**
+ * もしもアフィリエイト商品テンプレートを取得する
+ * @param productCategory 商品カテゴリ
+ */
+export function getMoshimoTemplate(productCategory: MoshimoProductCategory): MoshimoProductTemplate {
+  return MOSHIMO_PRODUCT_TEMPLATES[productCategory]
+}
+
+/**
+ * もしもアフィリエイトの自然な言及テンプレートをランダムに1件取得する
+ * @param productCategory 商品カテゴリ
+ */
+export function getRandomMoshimoMention(productCategory: MoshimoProductCategory): string {
+  const templates = MOSHIMO_PRODUCT_TEMPLATES[productCategory].mentionTemplates
+  return templates[Math.floor(Math.random() * templates.length)]
+}
+
+/**
+ * もしもアフィリエイト用のコンプライアンス注記を全て取得する
+ * @param productCategory 商品カテゴリ
+ */
+export function getMoshimoComplianceNotes(productCategory: MoshimoProductCategory): string[] {
+  return MOSHIMO_PRODUCT_TEMPLATES[productCategory].complianceNotes
+}
+
+/**
+ * コンテンツカテゴリに対応するもしもアフィリエイト商品カテゴリを取得する
+ */
+export function getRelatedMoshimoCategories(category: ContentCategory): MoshimoProductCategory[] {
+  const mapping: Record<ContentCategory, MoshimoProductCategory[]> = {
+    aga: ['aga_supplement', 'health_supplement'],
+    'hair-removal': ['grooming_tool'],
+    skincare: ['skincare_product'],
+    ed: ['health_supplement'],
+  }
+  return mapping[category]
 }
