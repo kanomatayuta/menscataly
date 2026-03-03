@@ -1,123 +1,84 @@
 import { Suspense } from "react";
+import { headers } from "next/headers";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { StatCard } from "@/components/admin/StatCard";
 import { PipelineStatusCard } from "@/components/admin/PipelineStatusCard";
 import { AlertsList } from "@/components/admin/AlertsList";
-import type { MonitoringAlert } from "@/types/admin";
+import {
+  PipelineSuccessChart,
+  generateDefaultPipelineData,
+} from "@/components/admin/PipelineSuccessChart";
+import type { AdminDashboardData } from "@/types/admin";
 
 // ------------------------------------------------------------------
-// Mock data (inline — will be replaced by API calls in Phase 3)
+// Data fetching (Server Component - direct fetch to API route)
 // ------------------------------------------------------------------
 
-const MOCK_ARTICLE_STATS = {
-  totalArticles: 47,
-  publishedCount: 38,
-  draftCount: 5,
-  pendingReviewCount: 4,
-  avgComplianceScore: 94.2,
-};
+async function fetchDashboardData(): Promise<AdminDashboardData> {
+  const headersList = await headers();
+  const host = headersList.get("host") ?? "localhost:3000";
+  const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
 
-const MOCK_REVENUE = {
-  totalRevenue30d: 128500,
-  totalClicks30d: 4230,
-  totalConversions30d: 52,
-  topAsp: "afb",
-};
+  const res = await fetch(`${protocol}://${host}/api/admin/dashboard`, {
+    cache: "no-store",
+    headers: {
+      "X-Admin-Api-Key": process.env.ADMIN_API_KEY ?? "",
+    },
+  });
 
-const MOCK_COST = {
-  totalCost30d: 12.45,
-  articleGenerationCost: 8.3,
-  imageGenerationCost: 3.15,
-  avgCostPerArticle: 0.26,
-};
+  if (!res.ok) {
+    throw new Error(`Dashboard API returned ${res.status}`);
+  }
 
-const MOCK_PIPELINE = {
-  currentStatus: "idle" as const,
-  lastRunAt: "2026-03-03T06:30:00+09:00",
-  lastRunDurationMs: 84000,
-  successRate7d: 92.5,
-};
-
-const MOCK_ALERTS: MonitoringAlert[] = [
-  {
-    id: "alert-1",
-    type: "compliance_violation",
-    severity: "warning",
-    status: "active",
-    title: "Compliance score below threshold",
-    message:
-      "Article 'AGA治療の最新ガイド' has a compliance score of 78, below the 80 threshold.",
-    metadata: { articleId: "art-12", score: 78 },
-    createdAt: "2026-03-03T07:15:00+09:00",
-    acknowledgedAt: null,
-    resolvedAt: null,
-  },
-  {
-    id: "alert-2",
-    type: "cost_threshold",
-    severity: "info",
-    status: "active",
-    title: "Monthly cost approaching limit",
-    message: "AI generation costs are at 85% of the monthly budget ($12.45 / $15.00).",
-    metadata: { currentCost: 12.45, budgetLimit: 15.0 },
-    createdAt: "2026-03-02T23:00:00+09:00",
-    acknowledgedAt: null,
-    resolvedAt: null,
-  },
-  {
-    id: "alert-3",
-    type: "pipeline_failure",
-    severity: "critical",
-    status: "active",
-    title: "Pipeline step failed: image_generation",
-    message: "Ideogram API returned 503 during daily pipeline run.",
-    metadata: { stepName: "image_generation", errorCode: 503 },
-    createdAt: "2026-03-01T06:45:00+09:00",
-    acknowledgedAt: null,
-    resolvedAt: null,
-  },
-];
+  return res.json();
+}
 
 // ------------------------------------------------------------------
-// Page component
+// Sub-components (async Server Components)
 // ------------------------------------------------------------------
 
-function DashboardStats() {
+async function DashboardStats() {
+  const data = await fetchDashboardData();
+  const { articleStats, revenueSummary, costSummary } = data;
+
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <StatCard
         title="Total Articles"
-        value={MOCK_ARTICLE_STATS.totalArticles}
-        subtitle={`${MOCK_ARTICLE_STATS.publishedCount} published, ${MOCK_ARTICLE_STATS.draftCount} drafts`}
+        value={articleStats.totalArticles}
+        subtitle={`${articleStats.publishedCount} published, ${articleStats.draftCount} drafts`}
       />
       <StatCard
         title="Revenue (30d)"
-        value={`¥${MOCK_REVENUE.totalRevenue30d.toLocaleString()}`}
-        subtitle={`${MOCK_REVENUE.totalConversions30d} conversions`}
+        value={`¥${revenueSummary.totalRevenue30d.toLocaleString()}`}
+        subtitle={`${revenueSummary.totalConversions30d} conversions`}
         variant="success"
       />
       <StatCard
         title="Avg Compliance"
-        value={`${MOCK_ARTICLE_STATS.avgComplianceScore}%`}
+        value={`${articleStats.avgComplianceScore}%`}
         subtitle="Target: 95%"
         variant={
-          MOCK_ARTICLE_STATS.avgComplianceScore >= 95
+          articleStats.avgComplianceScore >= 95
             ? "success"
-            : MOCK_ARTICLE_STATS.avgComplianceScore >= 80
+            : articleStats.avgComplianceScore >= 80
               ? "warning"
               : "danger"
         }
       />
       <StatCard
         title="AI Cost (30d)"
-        value={`$${MOCK_COST.totalCost30d.toFixed(2)}`}
-        subtitle={`$${MOCK_COST.avgCostPerArticle.toFixed(2)} per article`}
+        value={`$${costSummary.totalCost30d.toFixed(2)}`}
+        subtitle={`$${costSummary.avgCostPerArticle.toFixed(2)} per article`}
       />
     </div>
   );
 }
 
-function DashboardPipelineAndAlerts() {
+async function DashboardPipelineAndAlerts() {
+  const data = await fetchDashboardData();
+  const { pipelineStatus, activeAlerts } = data;
+
   return (
     <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
       {/* Pipeline status */}
@@ -126,10 +87,16 @@ function DashboardPipelineAndAlerts() {
           Pipeline
         </h2>
         <PipelineStatusCard
-          status={MOCK_PIPELINE.currentStatus}
-          lastRunAt={MOCK_PIPELINE.lastRunAt}
-          successRate={MOCK_PIPELINE.successRate7d}
+          status={pipelineStatus.currentStatus}
+          lastRunAt={pipelineStatus.lastRunAt}
+          successRate={pipelineStatus.successRate7d}
         />
+        <div className="mt-4">
+          <h3 className="mb-2 text-sm font-medium text-neutral-600">
+            Success Rate (7 days)
+          </h3>
+          <PipelineSuccessChart data={generateDefaultPipelineData()} />
+        </div>
       </div>
 
       {/* Alerts */}
@@ -137,13 +104,16 @@ function DashboardPipelineAndAlerts() {
         <h2 className="mb-3 text-lg font-semibold text-neutral-800">
           Active Alerts
         </h2>
-        <AlertsList alerts={MOCK_ALERTS} />
+        <AlertsList alerts={activeAlerts} />
       </div>
     </div>
   );
 }
 
-function DashboardCosts() {
+async function DashboardCosts() {
+  const data = await fetchDashboardData();
+  const { costSummary, articleStats } = data;
+
   return (
     <div className="mt-6">
       <h2 className="mb-3 text-lg font-semibold text-neutral-800">
@@ -152,24 +122,28 @@ function DashboardCosts() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
           title="Article Generation"
-          value={`$${MOCK_COST.articleGenerationCost.toFixed(2)}`}
-          subtitle={`${((MOCK_COST.articleGenerationCost / MOCK_COST.totalCost30d) * 100).toFixed(0)}% of total`}
+          value={`$${costSummary.articleGenerationCost.toFixed(2)}`}
+          subtitle={`${costSummary.totalCost30d > 0 ? ((costSummary.articleGenerationCost / costSummary.totalCost30d) * 100).toFixed(0) : 0}% of total`}
         />
         <StatCard
           title="Image Generation"
-          value={`$${MOCK_COST.imageGenerationCost.toFixed(2)}`}
-          subtitle={`${((MOCK_COST.imageGenerationCost / MOCK_COST.totalCost30d) * 100).toFixed(0)}% of total`}
+          value={`$${costSummary.imageGenerationCost.toFixed(2)}`}
+          subtitle={`${costSummary.totalCost30d > 0 ? ((costSummary.imageGenerationCost / costSummary.totalCost30d) * 100).toFixed(0) : 0}% of total`}
         />
         <StatCard
           title="Pending Review"
-          value={MOCK_ARTICLE_STATS.pendingReviewCount}
+          value={articleStats.pendingReviewCount}
           subtitle="Articles awaiting review"
-          variant={MOCK_ARTICLE_STATS.pendingReviewCount > 5 ? "warning" : "default"}
+          variant={articleStats.pendingReviewCount > 5 ? "warning" : "default"}
         />
       </div>
     </div>
   );
 }
+
+// ------------------------------------------------------------------
+// Page component
+// ------------------------------------------------------------------
 
 export default function AdminDashboardPage() {
   return (

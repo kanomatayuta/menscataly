@@ -7,7 +7,10 @@ interface AlertsListProps {
   alerts: MonitoringAlert[];
 }
 
-const SEVERITY_STYLES: Record<AlertSeverity, { bg: string; text: string; dot: string }> = {
+const SEVERITY_STYLES: Record<
+  AlertSeverity,
+  { bg: string; text: string; dot: string }
+> = {
   critical: {
     bg: "bg-red-50 border-red-200",
     text: "text-red-800",
@@ -27,19 +30,45 @@ const SEVERITY_STYLES: Record<AlertSeverity, { bg: string; text: string; dot: st
 
 export function AlertsList({ alerts: initialAlerts }: AlertsListProps) {
   const [alerts, setAlerts] = useState(initialAlerts);
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
 
-  const handleAcknowledge = (alertId: string) => {
-    setAlerts((prev) =>
-      prev.map((alert) =>
-        alert.id === alertId
-          ? {
-              ...alert,
-              status: "acknowledged" as const,
-              acknowledgedAt: new Date().toISOString(),
-            }
-          : alert,
-      ),
-    );
+  const handleAcknowledge = async (alertId: string) => {
+    // Mark as pending to show loading state
+    setPendingIds((prev) => new Set(prev).add(alertId));
+
+    try {
+      const res = await fetch("/api/admin/alerts", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alertId, action: "acknowledge" }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to acknowledge alert");
+      }
+
+      // Update local state on success
+      setAlerts((prev) =>
+        prev.map((alert) =>
+          alert.id === alertId
+            ? {
+                ...alert,
+                status: "acknowledged" as const,
+                acknowledgedAt: new Date().toISOString(),
+              }
+            : alert,
+        ),
+      );
+    } catch (error) {
+      console.error("Failed to acknowledge alert:", error);
+      // Could add toast notification here
+    } finally {
+      setPendingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(alertId);
+        return next;
+      });
+    }
   };
 
   if (alerts.length === 0) {
@@ -54,6 +83,7 @@ export function AlertsList({ alerts: initialAlerts }: AlertsListProps) {
     <div className="space-y-3">
       {alerts.map((alert) => {
         const styles = SEVERITY_STYLES[alert.severity];
+        const isPending = pendingIds.has(alert.id);
         return (
           <div
             key={alert.id}
@@ -81,9 +111,10 @@ export function AlertsList({ alerts: initialAlerts }: AlertsListProps) {
                 <button
                   type="button"
                   onClick={() => handleAcknowledge(alert.id)}
-                  className="flex-shrink-0 rounded-md border border-neutral-300 bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+                  disabled={isPending}
+                  className="flex-shrink-0 rounded-md border border-neutral-300 bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Acknowledge
+                  {isPending ? "..." : "Acknowledge"}
                 </button>
               )}
               {alert.status === "acknowledged" && (
