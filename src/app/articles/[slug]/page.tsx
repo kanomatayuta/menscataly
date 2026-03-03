@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { draftMode } from "next/headers";
 import { Badge } from "@/components/ui/Badge";
 import { PRDisclosure } from "@/components/compliance/PRDisclosure";
+import { AspTrackingScripts } from "@/components/tracking/AspTrackingScripts";
 import { getArticleBySlug, getAllArticleSlugs } from "@/lib/microcms/client";
 import type { MicroCMSArticle } from "@/types/microcms";
 import type { ArticleCategory } from "@/components/ui/Badge";
@@ -435,6 +436,11 @@ async function ArticleContent({
           </svg>
         </Link>
       </nav>
+
+      {/* ASP Tracking Scripts (ITP対応) */}
+      <Suspense fallback={null}>
+        <AspTrackingScripts aspNames={["afb", "a8"]} category={category} />
+      </Suspense>
     </>
   );
 }
