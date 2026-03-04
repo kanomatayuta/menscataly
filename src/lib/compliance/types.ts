@@ -3,7 +3,7 @@
  * 薬機法第66条・67条、景表法、ステマ規制対応
  */
 
-export type Category = "aga" | "hair_removal" | "skincare" | "ed" | "column" | "common";
+export type Category = "aga" | "hair_removal" | "skincare" | "ed" | "supplement" | "column" | "common";
 
 export type ViolationType =
   | "pharmaceutical_law"  // 薬機法第66条・67条

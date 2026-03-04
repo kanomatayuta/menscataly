@@ -470,3 +470,131 @@ export function getFAQThemes(category: string): string[] {
   const mapped = mapFAQCategory(category)
   return FAQ_TEMPLATES[mapped]?.themes ?? []
 }
+
+// ============================================================
+// FAQ薬機法チェック統合
+// ============================================================
+
+import { ComplianceChecker } from '@/lib/compliance/checker'
+import type { ComplianceResult } from '@/lib/compliance/types'
+
+/** FAQ薬機法チェック結果 */
+export interface FAQComplianceResult {
+  /** FAQ生成結果 */
+  faqResult: FAQGenerationResult
+  /** 各FAQアイテムのコンプライアンスチェック結果 */
+  complianceResults: Array<{
+    /** FAQアイテムインデックス */
+    index: number
+    /** 質問テキスト */
+    question: string
+    /** 回答のコンプライアンスチェック結果 */
+    result: ComplianceResult
+  }>
+  /** 全体のコンプライアンススコア（平均） */
+  overallScore: number
+  /** 全体が準拠しているか */
+  isCompliant: boolean
+  /** 違反を含むFAQの件数 */
+  violationCount: number
+}
+
+/**
+ * FAQ生成後にコンプライアンスチェックを行う統合関数
+ *
+ * generateFAQsForKeyword() でFAQを生成した後、
+ * ComplianceChecker.check() で各回答の薬機法チェックを実行する。
+ *
+ * @param keyword メインキーワード
+ * @param category コンテンツカテゴリ
+ * @param checkerOptions ComplianceChecker のオプション（省略時はデフォルト）
+ * @returns FAQ生成結果 + コンプライアンスチェック結果
+ *
+ * @example
+ * ```ts
+ * const result = generateAndCheckFAQs('AGA治療', 'aga');
+ * console.log(`FAQ数: ${result.faqResult.items.length}`);
+ * console.log(`準拠率: ${result.overallScore}`);
+ * console.log(`違反FAQ数: ${result.violationCount}`);
+ * if (!result.isCompliant) {
+ *   result.complianceResults
+ *     .filter(r => !r.result.isCompliant)
+ *     .forEach(r => {
+ *       console.log(`FAQ ${r.index}: ${r.question}`);
+ *       r.result.violations.forEach(v => {
+ *         console.log(`  NG: ${v.ngText} → OK: ${v.suggestedText}`);
+ *       });
+ *     });
+ * }
+ * ```
+ */
+export function generateAndCheckFAQs(
+  keyword: string,
+  category: string,
+  checkerOptions?: { categories?: string[]; strictMode?: boolean }
+): FAQComplianceResult {
+  // 1. FAQ生成
+  const faqResult = generateFAQsForKeyword(keyword, category)
+
+  // 2. ComplianceCheckerの初期化
+  // カテゴリに応じたチェッカーオプションを設定
+  const mappedCategory = mapFAQCategory(category)
+  const defaultCategories: string[] = []
+
+  // カテゴリに対応する辞書を追加
+  switch (mappedCategory) {
+    case 'aga':
+      defaultCategories.push('aga', 'common')
+      break
+    case 'ed':
+      defaultCategories.push('ed', 'common')
+      break
+    case 'hair-removal':
+      defaultCategories.push('hair_removal', 'common')
+      break
+    case 'skincare':
+      defaultCategories.push('skincare', 'common')
+      break
+    case 'supplement':
+      defaultCategories.push('supplement', 'common')
+      break
+    default:
+      defaultCategories.push('common')
+  }
+
+  const checker = new ComplianceChecker({
+    categories: (checkerOptions?.categories ?? defaultCategories) as import('@/lib/compliance/types').Category[],
+    strictMode: checkerOptions?.strictMode ?? false,
+  })
+
+  // 3. 各FAQアイテムの回答をチェック
+  const complianceResults = faqResult.items.map((item, index) => {
+    const result = checker.check(item.answer)
+    return {
+      index,
+      question: item.question,
+      result,
+    }
+  })
+
+  // 4. 全体スコアの計算
+  const scores = complianceResults.map((r) => r.result.score)
+  const overallScore =
+    scores.length > 0
+      ? Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length)
+      : 100
+
+  const violationCount = complianceResults.filter(
+    (r) => !r.result.isCompliant
+  ).length
+
+  const isCompliant = violationCount === 0
+
+  return {
+    faqResult,
+    complianceResults,
+    overallScore,
+    isCompliant,
+    violationCount,
+  }
+}
