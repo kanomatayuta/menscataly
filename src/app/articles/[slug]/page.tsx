@@ -20,6 +20,17 @@ import { ArticleBody } from "@/components/article/ArticleBody";
  * 目次 (Table of Contents)
  * HTML内のh2/h3タグからアンカーリンク付き目次を自動生成
  */
+/**
+ * 見出しテキストからアンカー用 ID を生成する
+ * ArticleBody.tsx の headingTextToId と同一ロジック
+ */
+function headingTextToId(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\u3000-\u9fff\uff00-\uffef]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 function TableOfContents({ html }: { html: string }) {
   // h2/h3 を正規表現で抽出
   const headingRegex = /<(h[23])[^>]*(?:\s+id="([^"]*)")?[^>]*>([\s\S]*?)<\/\1>/gi;
@@ -31,7 +42,7 @@ function TableOfContents({ html }: { html: string }) {
     // HTMLタグを除去してプレーンテキスト化
     const text = match[3].replace(/<[^>]*>/g, "").trim();
     // id が既にある場合はそのまま使い、なければテキストからスラッグ生成
-    const id = match[2] || text.replace(/\s+/g, "-").toLowerCase();
+    const id = match[2] || headingTextToId(text);
     if (text) {
       headings.push({ level, text, id });
     }

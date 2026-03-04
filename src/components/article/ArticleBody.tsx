@@ -87,10 +87,7 @@ function markdownToHtml(md: string): string {
       closeBlockquote();
       const level = headingMatch[1].length; // 2, 3, or 4
       const text = inlineFormat(headingMatch[2]);
-      const id = headingMatch[2]
-        .toLowerCase()
-        .replace(/[^\w\u3000-\u9fff\uff00-\uffef]+/g, "-")
-        .replace(/^-|-$/g, "");
+      const id = headingTextToId(headingMatch[2]);
       htmlLines.push(`<h${level} id="${id}">${text}</h${level}>`);
       continue;
     }
@@ -502,6 +499,41 @@ function unwrapEmbeddedContent(content: string): string {
 }
 
 /**
+ * 見出しテキストからアンカー用 ID を生成する
+ * 日本語文字を保持し、英数字・日本語以外をハイフンに変換する。
+ * TOC (page.tsx) と ArticleBody で同一のIDを生成するための共通ロジック。
+ */
+function headingTextToId(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\u3000-\u9fff\uff00-\uffef]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+/**
+ * 見出しタグ (h2/h3/h4) に id 属性を自動付与する
+ * 目次 (TOC) のアンカーリンクが正しく機能するために必要
+ */
+function ensureHeadingIds(html: string): string {
+  return html.replace(
+    /<(h[2-4])(\s[^>]*)?>([^<]*(?:<[^/][^>]*>[^<]*<\/[^>]+>[^<]*)*)<\/\1>/gi,
+    (match, tag: string, attrs: string | undefined, inner: string) => {
+      // 既に id がある場合はそのまま
+      if (attrs && /\sid="/.test(attrs)) return match;
+
+      // テキストを抽出 (HTMLタグを除去)
+      const text = inner.replace(/<[^>]*>/g, "").trim();
+      if (!text) return match;
+
+      const id = headingTextToId(text);
+      if (!id) return match;
+
+      return `<${tag}${attrs ?? ""} id="${id}">${inner}</${tag}>`;
+    }
+  );
+}
+
+/**
  * コンテンツを適切な HTML に変換する
  */
 function normalizeContent(content: string): string {
@@ -509,21 +541,26 @@ function normalizeContent(content: string): string {
   const unwrapped = unwrapEmbeddedContent(content);
   const format = detectFormat(unwrapped);
 
+  let result: string;
   switch (format) {
     case "json":
     case "json-codeblock": {
       const html = jsonToHtml(unwrapped);
-      if (html) return html;
-      // JSON parse succeeded but wasn't article format — show as markdown
-      return markdownToHtml(unwrapped);
+      result = html ?? markdownToHtml(unwrapped);
+      break;
     }
     case "markdown":
-      return markdownToHtml(unwrapped);
+      result = markdownToHtml(unwrapped);
+      break;
     case "html":
     default:
       // HTML内にMarkdown構文が残っている場合のハイブリッド変換
-      return processHybridContent(content);
+      result = processHybridContent(content);
+      break;
   }
+
+  // 後処理: 見出しタグに id 属性を自動付与（TOCアンカーリンク対応）
+  return ensureHeadingIds(result);
 }
 
 // ============================================================
