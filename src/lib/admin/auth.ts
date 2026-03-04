@@ -128,13 +128,15 @@ export function validateAdminAuth(request: Request): AuthResult {
  * パイプラインAPIリクエストを認証する
  *
  * - PIPELINE_API_KEY が設定されている場合: ヘッダーと照合 (timing-safe)
+ * - CRON_SECRET が設定されている場合: CRON_SECRET でも認証を許可
  * - 開発環境 + PIPELINE_API_KEY 未設定: 認証をバイパス
  * - 本番環境 + PIPELINE_API_KEY 未設定: 認証失敗
  */
 export function validatePipelineAuth(request: Request): AuthResult {
   const apiKey = process.env.PIPELINE_API_KEY
+  const cronSecret = process.env.CRON_SECRET
 
-  if (!apiKey) {
+  if (!apiKey && !cronSecret) {
     if (process.env.NODE_ENV === 'development') {
       return { authorized: true }
     }
@@ -160,17 +162,58 @@ export function validatePipelineAuth(request: Request): AuthResult {
     }
   }
 
-  if (!timingSafeCompare(providedKey, apiKey)) {
-    return {
-      authorized: false,
-      error: {
-        code: 'UNAUTHORIZED',
-        message: 'Unauthorized: Invalid API key',
-      },
-    }
+  // PIPELINE_API_KEY で照合
+  if (apiKey && timingSafeCompare(providedKey, apiKey)) {
+    return { authorized: true }
   }
 
-  return { authorized: true }
+  // CRON_SECRET で照合 (Vercel Cron Jobs 用)
+  if (cronSecret && timingSafeCompare(providedKey, cronSecret)) {
+    return { authorized: true }
+  }
+
+  return {
+    authorized: false,
+    error: {
+      code: 'UNAUTHORIZED',
+      message: 'Unauthorized: Invalid API key',
+    },
+  }
+}
+
+// ============================================================
+// Cron認証
+// ============================================================
+
+/**
+ * Vercel Cron Jobs のリクエストを認証する
+ *
+ * - CRON_SECRET が設定されている場合: Authorization: Bearer <CRON_SECRET> を照合
+ * - 開発環境 + CRON_SECRET 未設定: 認証をバイパス
+ * - 本番環境 + CRON_SECRET 未設定: 認証失敗
+ */
+export function validateCronAuth(request: Request): boolean {
+  const cronSecret = process.env.CRON_SECRET
+
+  if (!cronSecret) {
+    if (process.env.NODE_ENV === 'development') {
+      return true
+    }
+    console.error('[CronAuth] CRON_SECRET is not configured')
+    return false
+  }
+
+  const authHeader = request.headers.get('Authorization')
+  if (!authHeader) {
+    return false
+  }
+
+  const match = authHeader.match(/^Bearer\s+(.+)$/i)
+  if (!match) {
+    return false
+  }
+
+  return timingSafeCompare(match[1], cronSecret)
 }
 
 // ============================================================
