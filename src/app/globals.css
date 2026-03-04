@@ -83,278 +83,1084 @@ body {
 }
 
 /* ============================================================
-   記事本文タイポグラフィ (.article-body)
-   @tailwindcss/typography を使わず、独自で prose スタイルを定義
+   記事本文スタイル (.article-body)
+   microCMS Rich Editor 全20要素対応
    ============================================================ */
 
+/* --- 基本テキスト --- */
 .article-body {
   font-size: 1rem;
   line-height: 1.85;
-  color: var(--color-neutral-800, #282828);
+  color: var(--color-neutral-800);
   word-break: break-word;
   overflow-wrap: break-word;
 }
 
-/* --- 見出し共通 --- */
-.article-body h2,
-.article-body h3,
-.article-body h4 {
-  font-weight: 700;
-  line-height: 1.4;
-  color: var(--color-neutral-900, #181818);
-}
-
-/* h2: メインセクション見出し — 左ボーダー＋背景アクセント */
-.article-body h2 {
-  font-size: 1.5rem;
-  margin-top: 3rem;
-  margin-bottom: 1.25rem;
-  padding: 0.75rem 1rem;
-  border-left: 4px solid var(--color-primary-500, #1a365d);
-  background: var(--color-primary-50, #eef2f8);
-  border-radius: 0 0.375rem 0.375rem 0;
-}
-
-/* h3: サブセクション見出し — 左ボーダー（細め） */
-.article-body h3 {
-  font-size: 1.25rem;
-  margin-top: 2.25rem;
-  margin-bottom: 1rem;
-  padding-left: 0.875rem;
-  border-left: 3px solid var(--color-accent-500, #c8a951);
-}
-
-/* h4: 小セクション見出し */
-.article-body h4 {
-  font-size: 1.125rem;
-  margin-top: 1.75rem;
-  margin-bottom: 0.75rem;
-  padding-left: 0.75rem;
-  border-left: 2px solid var(--color-neutral-300, #c8c8c8);
-}
-
-/* 最初の見出しの上マージンを除去 */
-.article-body > h2:first-child,
-.article-body > h3:first-child,
-.article-body > h4:first-child {
+.article-body > *:first-child {
   margin-top: 0;
+}
+
+.article-body > *:last-child {
+  margin-bottom: 0;
 }
 
 /* --- 段落 --- */
 .article-body p {
-  margin-bottom: 1.25rem;
+  margin-top: 0;
+  margin-bottom: 1.5em;
+  font-size: 1rem;
+  line-height: 1.85;
 }
 
-.article-body p:last-child {
-  margin-bottom: 0;
-}
+/* ============================================================
+   1. 見出し (h1-h4)
+   ============================================================ */
 
-/* --- リンク --- */
-.article-body a {
-  color: var(--color-primary-500, #1a365d);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  transition: color 0.15s ease;
-}
-
-.article-body a:hover {
-  color: var(--color-primary-400, #3363b3);
-}
-
-/* --- 太字・イタリック --- */
-.article-body strong {
+/* h2: ネイビーバナー + 左アクセントボーダー + 背景 + デコ */
+.article-body h2 {
+  position: relative;
+  margin-top: 3rem;
+  margin-bottom: 1.5rem;
+  padding: 0.85em 1em 0.85em 1.2em;
+  font-size: 1.4rem;
   font-weight: 700;
-  color: var(--color-neutral-900, #181818);
+  line-height: 1.4;
+  color: var(--color-primary-500);
+  background: linear-gradient(135deg, var(--color-primary-50) 0%, #f4f7fc 100%);
+  border-left: 5px solid var(--color-primary-500);
+  border-radius: 0 6px 6px 0;
+  box-shadow: 0 2px 6px rgba(26, 54, 93, 0.08);
 }
 
-.article-body em {
+.article-body h2::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 1.2em;
+  right: 1.2em;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--color-accent-400) 0%,
+    transparent 100%
+  );
+  border-radius: 1px;
+}
+
+/* h3: ゴールド左ボーダー + サブトル背景 */
+.article-body h3 {
+  position: relative;
+  margin-top: 2.2rem;
+  margin-bottom: 1.2rem;
+  padding: 0.55em 0.8em;
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--color-neutral-800);
+  border-left: 4px solid var(--color-accent-400);
+  background-color: transparent;
+  transition: background-color 0.2s ease;
+}
+
+.article-body h3:hover {
+  background-color: var(--color-accent-50);
+}
+
+/* h4: 薄グレー左ボーダー + コンパクト */
+.article-body h4 {
+  margin-top: 1.8rem;
+  margin-bottom: 1rem;
+  padding-left: 0.7em;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--color-neutral-700);
+  border-left: 3px solid var(--color-neutral-300);
+}
+
+/* h1 (まれだが対応) */
+.article-body h1 {
+  margin-top: 2.5rem;
+  margin-bottom: 1.5rem;
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1.3;
+  color: var(--color-primary-500);
+}
+
+/* ============================================================
+   2-3. ボールド & イタリック
+   ============================================================ */
+
+.article-body strong,
+.article-body b {
+  font-weight: 700;
+  color: var(--color-neutral-900);
+  background: linear-gradient(transparent 60%, rgba(200, 169, 81, 0.18) 60%);
+  padding: 0 2px;
+}
+
+.article-body em,
+.article-body i {
   font-style: italic;
 }
 
-/* --- リスト (ul / ol) --- */
-.article-body ul,
-.article-body ol {
-  margin-top: 0.5rem;
-  margin-bottom: 1.25rem;
-  padding-left: 1.75rem;
+/* ============================================================
+   4. アンダーライン
+   ============================================================ */
+
+.article-body u {
+  text-decoration: none;
+  background-image: linear-gradient(
+    to right,
+    var(--color-accent-400) 0%,
+    var(--color-accent-300) 100%
+  );
+  background-position: 0 1.12em;
+  background-repeat: repeat-x;
+  background-size: 100% 3px;
+  padding-bottom: 2px;
 }
 
-.article-body ul {
-  list-style-type: disc;
+/* ============================================================
+   5. 打ち消し線
+   ============================================================ */
+
+.article-body s,
+.article-body del {
+  text-decoration: line-through;
+  text-decoration-color: var(--color-neutral-400);
+  color: var(--color-neutral-400);
+  opacity: 0.75;
 }
 
-.article-body ol {
-  list-style-type: decimal;
-}
+/* ============================================================
+   6. インラインコード
+   ============================================================ */
 
-.article-body li {
-  margin-bottom: 0.375rem;
-  line-height: 1.75;
-}
-
-.article-body li::marker {
-  color: var(--color-primary-500, #1a365d);
-}
-
-.article-body ul ul,
-.article-body ol ol,
-.article-body ul ol,
-.article-body ol ul {
-  margin-top: 0.25rem;
-  margin-bottom: 0.25rem;
-}
-
-/* --- 引用 (blockquote) --- */
-.article-body blockquote {
-  margin: 1.5rem 0;
-  padding: 1rem 1.25rem;
-  border-left: 4px solid var(--color-accent-400, #d8b633);
-  background: var(--color-accent-50, #fdf8ec);
-  border-radius: 0 0.375rem 0.375rem 0;
-  color: var(--color-neutral-700, #404040);
-  font-style: italic;
-}
-
-.article-body blockquote p {
-  margin-bottom: 0.5rem;
-}
-
-.article-body blockquote p:last-child {
-  margin-bottom: 0;
-}
-
-/* --- 水平線 --- */
-.article-body hr {
-  margin: 2.5rem 0;
-  border: none;
-  border-top: 1px solid var(--color-neutral-200, #e0e0e0);
-}
-
-/* --- テーブル --- */
-.article-body table {
-  width: 100%;
-  margin: 1.5rem 0;
-  border-collapse: collapse;
-  font-size: 0.9375rem;
-}
-
-.article-body thead {
-  background: var(--color-primary-500, #1a365d);
-  color: #ffffff;
-}
-
-.article-body th {
-  padding: 0.625rem 1rem;
-  text-align: left;
-  font-weight: 600;
-  font-size: 0.875rem;
-}
-
-.article-body td {
-  padding: 0.625rem 1rem;
-  border-bottom: 1px solid var(--color-neutral-200, #e0e0e0);
-}
-
-.article-body tbody tr:nth-child(even) {
-  background: var(--color-neutral-50, #f9f9f9);
-}
-
-.article-body tbody tr:hover {
-  background: var(--color-primary-50, #eef2f8);
-}
-
-/* --- インラインコード --- */
-.article-body code {
+.article-body code:not(pre code) {
+  display: inline;
+  padding: 0.15em 0.5em;
+  font-size: 0.88em;
   font-family: var(--font-mono);
-  font-size: 0.875em;
-  padding: 0.125rem 0.375rem;
-  background: var(--color-neutral-100, #f0f0f0);
-  border-radius: 0.25rem;
-  color: var(--color-primary-600, #162d4e);
+  color: var(--color-primary-600);
+  background-color: var(--color-primary-50);
+  border: 1px solid var(--color-primary-100);
+  border-radius: 4px;
+  word-break: break-all;
 }
 
-/* --- コードブロック (pre > code) --- */
-.article-body pre {
-  margin: 1.5rem 0;
-  padding: 1rem;
-  background: var(--color-neutral-800, #282828);
-  border-radius: 0.5rem;
-  overflow-x: auto;
-}
+/* ============================================================
+   7-9. テキスト色 / フォントサイズ / テキスト揃え
+   — inline style を尊重するため上書きしない
+   ============================================================ */
 
-.article-body pre code {
-  background: none;
-  padding: 0;
-  color: var(--color-neutral-100, #f0f0f0);
-  font-size: 0.875rem;
-  line-height: 1.6;
-}
-
-/* --- 画像 --- */
-.article-body img {
-  max-width: 100%;
-  height: auto;
-  margin: 1.5rem auto;
-  border-radius: 0.5rem;
-  display: block;
-}
-
-.article-body figure {
-  margin: 1.5rem 0;
+.article-body [style*="text-align: center"],
+.article-body [style*="text-align:center"] {
   text-align: center;
 }
 
-.article-body figcaption {
-  margin-top: 0.5rem;
-  font-size: 0.875rem;
-  color: var(--color-neutral-500, #787878);
+.article-body [style*="text-align: right"],
+.article-body [style*="text-align:right"] {
+  text-align: right;
 }
 
-/* --- PR表記 (publisher.ts が付与する class) --- */
-.article-body .pr-disclosure {
-  margin-bottom: 1.5rem;
+/* ============================================================
+   10. 水平線
+   ============================================================ */
+
+.article-body hr {
+  position: relative;
+  margin: 2.5rem auto;
+  border: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-neutral-300) 20%,
+    var(--color-neutral-300) 80%,
+    transparent 100%
+  );
+}
+
+.article-body hr::before {
+  content: "\25C6";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.6rem;
+  color: var(--color-accent-400);
+  background: var(--color-background);
+  padding: 0 0.8em;
+  line-height: 1;
+}
+
+/* ============================================================
+   11. 引用 (Blockquote)
+   ============================================================ */
+
+.article-body blockquote {
+  position: relative;
+  margin: 2rem 0;
+  padding: 1.8rem 1.5rem 1.3rem 2.5rem;
+  background: linear-gradient(135deg, #fffcf5 0%, #fdf8ec 100%);
+  border-left: 4px solid var(--color-accent-400);
+  border-radius: 0 8px 8px 0;
+  font-style: normal; /* 日本語はイタリック不適 */
+  color: var(--color-neutral-700);
+  line-height: 1.8;
+}
+
+.article-body blockquote::before {
+  content: "\201C";
+  position: absolute;
+  top: 0.3rem;
+  left: 0.5rem;
+  font-size: 3rem;
+  font-family: Georgia, "Times New Roman", serif;
+  color: var(--color-accent-300);
+  line-height: 1;
+  pointer-events: none;
+}
+
+.article-body blockquote p {
+  margin-bottom: 0.8em;
+}
+
+.article-body blockquote p:last-of-type {
+  margin-bottom: 0;
+}
+
+/* 引用内の出典・参考リンク */
+.article-body blockquote cite,
+.article-body blockquote footer {
+  display: block;
+  margin-top: 0.8rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--color-accent-200);
+  font-size: 0.85rem;
+  font-style: normal;
+  color: var(--color-neutral-500);
+}
+
+.article-body blockquote cite::before,
+.article-body blockquote footer::before {
+  content: "\1F4D6\00a0";
+  font-size: 0.9em;
+}
+
+.article-body blockquote cite a,
+.article-body blockquote footer a {
+  color: var(--color-primary-500);
+  text-decoration: underline;
+  text-decoration-color: var(--color-primary-200);
+  text-underline-offset: 2px;
+}
+
+.article-body blockquote cite a:hover,
+.article-body blockquote footer a:hover {
+  color: var(--color-primary-400);
+  text-decoration-color: var(--color-primary-400);
+}
+
+/* ネスト引用 */
+.article-body blockquote blockquote {
+  margin: 1rem 0;
+  padding: 1rem 1rem 1rem 1.5rem;
+  background: rgba(255, 255, 255, 0.6);
+  border-left-width: 3px;
+}
+
+.article-body blockquote blockquote::before {
+  display: none;
+}
+
+/* ============================================================
+   12. コードブロック (pre > code)
+   ============================================================ */
+
+.article-body pre {
+  position: relative;
+  margin: 2rem 0;
+  padding: 1.2rem 1.4rem;
+  background: var(--color-neutral-900);
+  color: #e2e8f0;
+  border: 1px solid var(--color-neutral-700);
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: 0.88rem;
+  line-height: 1.7;
+  -webkit-overflow-scrolling: touch;
+}
+
+.article-body pre code {
+  display: block;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  font-family: var(--font-mono);
+  font-size: inherit;
+  color: inherit;
+  white-space: pre;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+/* ============================================================
+   13. テーブル
+   ============================================================ */
+
+.article-body .table-wrapper {
+  margin: 2rem 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 8px;
+  border: 1px solid var(--color-neutral-200);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+/* microCMS は table-wrapper なしで出力するため直接テーブルも対応 */
+.article-body table {
+  width: 100%;
+  margin: 2rem 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--color-neutral-200);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+/* table-wrapper 内にある場合は二重ボーダーを防ぐ */
+.article-body .table-wrapper table {
+  margin: 0;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+.article-body thead {
+  background: var(--color-primary-500);
+  color: #ffffff;
+}
+
+.article-body thead th {
   padding: 0.75rem 1rem;
-  background: var(--color-neutral-50, #f9f9f9);
-  border: 1px solid var(--color-neutral-200, #e0e0e0);
-  border-radius: 0.375rem;
-  font-size: 0.8125rem;
-  color: var(--color-neutral-600, #585858);
+  font-weight: 700;
+  font-size: 0.88rem;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 2px solid var(--color-primary-600);
 }
 
-/* --- リード文 (jsonToHtml が付与する class) --- */
-.article-body .article-lead {
-  font-size: 1.0625rem;
-  line-height: 1.9;
-  color: var(--color-neutral-700, #404040);
+.article-body thead th:not(:last-child) {
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.article-body tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.article-body tbody tr:nth-child(even) {
+  background-color: var(--color-neutral-50);
+}
+
+.article-body tbody tr:hover {
+  background-color: var(--color-primary-50);
+}
+
+.article-body tbody td {
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid var(--color-neutral-200);
+  text-align: left;
+  vertical-align: top;
+}
+
+.article-body tbody td:not(:last-child) {
+  border-right: 1px solid var(--color-neutral-100);
+}
+
+/* thead なしのテーブル (microCMS がヘッダ行を th で出力) */
+.article-body table th {
+  padding: 0.75rem 1rem;
+  font-weight: 700;
+  text-align: left;
+  background: var(--color-primary-500);
+  color: #ffffff;
+}
+
+/* tbody の th (行ヘッダ) */
+.article-body tbody th {
+  background: var(--color-primary-50);
+  color: var(--color-primary-600);
+  font-weight: 600;
+  border-bottom: 1px solid var(--color-neutral-200);
+}
+
+/* 数値右揃えユーティリティ */
+.article-body td[data-align="right"],
+.article-body td.text-right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* モバイル: テーブルスクロール対応 */
+@media (max-width: 640px) {
+  .article-body table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+
+  .article-body thead,
+  .article-body tbody,
+  .article-body tr {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+  }
+
+  .article-body table {
+    min-width: 500px;
+  }
+
+  .article-body thead th,
+  .article-body tbody td {
+    padding: 0.55rem 0.7rem;
+    font-size: 0.82rem;
+  }
+}
+
+/* ============================================================
+   14. 順序なしリスト (ul)
+   ============================================================ */
+
+.article-body ul {
+  margin: 1.2em 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.article-body ul > li {
+  position: relative;
+  padding-left: 1.5em;
+  margin-bottom: 0.6em;
+  line-height: 1.75;
+}
+
+.article-body ul > li::before {
+  content: "";
+  position: absolute;
+  left: 0.2em;
+  top: 0.65em;
+  width: 8px;
+  height: 8px;
+  background: var(--color-primary-500);
+  border-radius: 50%;
+}
+
+/* ネスト 2 階層 */
+.article-body ul ul > li::before {
+  background: transparent;
+  border: 2px solid var(--color-primary-300);
+  width: 7px;
+  height: 7px;
+}
+
+/* ネスト 3 階層 */
+.article-body ul ul ul > li::before {
+  background: var(--color-neutral-400);
+  border: none;
+  width: 5px;
+  height: 5px;
+  border-radius: 1px;
+}
+
+/* ============================================================
+   15. 順序ありリスト (ol)
+   ============================================================ */
+
+.article-body ol {
+  margin: 1.2em 0;
+  padding-left: 0;
+  list-style: none;
+  counter-reset: ol-counter;
+}
+
+.article-body ol > li {
+  position: relative;
+  padding-left: 2.2em;
+  margin-bottom: 0.6em;
+  line-height: 1.75;
+  counter-increment: ol-counter;
+}
+
+.article-body ol > li::before {
+  content: counter(ol-counter);
+  position: absolute;
+  left: 0;
+  top: 0.15em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6em;
+  height: 1.6em;
+  font-size: 0.82em;
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--color-primary-500);
+  border-radius: 50%;
+  line-height: 1;
+}
+
+/* ネスト ol */
+.article-body ol ol {
+  counter-reset: ol-counter-nested;
+}
+
+.article-body ol ol > li {
+  counter-increment: ol-counter-nested;
+}
+
+.article-body ol ol > li::before {
+  content: counter(ol-counter-nested);
+  background: transparent;
+  color: var(--color-primary-500);
+  border: 2px solid var(--color-primary-400);
+  font-size: 0.75em;
+}
+
+/* リスト内のネストリスト余白調整 */
+.article-body li > ul,
+.article-body li > ol {
+  margin-top: 0.4em;
+  margin-bottom: 0.4em;
+}
+
+/* ============================================================
+   16. リンク
+   ============================================================ */
+
+.article-body a {
+  color: var(--color-primary-500);
+  text-decoration: underline;
+  text-decoration-color: var(--color-primary-200);
+  text-underline-offset: 3px;
+  transition: color 0.2s ease, text-decoration-color 0.2s ease;
+}
+
+.article-body a:hover {
+  color: var(--color-primary-400);
+  text-decoration-color: var(--color-primary-400);
+}
+
+/* 外部リンクアイコン */
+.article-body a[target="_blank"]::after,
+.article-body a[rel*="noopener"]::after,
+.article-body a[rel*="external"]::after {
+  content: "\2197";
+  display: inline-block;
+  margin-left: 0.2em;
+  font-size: 0.75em;
+  vertical-align: super;
+  text-decoration: none;
+  opacity: 0.6;
+}
+
+/* 同じリンクに複数アイコン重複を防ぐ */
+.article-body a[target="_blank"][rel*="noopener"]::after {
+  content: "\2197";
+}
+
+/* アフィリエイトリンク (sponsored) — ピルバッジ風 */
+.article-body a[rel*="sponsored"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  padding: 0.15em 0.6em;
+  color: var(--color-primary-500);
+  background: var(--color-primary-50);
+  border: 1px solid var(--color-primary-200);
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.article-body a[rel*="sponsored"]:hover {
+  background: var(--color-primary-100);
+  border-color: var(--color-primary-300);
+  color: var(--color-primary-600);
+}
+
+.article-body a[rel*="sponsored"]::after {
+  content: "PR";
+  display: inline-block;
+  padding: 0.05em 0.35em;
+  font-size: 0.65em;
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--color-accent-500);
+  border-radius: 3px;
+  vertical-align: middle;
+  text-decoration: none;
+  letter-spacing: 0.05em;
+}
+
+/* ============================================================
+   17. 画像
+   ============================================================ */
+
+.article-body img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1.5rem auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  cursor: zoom-in;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.article-body img:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  transform: scale(1.005);
+}
+
+/* figure / figcaption */
+.article-body figure {
+  margin: 2rem 0;
+  text-align: center;
+}
+
+.article-body figure img {
+  margin: 0 auto 0.6rem;
+}
+
+.article-body figcaption {
+  font-size: 0.85rem;
+  color: var(--color-neutral-500);
+  line-height: 1.5;
+  text-align: center;
+  margin-top: 0.4rem;
+}
+
+/* ============================================================
+   18. ファイルダウンロードリンク
+   ============================================================ */
+
+.article-body a[download] {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.55em 1.2em;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-primary-500);
+  background: var(--color-primary-50);
+  border: 1px solid var(--color-primary-200);
+  border-radius: 6px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.article-body a[download]:hover {
+  background: var(--color-primary-100);
+  border-color: var(--color-primary-300);
+}
+
+.article-body a[download]::before {
+  content: "\2B07";
+  font-size: 1.1em;
+}
+
+.article-body a[download]::after {
+  content: none;
+}
+
+/* ============================================================
+   19. 埋め込み / iframe (YouTube, Twitter 等)
+   ============================================================ */
+
+.article-body iframe {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin: 2rem auto;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* 16:9 レスポンシブラッパー (microCMS embed 出力用) */
+.article-body .embed-wrapper,
+.article-body .iframely-embed,
+.article-body div:has(> iframe[src*="youtube"]),
+.article-body div:has(> iframe[src*="twitter"]) {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%; /* 16:9 */
+  margin: 2rem 0;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  background: var(--color-neutral-100);
+}
+
+.article-body .embed-wrapper iframe,
+.article-body .iframely-embed iframe,
+.article-body div:has(> iframe[src*="youtube"]) iframe,
+.article-body div:has(> iframe[src*="twitter"]) iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* ============================================================
+   20. カスタムクラス (microCMS カスタムクラス機能)
+   ============================================================ */
+
+/* 情報・ヒントボックス */
+.article-body .highlight-box {
+  position: relative;
+  margin: 2rem 0;
+  padding: 1.2rem 1.2rem 1.2rem 1.5rem;
+  background: linear-gradient(135deg, #eef6ff 0%, #f0f7ff 100%);
+  border-left: 4px solid #3b82f6;
+  border-radius: 0 8px 8px 0;
+  font-size: 0.95rem;
+  line-height: 1.75;
+}
+
+.article-body .highlight-box::before {
+  content: "\2139\FE0F";
+  position: absolute;
+  top: -0.5rem;
+  left: -0.5rem;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* 注意ボックス */
+.article-body .warning-box {
+  position: relative;
+  margin: 2rem 0;
+  padding: 1.2rem 1.2rem 1.2rem 1.5rem;
+  background: linear-gradient(135deg, #fff7ed 0%, #fffbf5 100%);
+  border-left: 4px solid #f59e0b;
+  border-radius: 0 8px 8px 0;
+  font-size: 0.95rem;
+  line-height: 1.75;
+}
+
+.article-body .warning-box::before {
+  content: "\26A0\FE0F";
+  position: absolute;
+  top: -0.5rem;
+  left: -0.5rem;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* ポイントボックス */
+.article-body .point-box {
+  position: relative;
+  margin: 2rem 0;
+  padding: 1.2rem 1.2rem 1.2rem 1.5rem;
+  background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+  border-left: 4px solid #10b981;
+  border-radius: 0 8px 8px 0;
+  font-size: 0.95rem;
+  line-height: 1.75;
+}
+
+.article-body .point-box::before {
+  content: "\2705";
+  position: absolute;
+  top: -0.5rem;
+  left: -0.5rem;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* 比較ボックス */
+.article-body .comparison-box {
+  margin: 2rem 0;
+  padding: 1.2rem;
+  background: var(--color-neutral-50);
+  border: 1px solid var(--color-neutral-200);
+  border-radius: 8px;
+}
+
+.article-body .comparison-box table {
+  margin: 0;
+  border: none;
+  box-shadow: none;
+}
+
+/* アフィリエイトCTAボタン / カード */
+.article-body .affiliate-cta {
+  display: block;
+  margin: 2rem auto;
+  padding: 1.2rem 1.5rem;
+  text-align: center;
+  background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-600) 100%);
+  color: #ffffff;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 1.05rem;
+  box-shadow: 0 4px 14px rgba(26, 54, 93, 0.25);
+  transition: all 0.25s ease;
+  cursor: pointer;
+  max-width: 480px;
+}
+
+.article-body .affiliate-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(26, 54, 93, 0.35);
+}
+
+.article-body .affiliate-cta a {
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.article-body .affiliate-cta a::after {
+  content: none;
+}
+
+/* ============================================================
+   PR表記・記事リード (既存互換)
+   ============================================================ */
+
+.article-lead {
   margin-bottom: 2rem;
+  padding: 1rem 1.2rem;
+  border-left: 4px solid var(--color-primary-500);
+  background: var(--color-primary-50);
+  border-radius: 0 6px 6px 0;
+  font-size: 1rem;
+  line-height: 1.8;
+  color: var(--color-neutral-700);
 }
 
-/* --- レスポンシブ調整 --- */
+/* ============================================================
+   目次 (TOC)
+   ============================================================ */
+
+.article-toc {
+  margin: 1.5rem 0 2.5rem;
+  padding: 1.2rem 1.5rem;
+  background: var(--color-neutral-50);
+  border: 1px solid var(--color-neutral-200);
+  border-radius: 8px;
+}
+
+.article-toc-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  margin-bottom: 0.8rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-neutral-800);
+}
+
+.article-toc-title::before {
+  content: "\1F4D1";
+  font-size: 1.1em;
+}
+
+.article-toc ol {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  counter-reset: toc-counter;
+}
+
+.article-toc ol li {
+  counter-increment: toc-counter;
+  padding-left: 1.8em;
+  position: relative;
+  margin-bottom: 0.3em;
+}
+
+.article-toc ol li::before {
+  content: counter(toc-counter) ".";
+  position: absolute;
+  left: 0;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--color-primary-500);
+  top: 0.1em;
+  width: auto;
+  height: auto;
+  background: none;
+  border-radius: 0;
+  display: inline;
+}
+
+.article-toc a {
+  display: inline-block;
+  padding: 0.15em 0;
+  font-size: 0.9rem;
+  color: var(--color-neutral-700);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color 0.2s ease, border-color 0.2s ease;
+  line-height: 1.5;
+}
+
+.article-toc a:hover {
+  color: var(--color-primary-500);
+  border-bottom-color: var(--color-primary-300);
+}
+
+/* ネスト TOC (h3) */
+.article-toc ol ol {
+  margin-top: 0.2em;
+  counter-reset: toc-counter-sub;
+}
+
+.article-toc ol ol li {
+  counter-increment: toc-counter-sub;
+  padding-left: 1.5em;
+  margin-bottom: 0.15em;
+}
+
+.article-toc ol ol li::before {
+  content: "\2013";
+  color: var(--color-neutral-400);
+  font-weight: 400;
+}
+
+.article-toc ol ol a {
+  font-size: 0.85rem;
+  color: var(--color-neutral-500);
+}
+
+/* ============================================================
+   レスポンシブ調整
+   ============================================================ */
+
 @media (max-width: 640px) {
   .article-body {
-    font-size: 0.9375rem;
+    font-size: 0.95rem;
     line-height: 1.8;
   }
 
   .article-body h2 {
-    font-size: 1.3125rem;
-    padding: 0.625rem 0.875rem;
+    font-size: 1.2rem;
+    padding: 0.7em 0.8em 0.7em 1em;
+    margin-top: 2.5rem;
+    margin-bottom: 1.2rem;
   }
 
   .article-body h3 {
-    font-size: 1.125rem;
+    font-size: 1.08rem;
+    margin-top: 1.8rem;
+    margin-bottom: 1rem;
   }
 
   .article-body h4 {
     font-size: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .article-body blockquote {
+    padding: 1.4rem 1rem 1rem 1.8rem;
+    margin: 1.5rem 0;
+  }
+
+  .article-body blockquote::before {
+    font-size: 2.2rem;
+    left: 0.3rem;
+  }
+
+  .article-body pre {
+    padding: 1rem;
+    font-size: 0.82rem;
+    border-radius: 6px;
+  }
+
+  .article-body img {
+    border-radius: 6px;
+  }
+
+  .article-body .highlight-box,
+  .article-body .warning-box,
+  .article-body .point-box {
+    padding: 1rem;
+    margin: 1.5rem 0;
+  }
+
+  .article-body .affiliate-cta {
+    padding: 1rem 1.2rem;
+    font-size: 0.98rem;
+  }
+
+  .article-toc {
+    padding: 1rem 1.2rem;
+  }
+}
+
+/* ============================================================
+   印刷スタイル
+   ============================================================ */
+
+@media print {
+  .article-body a::after {
+    content: " (" attr(href) ")";
+    font-size: 0.8em;
+    color: var(--color-neutral-500);
+  }
+
+  .article-body a[rel*="sponsored"]::after {
+    content: " [PR](" attr(href) ")";
+  }
+
+  .article-body img {
+    box-shadow: none;
   }
 
   .article-body table {
-    font-size: 0.8125rem;
+    box-shadow: none;
   }
 
-  .article-body th,
-  .article-body td {
-    padding: 0.5rem 0.625rem;
+  .article-toc {
+    break-inside: avoid;
   }
 }
