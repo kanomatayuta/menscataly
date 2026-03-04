@@ -10,6 +10,7 @@ import type {
   KeywordGenerationProgress,
   KeywordTarget,
 } from '@/types/batch-generation'
+import type { ContentCategory } from '@/types/content'
 
 // ============================================================
 // セマフォ (並行数制限)
@@ -224,9 +225,15 @@ export class BatchArticleGenerator {
     progress.updatedAt = new Date().toISOString()
 
     try {
-      // ArticleGenerator を動的インポート
+      // ArticleGenerator と ASP セレクターを動的インポート
       const { ArticleGenerator } = await import('@/lib/content/generator')
+      const { selectBestPrograms, toAffiliateLinks } = await import('@/lib/asp/selector')
+      const { injectAffiliateLinksByCategory } = await import('@/lib/asp/link-injector')
       const generator = new ArticleGenerator()
+
+      // カテゴリに最適なアフィリエイトリンクを選定
+      const bestPrograms = selectBestPrograms(keyword.category as ContentCategory)
+      const affiliateLinks = toAffiliateLinks(bestPrograms)
 
       const response = await generator.generate({
         category: keyword.category,
@@ -235,7 +242,14 @@ export class BatchArticleGenerator {
         targetAudience: keyword.targetAudience,
         tone: keyword.tone,
         targetLength: keyword.targetLength,
+        affiliateLinks,
       })
+
+      // 生成後にアフィリエイトリンクをHTMLとして注入
+      response.article.content = injectAffiliateLinksByCategory(
+        response.article.content,
+        keyword.category as ContentCategory
+      )
 
       // コンプライアンスチェック
       kwProgress.status = 'compliance_check'

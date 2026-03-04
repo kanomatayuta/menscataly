@@ -599,7 +599,8 @@ ${ctaPositionList}
   }
 
   /**
-   * アフィリエイトリンクを記事コンテンツに注入する（アンカーテキスト挿入）
+   * アフィリエイトリンクを記事コンテンツに注入する（HTML <a> タグ挿入）
+   * rel="sponsored noopener" を付与し、最初の出現箇所のみリンク化する
    */
   private injectAffiliateLinks(
     article: Article,
@@ -610,17 +611,33 @@ ${ctaPositionList}
     let content = article.content;
 
     for (const link of request.affiliateLinks) {
-      // アンカーテキストが既にコンテンツに含まれていれば、リンク化
-      if (content.includes(link.anchorText)) {
-        // rel="sponsored" 付きで置換（既にリンク化されていない場合のみ）
-        const linkPattern = new RegExp(
-          `(?<!\\[)${link.anchorText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?!\\])`,
-          "g"
-        );
-        content = content.replace(
-          linkPattern,
-          `[${link.anchorText}](${link.url}){rel="sponsored noopener"}`
-        );
+      const escapedAnchor = link.anchorText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+      // 既にリンク化済み（<a> タグ内）の場合はスキップ
+      const alreadyLinked = new RegExp(
+        `<a\\s[^>]*>[^<]*${escapedAnchor}[^<]*</a>`,
+        "i"
+      );
+      if (alreadyLinked.test(content)) {
+        continue;
+      }
+
+      // 最初の出現箇所のみ HTML <a> タグに置換
+      const index = content.indexOf(link.anchorText);
+      if (index === -1) continue;
+
+      const linkHtml = `<a href="${link.url}" rel="sponsored noopener" target="_blank">${link.anchorText}</a>`;
+      content =
+        content.slice(0, index) +
+        linkHtml +
+        content.slice(index + link.anchorText.length);
+    }
+
+    // PR表記がまだ挿入されていない場合は先頭に追加
+    if (!article.hasPRDisclosure && request.affiliateLinks.length > 0) {
+      const hasPR = /アフィリエイト広告|【PR】|成果報酬型広告/.test(content);
+      if (!hasPR) {
+        content = "※本記事はアフィリエイト広告を含みます。\n\n" + content;
       }
     }
 
