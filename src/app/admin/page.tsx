@@ -1,40 +1,29 @@
 import { Suspense } from "react";
-import { headers } from "next/headers";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { StatCard } from "@/components/admin/StatCard";
 import { PipelineStatusCard } from "@/components/admin/PipelineStatusCard";
 import { AlertsList } from "@/components/admin/AlertsList";
-import {
-  PipelineSuccessChart,
-  generateDefaultPipelineData,
-} from "@/components/admin/PipelineSuccessChart";
-import type { AdminDashboardData } from "@/types/admin";
+import { PipelineSuccessChart } from "@/components/admin/PipelineSuccessChart";
+import { fetchDashboardData } from "@/lib/admin/dashboard-data";
 
-// ------------------------------------------------------------------
-// Data fetching (Server Component - direct fetch to API route)
-// ------------------------------------------------------------------
-
-async function fetchDashboardData(): Promise<AdminDashboardData> {
-  const headersList = await headers();
-  const host = headersList.get("host") ?? "localhost:3000";
-  const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
-
-  const res = await fetch(`${protocol}://${host}/api/admin/dashboard`, {
-    cache: "no-store",
-    headers: {
-      Authorization: `Bearer ${process.env.ADMIN_API_KEY ?? ""}`,
-    },
-  });
-
-  if (!res.ok) {
-    throw new Error(`Dashboard API returned ${res.status}`);
-  }
-
-  return res.json();
+/**
+ * サーバーサイドで呼び出し可能なデフォルトパイプラインデータ生成
+ * 「use client」ファイルの generateDefaultPipelineData をサーバーから呼べないため
+ * ここで同等のロジックを定義する（静的フォールバック）
+ */
+function getDefaultPipelineData() {
+  // 静的なフォールバック値（new Date() はプリレンダリング制約でリスクがあるため固定値）
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  return days.map((day, i) => ({
+    date: day,
+    successRate: 90 + (i % 3) * 2.5,
+    totalRuns: 1 + (i % 2),
+  }));
 }
 
 // ------------------------------------------------------------------
 // Sub-components (async Server Components)
+// Phase 3b: 直接 lib 関数でデータ取得（自己APIフェッチを排除）
 // ------------------------------------------------------------------
 
 async function DashboardStats() {
@@ -95,7 +84,7 @@ async function DashboardPipelineAndAlerts() {
           <h3 className="mb-2 text-sm font-medium text-neutral-600">
             Success Rate (7 days)
           </h3>
-          <PipelineSuccessChart data={generateDefaultPipelineData()} />
+          <PipelineSuccessChart data={getDefaultPipelineData()} />
         </div>
       </div>
 
