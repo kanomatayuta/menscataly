@@ -7,6 +7,8 @@
  *   85-94 → 条件付き (E-E-A-T チェック通過で公開)
  *   70-84 → レビューキュー (手動レビュー待ち)
  *   70未満 → 拒否 (reject) + アラート通知
+ *
+ * Phase 3b: キュー永続化 — 判定結果を article_review_queue テーブルに保存
  */
 
 import { ComplianceChecker } from '@/lib/compliance/checker'
@@ -35,6 +37,39 @@ export interface ComplianceGateResult {
   reason: string
 }
 
+/**
+ * コンプライアンスキューエントリ
+ * 判定結果を article_review_queue テーブルに永続化する際のデータ型
+ */
+export interface ComplianceQueueEntry {
+  /** 記事スラッグ（一意キー） */
+  slug: string
+  /** 記事タイトル */
+  title: string
+  /** カテゴリ */
+  category: string
+  /** コンプライアンス判定 */
+  decision: ComplianceDecision
+  /** コンプライアンススコア */
+  complianceScore: number
+  /** E-E-A-T スコア */
+  eeatScore?: number
+  /** 違反件数 */
+  violationCount: number
+  /** パイプライン実行ID */
+  runId: string
+  /** 判定理由 */
+  reason: string
+  /** 記事データ（リトライ用） */
+  articleData: GeneratedArticleData
+  /** キューステータス (pending=publish待ち, completed=publish済, failed=publish失敗) */
+  queueStatus: 'pending' | 'completed' | 'failed'
+  /** リトライ回数 */
+  retryCount: number
+  /** 永続化日時 */
+  createdAt: string
+}
+
 export interface ComplianceGateOutput {
   /** 公開可能な記事データ（reject以外） */
   articles: GeneratedArticleData[]
@@ -44,6 +79,8 @@ export interface ComplianceGateOutput {
   reviewQueueCount: number
   /** 拒否された記事数 */
   rejectedCount: number
+  /** 永続化されたキューエントリ */
+  queueEntries: ComplianceQueueEntry[]
 }
 
 // ============================================================
@@ -136,12 +173,70 @@ function determineDecision(
 }
 
 // ============================================================
+// キュー永続化ヘルパー
+// ============================================================
+
+/**
+ * コンプライアンスキューエントリを Supabase article_review_queue テーブルに永続化する
+ * Supabase 未設定時はインメモリログのみ
+ */
+async function persistQueueEntry(entry: ComplianceQueueEntry): Promise<void> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.info(`[compliance-gate] Supabase not configured — queue entry logged in memory: ${entry.slug} (${entry.decision})`)
+    return
+  }
+
+  try {
+    const { createServerSupabaseClient } = await import('@/lib/supabase/client')
+    const supabase = createServerSupabaseClient()
+
+    // article_review_queue テーブルへの upsert（slug で重複排除）
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
+      .from('article_review_queue')
+      .upsert(
+        {
+          title: entry.title,
+          slug: entry.slug,
+          category: entry.category,
+          compliance_score: entry.complianceScore,
+          status: entry.decision === 'reject' ? 'rejected' : 'pending',
+          author_name: entry.articleData.authorName || 'MENS CATALY 編集部',
+          review_notes: JSON.stringify({
+            decision: entry.decision,
+            reason: entry.reason,
+            eeatScore: entry.eeatScore,
+            violationCount: entry.violationCount,
+            runId: entry.runId,
+            queueStatus: entry.queueStatus,
+            retryCount: entry.retryCount,
+          }),
+        },
+        { onConflict: 'slug' }
+      )
+
+    if (error) {
+      console.error(`[compliance-gate] Failed to persist queue entry for ${entry.slug}:`, error.message)
+    } else {
+      console.log(`[compliance-gate] Persisted queue entry: ${entry.slug} (${entry.decision})`)
+    }
+  } catch (err) {
+    // 永続化失敗はパイプライン全体を止めない
+    console.error(`[compliance-gate] Queue persistence error for ${entry.slug}:`, err)
+  }
+}
+
+// ============================================================
 // ステップ実装
 // ============================================================
 
 /**
  * コンプライアンスゲート パイプラインステップ
  * 記事コンテンツの薬機法・景表法チェックを実行し、公開可否を判定する
+ * Phase 3b: 判定結果を article_review_queue テーブルに永続化
  */
 export const complianceGateStep: PipelineStep<GeneratedArticleData[], ComplianceGateOutput> = {
   name: 'compliance-gate',
@@ -159,6 +254,7 @@ export const complianceGateStep: PipelineStep<GeneratedArticleData[], Compliance
 
     const passedArticles: GeneratedArticleData[] = []
     const gateResults: ComplianceGateResult[] = []
+    const queueEntries: ComplianceQueueEntry[] = []
     let reviewQueueCount = 0
     let rejectedCount = 0
 
@@ -181,6 +277,27 @@ export const complianceGateStep: PipelineStep<GeneratedArticleData[], Compliance
         eeatScore,
         violationCount: result.violations.length,
         reason,
+      }
+
+      // キューエントリを生成（全判定結果を永続化）
+      const queueEntry: ComplianceQueueEntry = {
+        slug: article.slug,
+        title: article.title,
+        category: article.category,
+        decision,
+        complianceScore,
+        eeatScore,
+        violationCount: result.violations.length,
+        runId: context.runId,
+        reason,
+        articleData: {
+          ...article,
+          content: result.fixedText,
+          complianceScore,
+        },
+        queueStatus: 'pending',
+        retryCount: 0,
+        createdAt: new Date().toISOString(),
       }
 
       // 判定に基づく処理
@@ -254,6 +371,10 @@ export const complianceGateStep: PipelineStep<GeneratedArticleData[], Compliance
       }
 
       gateResults.push(gateResult)
+
+      // キューエントリを永続化
+      await persistQueueEntry(queueEntry)
+      queueEntries.push(queueEntry)
     }
 
     const output: ComplianceGateOutput = {
@@ -261,15 +382,80 @@ export const complianceGateStep: PipelineStep<GeneratedArticleData[], Compliance
       results: gateResults,
       reviewQueueCount,
       rejectedCount,
+      queueEntries,
     }
 
     // コンテキストの共有データに保存
     context.sharedData['complianceGateResults'] = gateResults
+    context.sharedData['complianceQueueEntries'] = queueEntries
 
     console.log(
-      `[compliance-gate] 完了: ${passedArticles.length}件公開可, ${reviewQueueCount}件レビュー待ち, ${rejectedCount}件拒否`
+      `[compliance-gate] 完了: ${passedArticles.length}件公開可, ${reviewQueueCount}件レビュー待ち, ${rejectedCount}件拒否, ${queueEntries.length}件キュー永続化`
     )
 
     return output
   },
+}
+
+/**
+ * キューエントリのステータスを更新する（publish成功/失敗時に呼び出し）
+ */
+export async function updateQueueEntryStatus(
+  slug: string,
+  status: 'completed' | 'failed',
+  retryCount?: number
+): Promise<void> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.info(`[compliance-gate] Supabase not configured — skipping queue status update for ${slug}`)
+    return
+  }
+
+  try {
+    const { createServerSupabaseClient } = await import('@/lib/supabase/client')
+    const supabase = createServerSupabaseClient()
+
+    const updateData: Record<string, unknown> = {
+      status: status === 'completed' ? 'approved' : 'pending',
+    }
+
+    if (status === 'completed') {
+      updateData.reviewed_at = new Date().toISOString()
+      updateData.reviewed_by = 'pipeline-auto'
+    }
+
+    if (retryCount !== undefined) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: existing } = await (supabase as any)
+        .from('article_review_queue')
+        .select('review_notes')
+        .eq('slug', slug)
+        .single()
+
+      if (existing?.review_notes) {
+        try {
+          const notes = JSON.parse(existing.review_notes as string)
+          notes.retryCount = retryCount
+          notes.queueStatus = status
+          updateData.review_notes = JSON.stringify(notes)
+        } catch {
+          // JSON parse failure — skip notes update
+        }
+      }
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
+      .from('article_review_queue')
+      .update(updateData)
+      .eq('slug', slug)
+
+    if (error) {
+      console.error(`[compliance-gate] Failed to update queue status for ${slug}:`, error.message)
+    }
+  } catch (err) {
+    console.error(`[compliance-gate] Queue status update error for ${slug}:`, err)
+  }
 }
