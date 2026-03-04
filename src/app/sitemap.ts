@@ -20,11 +20,11 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://menscataly.com'
 // ============================================================
 
 const SUPERVISOR_SLUGS = [
-  { slug: 'aga-supervisor', name: 'AGA治療 監修医', category: 'aga' },
-  { slug: 'ed-supervisor', name: 'ED治療 監修医', category: 'ed' },
-  { slug: 'hair-removal-supervisor', name: '医療脱毛 監修医', category: 'hair-removal' },
-  { slug: 'skincare-supervisor', name: 'スキンケア 監修医', category: 'skincare' },
-  { slug: 'supplement-supervisor', name: 'サプリメント 監修専門家', category: 'supplement' },
+  { slug: 'aga-dr-tanaka', name: 'AGA治療 監修医', category: 'aga' },
+  { slug: 'ed-dr-suzuki', name: 'ED治療 監修医', category: 'ed' },
+  { slug: 'hair-removal-dr-yamamoto', name: '医療脱毛 監修医', category: 'hair-removal' },
+  { slug: 'skincare-dr-sato', name: 'スキンケア 監修医', category: 'skincare' },
+  { slug: 'column-writer-kobayashi', name: 'サプリメント 監修専門家', category: 'column' },
 ]
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -95,6 +95,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified,
       changeFrequency: 'monthly',
       priority: 0.5,
+    },
+    {
+      url: `${BASE_URL}/privacy`,
+      lastModified,
+      changeFrequency: 'monthly',
+      priority: 0.3,
+    },
+    {
+      url: `${BASE_URL}/disclaimer`,
+      lastModified,
+      changeFrequency: 'monthly',
+      priority: 0.3,
+    },
+    {
+      url: `${BASE_URL}/contact`,
+      lastModified,
+      changeFrequency: 'monthly',
+      priority: 0.3,
+    },
+    {
+      url: `${BASE_URL}/advertising-policy`,
+      lastModified,
+      changeFrequency: 'monthly',
+      priority: 0.3,
     },
   ]
 

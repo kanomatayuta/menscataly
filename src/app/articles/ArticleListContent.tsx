@@ -84,8 +84,8 @@ export async function ArticleListContent({ searchParams }: Props) {
     : "記事一覧";
 
   const basePath = activeCategory
-    ? `/articles?category=${activeCategory}`
-    : "/articles";
+    ? `/articles?category=${activeCategory}&`
+    : "/articles?";
 
   return (
     <>
@@ -172,10 +172,7 @@ export async function ArticleListContent({ searchParams }: Props) {
               {/* 前のページ */}
               {pageParam > 1 && (
                 <Link
-                  href={`${basePath}&page=${pageParam - 1}`.replace(
-                    "?&",
-                    "?"
-                  )}
+                  href={`${basePath}page=${pageParam - 1}`}
                   className="inline-flex items-center gap-1 rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
                 >
                   <svg
@@ -222,7 +219,7 @@ export async function ArticleListContent({ searchParams }: Props) {
                   ) : (
                     <Link
                       key={item}
-                      href={`${basePath}&page=${item}`.replace("?&", "?")}
+                      href={`${basePath}page=${item}`}
                       aria-current={item === pageParam ? "page" : undefined}
                       className={`inline-flex h-9 w-9 items-center justify-center rounded-md text-sm ${
                         item === pageParam
@@ -246,10 +243,7 @@ export async function ArticleListContent({ searchParams }: Props) {
               {/* 次のページ */}
               {pageParam < totalPages && (
                 <Link
-                  href={`${basePath}&page=${pageParam + 1}`.replace(
-                    "?&",
-                    "?"
-                  )}
+                  href={`${basePath}page=${pageParam + 1}`}
                   className="inline-flex items-center gap-1 rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
                 >
                   次へ
