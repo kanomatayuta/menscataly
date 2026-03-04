@@ -13,8 +13,6 @@ import {
   buildEEATPrompt,
   getRecommendedReferences,
   getSupervisorTemplate,
-  getCategoryAffiliateGuide,
-  getContentGuide,
 } from "@/lib/content/index";
 import { slugify, extractExcerpt } from "@/lib/content/utils/text-utils";
 import { calculateReadingTime } from "@/lib/content/utils/reading-time";
@@ -546,10 +544,7 @@ export class ArticleGenerator {
     const template = ARTICLE_TEMPLATES[request.category];
     const templatePrompt = this.buildTemplatePrompt(template, request.category);
 
-    // ASPコンテンツガイドのプロンプトを構築
-    const aspGuidePrompt = this.buildAspGuidePrompt(request.category);
-
-    return [basePrompt, categoryPrompt, seoPrompt, eeatPrompt, templatePrompt, aspGuidePrompt].join("\n\n---\n\n");
+    return [basePrompt, categoryPrompt, seoPrompt, eeatPrompt, templatePrompt].join("\n\n---\n\n");
   }
 
   private buildUserMessage(request: ContentGenerationRequest): string {
@@ -568,15 +563,14 @@ export class ArticleGenerator {
     }
 
     if (request.affiliateLinks && request.affiliateLinks.length > 0) {
-      const linkDetails = request.affiliateLinks
-        .map(
-          (l, i) =>
-            `${i + 1}. ${l.programName}（${l.aspName}）\n   報酬: ${l.rewardAmount}円\n   アンカーテキスト候補: ${l.anchorText}\n   URL: ${l.url}\n   ※ 上記アンカーテキストを記事本文中に自然に含めてください。リンク化は自動処理されます。`
-        )
-        .join("\n\n");
-
       parts.push(
-        `アフィリエイトリンク候補（記事内の適切な位置に自然に組み込んでください）:\n\n${linkDetails}\n\n重要: アンカーテキストは必ず上記の候補テキストをそのまま使用してください（リンク自動挿入のため完全一致が必要です）。`
+        `アフィリエイトリンク候補（記事に自然に組み込む）:\n` +
+          request.affiliateLinks
+            .map(
+              (l) =>
+                `- ${l.programName}（${l.aspName}）: ${l.anchorText} — ${l.url}`
+            )
+            .join("\n")
       );
     }
 
@@ -629,39 +623,6 @@ ${ctaPositionList}
   }
 
   /**
-   * ASPコンテンツガイドのプロンプトを構築する
-   * カテゴリ別のアフィリエイトリンク配置指示・テンプレート・禁止フレーズを含む
-   */
-  private buildAspGuidePrompt(category: ContentCategory): string {
-    const guide = getContentGuide(category);
-    const affiliateGuide = getCategoryAffiliateGuide(category);
-
-    const parts: string[] = [`## アフィリエイトリンク配置ガイド`];
-
-    parts.push(`### 配置指示\n${affiliateGuide}`);
-
-    if (guide.naturalMentionTemplates.length > 0) {
-      parts.push(
-        `### 自然な言及テンプレート（参考）\n${guide.naturalMentionTemplates.join("\n")}`
-      );
-    }
-
-    if (guide.ctaGuidelines.length > 0) {
-      parts.push(
-        `### CTAガイドライン\n${guide.ctaGuidelines.join("\n")}`
-      );
-    }
-
-    if (guide.forbiddenPhrases.length > 0) {
-      parts.push(
-        `### 使用禁止フレーズ（アフィリエイト関連）\n${guide.forbiddenPhrases.join("\n")}`
-      );
-    }
-
-    return parts.join("\n\n");
-  }
-
-  /**
    * ContentCategory を ComplianceChecker の Category 型にマップする
    */
   private mapCategory(
@@ -679,6 +640,12 @@ ${ctaPositionList}
 
   /**
    * アフィリエイトリンクを記事コンテンツに注入する（HTML <a> タグ挿入）
+   *
+   * NOTE: これは Claude API が生成したアンカーテキストを検索して
+   * request.affiliateLinks のURLでリンク化する「生成時リンク注入」です。
+   * カテゴリベースの自動リンク注入は link-injector.ts の
+   * injectAffiliateLinksByCategory() を使用してください。
+   *
    * rel="sponsored noopener" を付与し、最初の出現箇所のみリンク化する
    */
   private injectAffiliateLinks(

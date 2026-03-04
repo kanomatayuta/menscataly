@@ -155,7 +155,7 @@ describe('injectAffiliateLinksByCategory', () => {
     const content = '<p>AGAスキンクリニック 公式サイトは多くの方に選ばれています。</p>'
     const result = await injectAffiliateLinksByCategory(content, 'aga')
 
-    expect(result).toContain('<a href="https://t.afi-b.com/visit.php?guid=ON&a=aga-skin-001"')
+    expect(result).toContain('<a href="https://t.afi-b.com/visit.php?guid=ON&amp;a=aga-skin-001"')
     expect(result).toContain('AGAスキンクリニック 公式サイト</a>')
   })
 
@@ -222,7 +222,7 @@ describe('injectAffiliateLinksByCategory — normalized matching', () => {
     const content = '<p>AGAスキンクリニックの公式サイトは多くの方に選ばれています。</p>'
     const result = await injectAffiliateLinksByCategory(content, 'aga')
 
-    expect(result).toContain('<a href="https://t.afi-b.com/visit.php?guid=ON&a=aga-skin-001"')
+    expect(result).toContain('<a href="https://t.afi-b.com/visit.php?guid=ON&amp;a=aga-skin-001"')
     expect(result).toContain('AGAスキンクリニックの公式サイト</a>')
   })
 
@@ -231,7 +231,7 @@ describe('injectAffiliateLinksByCategory — normalized matching', () => {
     const content = '<p>AGAスキンクリニック公式サイトは多くの方に選ばれています。</p>'
     const result = await injectAffiliateLinksByCategory(content, 'aga')
 
-    expect(result).toContain('<a href="https://t.afi-b.com/visit.php?guid=ON&a=aga-skin-001"')
+    expect(result).toContain('<a href="https://t.afi-b.com/visit.php?guid=ON&amp;a=aga-skin-001"')
     expect(result).toContain('AGAスキンクリニック公式サイト</a>')
   })
 
@@ -240,7 +240,7 @@ describe('injectAffiliateLinksByCategory — normalized matching', () => {
     const content = '<p>AGAスキンクリニック\u3000公式サイトは多くの方に選ばれています。</p>'
     const result = await injectAffiliateLinksByCategory(content, 'aga')
 
-    expect(result).toContain('<a href="https://t.afi-b.com/visit.php?guid=ON&a=aga-skin-001"')
+    expect(result).toContain('<a href="https://t.afi-b.com/visit.php?guid=ON&amp;a=aga-skin-001"')
     // The link text should preserve the original content text (with full-width space)
     expect(result).toContain('</a>')
   })
@@ -281,7 +281,7 @@ describe('injectAffiliateLinksByCategory — core name matching', () => {
     const content = '<p>AGAスキンクリニックでは最新の治療が受けられます。</p>'
     const result = await injectAffiliateLinksByCategory(content, 'aga')
 
-    expect(result).toContain('<a href="https://t.afi-b.com/visit.php?guid=ON&a=aga-skin-001"')
+    expect(result).toContain('<a href="https://t.afi-b.com/visit.php?guid=ON&amp;a=aga-skin-001"')
     expect(result).toContain('AGAスキンクリニック</a>')
   })
 
@@ -346,7 +346,85 @@ describe('injectAffiliateLinksByCategory — forbidden tag protection', () => {
     // h2 should be untouched
     expect(result).toContain('<h2>AGAスキンクリニック 公式サイト</h2>')
     // p should have the link
-    expect(result).toContain('<p><a href="https://t.afi-b.com/visit.php?guid=ON&a=aga-skin-001"')
+    expect(result).toContain('<p><a href="https://t.afi-b.com/visit.php?guid=ON&amp;a=aga-skin-001"')
+  })
+})
+
+// ============================================================
+// XSS protection
+// ============================================================
+
+describe('XSS protection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('should escape special characters in affiliate URL', async () => {
+    // affiliateUrlに " と & が含まれるケース
+    const { selectBestPrograms } = await import('@/lib/asp/selector')
+    const mockedSelect = vi.mocked(selectBestPrograms)
+    mockedSelect.mockResolvedValueOnce([
+      createMockAspProgram({
+        id: 'xss-test-001',
+        programName: 'XSSテストクリニック',
+        affiliateUrl: 'https://example.com/test?a=1&b=2"onclick="alert(1)',
+        recommendedAnchors: ['XSSテストクリニック 公式サイト'],
+      }),
+    ])
+
+    const content = '<p>XSSテストクリニック 公式サイトはこちらです。</p>'
+    const result = await injectAffiliateLinksByCategory(content, 'aga')
+
+    // エスケープされた形式が含まれることを確認
+    expect(result).toContain('&amp;')
+    expect(result).toContain('&quot;')
+    // 生の " がhref属性値内に含まれないことを確認
+    expect(result).not.toContain('href="https://example.com/test?a=1&b=2"onclick')
+    expect(result).toContain('href="https://example.com/test?a=1&amp;b=2&quot;onclick=&quot;alert(1)')
+  })
+
+  it('should escape < and > in affiliate URL', async () => {
+    const { selectBestPrograms } = await import('@/lib/asp/selector')
+    const mockedSelect = vi.mocked(selectBestPrograms)
+    mockedSelect.mockResolvedValueOnce([
+      createMockAspProgram({
+        id: 'xss-test-002',
+        programName: 'タグテストクリニック',
+        affiliateUrl: 'https://example.com/test?x=<script>alert(1)</script>',
+        recommendedAnchors: ['タグテストクリニック 公式サイト'],
+      }),
+    ])
+
+    const content = '<p>タグテストクリニック 公式サイトをチェック。</p>'
+    const result = await injectAffiliateLinksByCategory(content, 'aga')
+
+    expect(result).toContain('&lt;script&gt;')
+    expect(result).not.toContain('<script>alert(1)</script>')
+  })
+})
+
+// ============================================================
+// performance — forbidden range caching
+// ============================================================
+
+describe('performance — forbidden range caching', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('should handle content with many tags efficiently', async () => {
+    const bigContent = Array.from({length: 100}, (_, i) =>
+      `<p>段落${i}のテキスト</p><h2>見出し${i}</h2>`
+    ).join('') + '<p>AGAスキンクリニック 公式サイトはこちら</p>'
+
+    const start = performance.now()
+    const result = await injectAffiliateLinksByCategory(bigContent, 'aga')
+    const elapsed = performance.now() - start
+
+    expect(result).toContain('<a href=')
+    expect(result).toContain('AGAスキンクリニック 公式サイト</a>')
+    // 大量のHTMLタグがあっても1秒以内に処理が完了すること
+    expect(elapsed).toBeLessThan(1000)
   })
 })
 

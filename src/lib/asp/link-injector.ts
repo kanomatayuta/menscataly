@@ -16,9 +16,6 @@ import { selectBestPrograms } from './selector'
 // 定数
 // ============================================================
 
-/** リンク注入を禁止するHTMLタグ（<a>, <h2>, <h3>, <script> 内には注入しない） */
-const FORBIDDEN_TAG_PATTERN = /<(a|h2|h3|script)\b[^>]*>[\s\S]*?<\/\1>/gi
-
 /** 正規化時に除去する日本語助詞 */
 const JAPANESE_PARTICLES = ['の', 'を', 'は', 'が', 'に', 'で', 'と', 'も', 'へ']
 
@@ -30,6 +27,19 @@ const ANCHOR_SUFFIXES = [
   '無料カウンセリング',
   'オンライン診療',
 ]
+
+// ============================================================
+// HTML エスケープ
+// ============================================================
+
+/** HTML属性値用エスケープ */
+function escapeHtmlAttr(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
 
 // ============================================================
 // テキスト正規化ヘルパー
@@ -90,28 +100,25 @@ export function extractCoreName(anchor: string): string {
 }
 
 // ============================================================
-// 禁止タグ内チェック
+// 禁止タグ範囲の事前計算
 // ============================================================
 
-/**
- * 指定されたインデックスが禁止タグ（<a>, <h2>, <h3>, <script>）の内部かどうかを判定する
- */
-function isInsideForbiddenTag(content: string, index: number, matchLength: number): boolean {
-  // 毎回パターンを新規生成してlastIndexをリセットする
+interface ForbiddenRange { start: number; end: number }
+
+/** コンテンツ全体の禁止タグ範囲を一度計算する */
+function computeForbiddenRanges(content: string): ForbiddenRange[] {
+  const ranges: ForbiddenRange[] = []
   const pattern = /<(a|h2|h3|script)\b[^>]*>[\s\S]*?<\/\1>/gi
   let match: RegExpExecArray | null
-
   while ((match = pattern.exec(content)) !== null) {
-    const tagStart = match.index
-    const tagEnd = tagStart + match[0].length
-
-    // マッチ位置がタグ範囲内にあるかチェック
-    if (index >= tagStart && index + matchLength <= tagEnd) {
-      return true
-    }
+    ranges.push({ start: match.index, end: match.index + match[0].length })
   }
+  return ranges
+}
 
-  return false
+/** 禁止範囲内かチェック（事前計算済みの範囲を使用） */
+function isInForbiddenRange(ranges: ForbiddenRange[], index: number, matchLength: number): boolean {
+  return ranges.some(r => index >= r.start && index + matchLength <= r.end)
 }
 
 // ============================================================
@@ -172,6 +179,9 @@ function injectSingleLink(
   content: string,
   program: AspProgram
 ): string | null {
+  // 禁止範囲を一度だけ計算する
+  const forbiddenRanges = computeForbiddenRanges(content)
+
   for (const anchor of program.recommendedAnchors) {
     // 既にリンク化済み（<a> タグ内）でないかチェック
     // href="..." 内やタグ属性内に含まれるテキストは除外する
@@ -186,15 +196,15 @@ function injectSingleLink(
     }
 
     // --- Pass 1: 完全一致 ---
-    const exactResult = tryExactMatch(content, anchor, program)
+    const exactResult = tryExactMatch(content, anchor, program, forbiddenRanges)
     if (exactResult !== null) return exactResult
 
     // --- Pass 2: 正規化マッチング ---
-    const normalizedResult = tryNormalizedMatch(content, anchor, program)
+    const normalizedResult = tryNormalizedMatch(content, anchor, program, forbiddenRanges)
     if (normalizedResult !== null) return normalizedResult
 
     // --- Pass 3: コアネーム マッチング ---
-    const coreResult = tryCoreNameMatch(content, anchor, program)
+    const coreResult = tryCoreNameMatch(content, anchor, program, forbiddenRanges)
     if (coreResult !== null) return coreResult
   }
 
@@ -207,15 +217,16 @@ function injectSingleLink(
 function tryExactMatch(
   content: string,
   anchor: string,
-  program: AspProgram
+  program: AspProgram,
+  forbiddenRanges: ForbiddenRange[]
 ): string | null {
   const index = content.indexOf(anchor)
   if (index === -1) return null
 
   // 禁止タグ内チェック
-  if (isInsideForbiddenTag(content, index, anchor.length)) return null
+  if (isInForbiddenRange(forbiddenRanges, index, anchor.length)) return null
 
-  const linkHtml = `<a href="${program.affiliateUrl}" rel="sponsored noopener" target="_blank">${anchor}</a>`
+  const linkHtml = `<a href="${escapeHtmlAttr(program.affiliateUrl)}" rel="sponsored noopener" target="_blank">${anchor}</a>`
   const before = content.slice(0, index)
   const after = content.slice(index + anchor.length)
 
@@ -230,14 +241,15 @@ function tryExactMatch(
 function tryNormalizedMatch(
   content: string,
   anchor: string,
-  program: AspProgram
+  program: AspProgram,
+  forbiddenRanges: ForbiddenRange[]
 ): string | null {
   const normalizedAnchor = normalizeText(anchor)
   if (normalizedAnchor.length === 0) return null
 
   // コンテンツからHTMLタグを除いたテキスト部分をスキャンする
   // テキストノード（タグ外テキスト）の各部分に対して正規化マッチを試みる
-  const textSegments = extractTextSegments(content)
+  const textSegments = extractTextSegments(content, forbiddenRanges)
 
   for (const segment of textSegments) {
     const normalizedSegment = normalizeText(segment.text)
@@ -254,9 +266,9 @@ function tryNormalizedMatch(
     const matchedText = content.slice(absoluteStart, absoluteEnd)
 
     // 禁止タグ内チェック
-    if (isInsideForbiddenTag(content, absoluteStart, matchedText.length)) continue
+    if (isInForbiddenRange(forbiddenRanges, absoluteStart, matchedText.length)) continue
 
-    const linkHtml = `<a href="${program.affiliateUrl}" rel="sponsored noopener" target="_blank">${matchedText}</a>`
+    const linkHtml = `<a href="${escapeHtmlAttr(program.affiliateUrl)}" rel="sponsored noopener" target="_blank">${matchedText}</a>`
     const before = content.slice(0, absoluteStart)
     const after = content.slice(absoluteEnd)
 
@@ -275,7 +287,8 @@ function tryNormalizedMatch(
 function tryCoreNameMatch(
   content: string,
   anchor: string,
-  program: AspProgram
+  program: AspProgram,
+  forbiddenRanges: ForbiddenRange[]
 ): string | null {
   const coreName = extractCoreName(anchor)
 
@@ -287,9 +300,9 @@ function tryCoreNameMatch(
   if (index === -1) return null
 
   // 禁止タグ内チェック
-  if (isInsideForbiddenTag(content, index, coreName.length)) return null
+  if (isInForbiddenRange(forbiddenRanges, index, coreName.length)) return null
 
-  const linkHtml = `<a href="${program.affiliateUrl}" rel="sponsored noopener" target="_blank">${coreName}</a>`
+  const linkHtml = `<a href="${escapeHtmlAttr(program.affiliateUrl)}" rel="sponsored noopener" target="_blank">${coreName}</a>`
   const before = content.slice(0, index)
   const after = content.slice(index + coreName.length)
 
@@ -311,19 +324,8 @@ interface TextSegment {
  * HTMLコンテンツからタグ外のテキストセグメントを抽出する
  * 禁止タグ（<a>, <h2>, <h3>, <script>）内のテキストは除外する
  */
-function extractTextSegments(content: string): TextSegment[] {
+function extractTextSegments(content: string, forbiddenRanges: ForbiddenRange[]): TextSegment[] {
   const segments: TextSegment[] = []
-
-  // まず禁止タグの位置範囲を収集
-  const forbiddenRanges: Array<{ start: number; end: number }> = []
-  const forbiddenPattern = /<(a|h2|h3|script)\b[^>]*>[\s\S]*?<\/\1>/gi
-  let forbiddenMatch: RegExpExecArray | null
-  while ((forbiddenMatch = forbiddenPattern.exec(content)) !== null) {
-    forbiddenRanges.push({
-      start: forbiddenMatch.index,
-      end: forbiddenMatch.index + forbiddenMatch[0].length,
-    })
-  }
 
   // HTMLタグ（任意）を検出してテキストセグメントを分割
   const tagPattern = /<[^>]+>/g
@@ -426,7 +428,7 @@ export async function generateAffiliateSection(
   const listItems = programs
     .map(
       (p) =>
-        `  <li><a href="${p.affiliateUrl}" rel="sponsored noopener" target="_blank">${p.recommendedAnchors[0] ?? p.programName}</a> - ${p.programName}</li>`
+        `  <li><a href="${escapeHtmlAttr(p.affiliateUrl)}" rel="sponsored noopener" target="_blank">${p.recommendedAnchors[0] ?? p.programName}</a> - ${p.programName}</li>`
     )
     .join('\n')
 
