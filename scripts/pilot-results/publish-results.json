@@ -1,0 +1,65 @@
+{
+  "executedAt": "2026-03-04T11:24:30.155Z",
+  "isDryRun": true,
+  "publishStatus": "draft",
+  "totalArticles": 5,
+  "successCount": 5,
+  "failedCount": 0,
+  "results": [
+    {
+      "articleId": "pilot-aga-001",
+      "title": "【ダミー】AGA治療 オンラインクリニック 比較の完全ガイド",
+      "category": "aga",
+      "slug": "dummy-aga-treatment-online-clinic-comparison",
+      "status": "draft",
+      "contentId": "2y7r0_--5",
+      "url": "https://menscataly.com/articles/dummy-aga-treatment-online-clinic-comparison",
+      "isDryRun": false,
+      "publishedAt": "2026-03-04T11:24:11.920Z"
+    },
+    {
+      "articleId": "pilot-ed-001",
+      "title": "【ダミー】ED治療 オンライン診療 おすすめの完全ガイド",
+      "category": "ed",
+      "slug": "dummy-ed-treatment-online-medical-recommended",
+      "status": "draft",
+      "contentId": "r68zg5u0inl",
+      "url": "https://menscataly.com/articles/dummy-ed-treatment-online-medical-recommended",
+      "isDryRun": false,
+      "publishedAt": "2026-03-04T11:24:15.352Z"
+    },
+    {
+      "articleId": "pilot-hr-001",
+      "title": "【ダミー】メンズ脱毛 医療脱毛 比較の完全ガイド",
+      "category": "hair-removal",
+      "slug": "dummy-mens-hair-removal-medical-hair-removal-comparison",
+      "status": "draft",
+      "contentId": "8fy2afdvo",
+      "url": "https://menscataly.com/articles/dummy-mens-hair-removal-medical-hair-removal-comparison",
+      "isDryRun": false,
+      "publishedAt": "2026-03-04T11:24:19.616Z"
+    },
+    {
+      "articleId": "pilot-sc-001",
+      "title": "【ダミー】メンズ スキンケア 30代 おすすめの完全ガイド",
+      "category": "skincare",
+      "slug": "dummy-mens-skincare-30-recommended",
+      "status": "draft",
+      "contentId": "2bd6u3_3j",
+      "url": "https://menscataly.com/articles/dummy-mens-skincare-30-recommended",
+      "isDryRun": false,
+      "publishedAt": "2026-03-04T11:24:23.771Z"
+    },
+    {
+      "articleId": "pilot-sp-001",
+      "title": "【ダミー】男性 サプリメント 疲労回復 おすすめの完全ガイド",
+      "category": "column",
+      "slug": "dummy-mens-recommended",
+      "status": "draft",
+      "contentId": "2ktuo-gqkf2",
+      "url": "https://menscataly.com/articles/dummy-mens-recommended",
+      "isDryRun": false,
+      "publishedAt": "2026-03-04T11:24:27.958Z"
+    }
+  ]
+}

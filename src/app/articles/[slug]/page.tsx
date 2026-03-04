@@ -14,6 +14,7 @@ import {
 } from "@/lib/seo/structured-data";
 import type { MicroCMSArticle } from "@/types/microcms";
 import type { ArticleCategory } from "@/components/ui/Badge";
+import { ArticleBody } from "@/components/article/ArticleBody";
 
 /**
  * 目次 (Table of Contents)
@@ -333,8 +334,8 @@ async function ArticleContent({
       <TableOfContents html={article.content} />
 
       {/* 記事本文 */}
-      <article className="article-body max-w-none">
-        <div dangerouslySetInnerHTML={{ __html: article.content }} />
+      <article>
+        <ArticleBody content={article.content} className="max-w-none" />
       </article>
 
       {/* タグ */}

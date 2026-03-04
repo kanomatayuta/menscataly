@@ -106,6 +106,48 @@ const ENDPOINTS = {
  * 記事一覧を取得する
  * @param params - クエリパラメータ (limit, offset, filters, orders, category 等)
  */
+/**
+ * カテゴリスラッグ → microCMS カテゴリID マッピングキャッシュ
+ * リレーション型フィールドは ID でフィルタする必要がある
+ */
+let categorySlugToIdCache: Record<string, string> | null = null
+
+async function getCategoryIdBySlug(slug: string): Promise<string | null> {
+  // キャッシュがあればそこから返す
+  if (categorySlugToIdCache && categorySlugToIdCache[slug]) {
+    return categorySlugToIdCache[slug]
+  }
+
+  try {
+    const client = getMicroCMSClient()
+    const response = await client.getList<MicroCMSCategory>({
+      endpoint: ENDPOINTS.categories,
+      queries: { filters: `slug[equals]${slug}`, limit: 1 },
+    })
+
+    if (response.contents.length > 0) {
+      // 全カテゴリをキャッシュに入れるため、全件取得
+      if (!categorySlugToIdCache) {
+        const allCategories = await client.getList<MicroCMSCategory>({
+          endpoint: ENDPOINTS.categories,
+          queries: { limit: 100 },
+        })
+        categorySlugToIdCache = {}
+        for (const cat of allCategories.contents) {
+          if (cat.slug) {
+            categorySlugToIdCache[cat.slug] = cat.id
+          }
+        }
+      }
+      return categorySlugToIdCache[slug] ?? response.contents[0].id
+    }
+  } catch (err) {
+    console.error(`[microCMS] Failed to resolve category slug "${slug}":`, err)
+  }
+
+  return null
+}
+
 export async function getArticles(
   params: MicroCMSArticleQueries = {}
 ): Promise<MicroCMSListResponse<MicroCMSArticle>> {
@@ -122,14 +164,25 @@ export async function getArticles(
   const client = getMicroCMSClient()
 
   // category クエリを microCMS filters 形式に変換
+  // リレーション型フィールドは カテゴリID でフィルタする必要がある
   const { category, depth: _depth, ...rest } = params
   const queries: MicroCMSQueries = { ...rest }
 
   if (category) {
-    const categoryFilter = `category[equals]${category}`
-    queries.filters = queries.filters
-      ? `${queries.filters}[and]${categoryFilter}`
-      : categoryFilter
+    // カテゴリスラッグからIDを解決
+    const categoryId = await getCategoryIdBySlug(category)
+    if (categoryId) {
+      const categoryFilter = `category[equals]${categoryId}`
+      queries.filters = queries.filters
+        ? `${queries.filters}[and]${categoryFilter}`
+        : categoryFilter
+    } else {
+      // IDが見つからない場合はスラッグをそのまま使用（フォールバック）
+      const categoryFilter = `category[equals]${category}`
+      queries.filters = queries.filters
+        ? `${queries.filters}[and]${categoryFilter}`
+        : categoryFilter
+    }
   }
 
   // デフォルト値

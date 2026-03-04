@@ -273,6 +273,176 @@ function detectFormat(content: string): ContentFormat {
   return "html";
 }
 
+// ============================================================
+// HTML内Markdownハイブリッド変換
+// ============================================================
+
+/**
+ * HTML内に残ったMarkdown構文を変換する（ハイブリッドモード）
+ *
+ * Claude APIが生成した記事は <p>, <h2> 等のHTMLタグを持つが、
+ * タグの中身に **bold**, `| table |`, `- list` 等のMarkdown構文が
+ * そのまま残っているケースが多い。
+ */
+function processHybridContent(html: string): string {
+  // 1. インライン Markdown を HTML タグ内で変換
+  //    **text** → <strong>text</strong>
+  //    *text*   → <em>text</em>
+  //    `code`   → <code>code</code>
+  //    [text](url) → <a>
+  html = html.replace(
+    /(<p[^>]*>)([\s\S]*?)(<\/p>)/g,
+    (_match, open: string, inner: string, close: string) => {
+      let processed = inner;
+
+      // Markdownテーブル行の検出: | col1 | col2 | col3 |
+      if (/^\s*\|.*\|.*\|\s*$/.test(processed.trim())) {
+        // テーブル行はそのまま返す（後でテーブル変換で処理）
+        return open + processed + close;
+      }
+
+      // Markdown リスト検出: - item または * item
+      if (/^\s*[-*]\s+\*?\*?/.test(processed.trim())) {
+        // リストアイテムはそのまま返す（後でリスト変換で処理）
+        return open + processed + close;
+      }
+
+      // Bold: **text**
+      processed = processed.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+      // Italic: *text* (not inside **)
+      processed = processed.replace(
+        /(?<!\*)\*([^*]+)\*(?!\*)/g,
+        "<em>$1</em>"
+      );
+      // Inline code: `code`
+      processed = processed.replace(/`([^`]+)`/g, "<code>$1</code>");
+      // Links: [text](url)
+      processed = processed.replace(
+        /\[([^\]]+)\]\(([^)]+)\)/g,
+        '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
+      );
+
+      return open + processed + close;
+    }
+  );
+
+  // 2. Markdownテーブルを <table> に変換
+  //    <p>| col1 | col2 |</p><p>|---|---|</p><p>| val1 | val2 |</p>
+  html = convertMarkdownTables(html);
+
+  // 3. Markdownリスト (<p>- item</p> パターン) を <ul>/<ol> に変換
+  html = convertMarkdownLists(html);
+
+  return html;
+}
+
+/**
+ * <p>タグに包まれたMarkdownテーブルを <table> に変換
+ */
+function convertMarkdownTables(html: string): string {
+  // <p>| ... |</p> の連続パターンを検出
+  const tablePattern =
+    /(?:<p[^>]*>\s*\|[^<]+\|\s*<\/p>\s*)+/g;
+
+  return html.replace(tablePattern, (match) => {
+    // 各行を抽出
+    const rowMatches = match.match(/<p[^>]*>\s*(\|[^<]+\|)\s*<\/p>/g);
+    if (!rowMatches || rowMatches.length < 2) return match;
+
+    const rows: string[][] = [];
+    let separatorIdx = -1;
+
+    for (let i = 0; i < rowMatches.length; i++) {
+      const inner = rowMatches[i]
+        .replace(/<p[^>]*>\s*/, "")
+        .replace(/\s*<\/p>/, "")
+        .trim();
+
+      // セパレータ行の検出: |---|---|
+      if (/^\|[\s:]*-{2,}[\s:]*(\|[\s:]*-{2,}[\s:]*)*\|$/.test(inner)) {
+        separatorIdx = i;
+        continue;
+      }
+
+      const cells = inner
+        .split("|")
+        .filter((cell) => cell.trim() !== "")
+        .map((cell) => cell.trim());
+
+      if (cells.length > 0) {
+        rows.push(cells);
+      }
+    }
+
+    if (rows.length === 0) return match;
+
+    // テーブルHTML構築
+    let tableHtml = '<table>';
+    const hasHeader = separatorIdx === 1 || (separatorIdx === -1 && rows.length >= 2);
+
+    if (hasHeader && rows.length > 0) {
+      const headerRow = rows.shift()!;
+      tableHtml += "<thead><tr>";
+      for (const cell of headerRow) {
+        // Bold変換
+        const cellHtml = cell.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+        tableHtml += `<th>${cellHtml}</th>`;
+      }
+      tableHtml += "</tr></thead>";
+    }
+
+    if (rows.length > 0) {
+      tableHtml += "<tbody>";
+      for (const row of rows) {
+        tableHtml += "<tr>";
+        for (const cell of row) {
+          const cellHtml = cell.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+          tableHtml += `<td>${cellHtml}</td>`;
+        }
+        tableHtml += "</tr>";
+      }
+      tableHtml += "</tbody>";
+    }
+
+    tableHtml += "</table>";
+    return tableHtml;
+  });
+}
+
+/**
+ * <p>タグに包まれたMarkdownリストを <ul>/<ol> に変換
+ */
+function convertMarkdownLists(html: string): string {
+  // 連続する <p>- item</p> パターンを <ul> に変換
+  html = html.replace(
+    /(?:<p[^>]*>\s*[-*]\s+[\s\S]*?<\/p>\s*){2,}/g,
+    (match) => {
+      const items = match.match(/<p[^>]*>\s*[-*]\s+([\s\S]*?)<\/p>/g);
+      if (!items) return match;
+
+      let listHtml = "<ul>";
+      for (const item of items) {
+        let content = item
+          .replace(/<p[^>]*>\s*[-*]\s+/, "")
+          .replace(/<\/p>/, "")
+          .trim();
+        // Bold変換
+        content = content.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+        // Italic変換
+        content = content.replace(
+          /(?<!\*)\*([^*]+)\*(?!\*)/g,
+          "<em>$1</em>"
+        );
+        listHtml += `<li>${content}</li>`;
+      }
+      listHtml += "</ul>";
+      return listHtml;
+    }
+  );
+
+  return html;
+}
+
 /**
  * コンテンツを適切な HTML に変換する
  */
@@ -291,7 +461,8 @@ function normalizeContent(content: string): string {
       return markdownToHtml(content);
     case "html":
     default:
-      return content;
+      // HTML内にMarkdown構文が残っている場合のハイブリッド変換
+      return processHybridContent(content);
   }
 }
 

@@ -1,19 +1,22 @@
 -- ============================================================
--- MENS CATALY - Consolidated Supabase Migration
+-- MENS CATALY - Consolidated Supabase Migration (v2.0 Improved)
 -- ============================================================
 --
 -- This script combines all migrations into a single idempotent file.
--- Sources:
---   - src/lib/db/schema.sql (v2.0 base schema)
---   - src/lib/db/migrations/001_pipeline_tables.sql
---   - src/lib/db/migrations/002_phase2_tables.sql
---   - src/lib/db/migrations/003_phase3b_compliance_queue.sql
+-- v2.0 improvements (Phase 4 review):
+--   - FK追加: generation_costs.job_id, affiliate_links.program_id
+--   - 新テーブル: article_keywords (記事↔キーワード追跡), audit_log (監査ログ), schema_migrations
+--   - articles.primary_keyword_id FK追加
+--   - 複合インデックス追加 (review_queue, compliance_logs, pipeline_logs)
+--   - NUMERIC列のCHECK制約追加
+--   - UUID生成関数の統一 (uuid_generate_v4)
+--   - anon用 asp_programs SELECTポリシー追加
+--   - カテゴリシードに column 追加
 --
--- All statements use IF NOT EXISTS / IF EXISTS guards so this script
--- can be run multiple times safely (idempotent).
+-- All statements use IF NOT EXISTS / IF EXISTS guards (idempotent).
 --
 -- Usage:
---   psql $DATABASE_URL -f scripts/migrate-supabase.sql
+--   Supabase SQL Editor にペーストして Run
 -- ============================================================
 
 -- ============================================================
@@ -53,7 +56,25 @@ BEGIN
 END$$;
 
 -- ============================================================
--- 3. Base Tables (from schema.sql)
+-- 3. Schema Migrations Tracking
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  version    TEXT PRIMARY KEY,
+  applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  description TEXT
+);
+COMMENT ON TABLE schema_migrations IS 'マイグレーションバージョン管理';
+
+INSERT INTO schema_migrations (version, description) VALUES
+  ('001', 'Base schema + pipeline tables'),
+  ('002', 'Phase 2: costs, alerts, batch, review, ASP'),
+  ('003', 'Phase 3b: compliance queue slug unique'),
+  ('004', 'Phase 4: FK追加, article_keywords, audit_log, CHECK制約, 複合インデックス')
+ON CONFLICT (version) DO NOTHING;
+
+-- ============================================================
+-- 4. Base Tables
 -- ============================================================
 
 -- categories
@@ -150,7 +171,7 @@ CREATE TABLE IF NOT EXISTS compliance_logs (
 COMMENT ON TABLE compliance_logs IS '薬機法・景表法コンプライアンスチェックログ';
 
 -- ============================================================
--- 4. Pipeline Tables (from 001_pipeline_tables.sql)
+-- 5. Pipeline Tables
 -- ============================================================
 
 -- pipeline_runs
@@ -179,42 +200,12 @@ CREATE TABLE IF NOT EXISTS pipeline_logs (
 COMMENT ON TABLE pipeline_logs IS 'パイプライン実行詳細ログ';
 
 -- ============================================================
--- 5. Phase 2 Tables (from 002_phase2_tables.sql)
+-- 6. Phase 2 Tables
 -- ============================================================
 
--- generation_costs
-CREATE TABLE IF NOT EXISTS generation_costs (
-  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  job_id        UUID,
-  article_id    UUID REFERENCES articles(id) ON DELETE SET NULL,
-  cost_type     TEXT NOT NULL CHECK (cost_type IN ('article_generation', 'image_generation', 'analysis', 'compliance_check')),
-  input_tokens  INT NOT NULL DEFAULT 0,
-  output_tokens INT NOT NULL DEFAULT 0,
-  cost_usd      NUMERIC(10,6) NOT NULL DEFAULT 0,
-  model         TEXT NOT NULL,
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-COMMENT ON TABLE generation_costs IS 'AI生成コスト追跡';
-
--- monitoring_alerts
-CREATE TABLE IF NOT EXISTS monitoring_alerts (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  type            TEXT NOT NULL,
-  severity        TEXT NOT NULL CHECK (severity IN ('critical', 'warning', 'info')),
-  status          TEXT NOT NULL CHECK (status IN ('active', 'acknowledged', 'resolved'))
-                  DEFAULT 'active',
-  title           TEXT NOT NULL,
-  message         TEXT NOT NULL,
-  metadata        JSONB NOT NULL DEFAULT '{}',
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  acknowledged_at TIMESTAMPTZ,
-  resolved_at     TIMESTAMPTZ
-);
-COMMENT ON TABLE monitoring_alerts IS 'システムモニタリングアラート';
-
--- batch_generation_jobs
+-- batch_generation_jobs (generation_costsより先に作成 — FK参照のため)
 CREATE TABLE IF NOT EXISTS batch_generation_jobs (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   status          TEXT NOT NULL CHECK (status IN ('queued', 'running', 'completed', 'failed', 'cancelled'))
                   DEFAULT 'queued',
   total_keywords  INT NOT NULL,
@@ -229,9 +220,57 @@ CREATE TABLE IF NOT EXISTS batch_generation_jobs (
 );
 COMMENT ON TABLE batch_generation_jobs IS 'バッチ記事生成ジョブ';
 
+-- generation_costs (batch_generation_jobs の後に作成)
+CREATE TABLE IF NOT EXISTS generation_costs (
+  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  job_id        UUID REFERENCES batch_generation_jobs(id) ON DELETE CASCADE,
+  article_id    UUID REFERENCES articles(id) ON DELETE SET NULL,
+  cost_type     TEXT NOT NULL CHECK (cost_type IN ('article_generation', 'image_generation', 'analysis', 'compliance_check')),
+  input_tokens  INT NOT NULL DEFAULT 0,
+  output_tokens INT NOT NULL DEFAULT 0,
+  cost_usd      NUMERIC(10,6) NOT NULL DEFAULT 0,
+  model         TEXT NOT NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+COMMENT ON TABLE generation_costs IS 'AI生成コスト追跡';
+
+-- generation_costs.job_id に FK が未定義の場合は追加 (既存DB対応)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_name = 'generation_costs_job_id_fkey'
+      AND table_name = 'generation_costs'
+  ) THEN
+    BEGIN
+      ALTER TABLE generation_costs
+        ADD CONSTRAINT generation_costs_job_id_fkey
+        FOREIGN KEY (job_id) REFERENCES batch_generation_jobs(id) ON DELETE CASCADE;
+    EXCEPTION WHEN others THEN
+      RAISE NOTICE 'FK generation_costs_job_id_fkey already exists or failed: %', SQLERRM;
+    END;
+  END IF;
+END $$;
+
+-- monitoring_alerts
+CREATE TABLE IF NOT EXISTS monitoring_alerts (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  type            TEXT NOT NULL,
+  severity        TEXT NOT NULL CHECK (severity IN ('critical', 'warning', 'info')),
+  status          TEXT NOT NULL CHECK (status IN ('active', 'acknowledged', 'resolved'))
+                  DEFAULT 'active',
+  title           TEXT NOT NULL,
+  message         TEXT NOT NULL,
+  metadata        JSONB NOT NULL DEFAULT '{}',
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  acknowledged_at TIMESTAMPTZ,
+  resolved_at     TIMESTAMPTZ
+);
+COMMENT ON TABLE monitoring_alerts IS 'システムモニタリングアラート';
+
 -- article_review_queue
 CREATE TABLE IF NOT EXISTS article_review_queue (
-  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   article_id       UUID NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
   microcms_id      TEXT,
   title            TEXT NOT NULL,
@@ -251,7 +290,7 @@ COMMENT ON TABLE article_review_queue IS '記事レビューキュー';
 
 -- asp_programs
 CREATE TABLE IF NOT EXISTS asp_programs (
-  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   asp_name            TEXT NOT NULL,
   program_name        TEXT NOT NULL,
   program_id          TEXT NOT NULL UNIQUE,
@@ -270,9 +309,61 @@ CREATE TABLE IF NOT EXISTS asp_programs (
   updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 COMMENT ON TABLE asp_programs IS 'ASPアフィリエイトプログラム';
+COMMENT ON COLUMN asp_programs.epc IS 'Earnings Per Click (アフィリエイト指標)';
 
 -- ============================================================
--- 6. Phase 3b Constraints (from 003_phase3b_compliance_queue.sql)
+-- 7. Phase 4 新テーブル
+-- ============================================================
+
+-- article_keywords: 記事↔キーワード追跡 (どのKWからどの記事が生成されたか)
+CREATE TABLE IF NOT EXISTS article_keywords (
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  article_id  UUID NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+  keyword_id  UUID NOT NULL REFERENCES keywords(id) ON DELETE CASCADE,
+  is_primary  BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (article_id, keyword_id)
+);
+COMMENT ON TABLE article_keywords IS '記事↔キーワード関連付け (生成元キーワード追跡)';
+
+-- articles.primary_keyword_id (1記事:1プライマリKW のショートカット)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'articles' AND column_name = 'primary_keyword_id'
+  ) THEN
+    ALTER TABLE articles ADD COLUMN primary_keyword_id UUID REFERENCES keywords(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+-- affiliate_links.program_id FK (asp_programs との関連付け)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'affiliate_links' AND column_name = 'program_id'
+  ) THEN
+    ALTER TABLE affiliate_links ADD COLUMN program_id UUID REFERENCES asp_programs(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+-- audit_log: 監査ログ
+CREATE TABLE IF NOT EXISTS audit_log (
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  table_name  TEXT NOT NULL,
+  operation   TEXT NOT NULL CHECK (operation IN ('INSERT', 'UPDATE', 'DELETE')),
+  record_id   UUID,
+  changed_by  TEXT,
+  old_values  JSONB,
+  new_values  JSONB,
+  ip_address  INET,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+COMMENT ON TABLE audit_log IS '変更監査ログ';
+
+-- ============================================================
+-- 8. Phase 3b Constraints
 -- ============================================================
 
 -- slug にユニーク制約を追加 (upsert の onConflict に必要)
@@ -300,7 +391,56 @@ END $$;
 COMMENT ON COLUMN article_review_queue.review_notes IS 'JSON形式のレビューメモ: decision, reason, eeatScore, violationCount, runId, queueStatus, retryCount';
 
 -- ============================================================
--- 7. Indexes
+-- 9. CHECK Constraints (NUMERIC列の範囲制約)
+-- ============================================================
+
+DO $$
+BEGIN
+  -- articles.quality_score: 0〜100
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_articles_quality_score') THEN
+    ALTER TABLE articles ADD CONSTRAINT chk_articles_quality_score
+      CHECK (quality_score >= 0 AND quality_score <= 100);
+  END IF;
+
+  -- keywords.difficulty: 0〜100
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_keywords_difficulty') THEN
+    ALTER TABLE keywords ADD CONSTRAINT chk_keywords_difficulty
+      CHECK (difficulty >= 0 AND difficulty <= 100);
+  END IF;
+
+  -- keywords.trend_score: 0〜100
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_keywords_trend_score') THEN
+    ALTER TABLE keywords ADD CONSTRAINT chk_keywords_trend_score
+      CHECK (trend_score >= 0 AND trend_score <= 100);
+  END IF;
+
+  -- analytics_daily.bounce_rate: 0〜1
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_analytics_bounce_rate') THEN
+    ALTER TABLE analytics_daily ADD CONSTRAINT chk_analytics_bounce_rate
+      CHECK (bounce_rate >= 0 AND bounce_rate <= 1);
+  END IF;
+
+  -- analytics_daily.ctr: 0〜1
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_analytics_ctr') THEN
+    ALTER TABLE analytics_daily ADD CONSTRAINT chk_analytics_ctr
+      CHECK (ctr >= 0 AND ctr <= 1);
+  END IF;
+
+  -- asp_programs.approval_rate: 0〜100
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_asp_approval_rate') THEN
+    ALTER TABLE asp_programs ADD CONSTRAINT chk_asp_approval_rate
+      CHECK (approval_rate >= 0 AND approval_rate <= 100);
+  END IF;
+
+  -- article_review_queue.compliance_score: 0〜100
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_review_compliance_score') THEN
+    ALTER TABLE article_review_queue ADD CONSTRAINT chk_review_compliance_score
+      CHECK (compliance_score >= 0 AND compliance_score <= 100);
+  END IF;
+END $$;
+
+-- ============================================================
+-- 10. Indexes
 -- ============================================================
 
 -- articles
@@ -310,11 +450,17 @@ CREATE INDEX IF NOT EXISTS idx_articles_category_id    ON articles(category_id);
 CREATE INDEX IF NOT EXISTS idx_articles_published_at   ON articles(published_at DESC) WHERE status = 'published';
 CREATE INDEX IF NOT EXISTS idx_articles_microcms_id    ON articles(microcms_id) WHERE microcms_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_articles_updated_at     ON articles(updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_articles_primary_kw     ON articles(primary_keyword_id) WHERE primary_keyword_id IS NOT NULL;
 
 -- keywords
 CREATE INDEX IF NOT EXISTS idx_keywords_category       ON keywords(category);
 CREATE INDEX IF NOT EXISTS idx_keywords_search_volume  ON keywords(search_volume DESC);
 CREATE INDEX IF NOT EXISTS idx_keywords_tracked_at     ON keywords(tracked_at DESC);
+
+-- article_keywords
+CREATE INDEX IF NOT EXISTS idx_article_keywords_article  ON article_keywords(article_id);
+CREATE INDEX IF NOT EXISTS idx_article_keywords_keyword  ON article_keywords(keyword_id);
+CREATE INDEX IF NOT EXISTS idx_article_keywords_primary  ON article_keywords(article_id) WHERE is_primary = TRUE;
 
 -- analytics_daily
 CREATE INDEX IF NOT EXISTS idx_analytics_article_date  ON analytics_daily(article_id, date DESC);
@@ -323,10 +469,14 @@ CREATE INDEX IF NOT EXISTS idx_analytics_date          ON analytics_daily(date D
 -- affiliate_links
 CREATE INDEX IF NOT EXISTS idx_affiliate_article_id    ON affiliate_links(article_id);
 CREATE INDEX IF NOT EXISTS idx_affiliate_asp_name      ON affiliate_links(asp_name);
+CREATE INDEX IF NOT EXISTS idx_affiliate_program_id    ON affiliate_links(program_id) WHERE program_id IS NOT NULL;
 
 -- compliance_logs
 CREATE INDEX IF NOT EXISTS idx_compliance_article_id   ON compliance_logs(article_id);
 CREATE INDEX IF NOT EXISTS idx_compliance_checked_at   ON compliance_logs(checked_at DESC);
+-- [NEW] 複合インデックス: DISTINCT ON クエリ高速化
+CREATE INDEX IF NOT EXISTS idx_compliance_article_checktype_checked
+  ON compliance_logs(article_id, check_type, checked_at DESC);
 
 -- full-text search (pg_trgm)
 CREATE INDEX IF NOT EXISTS idx_articles_title_trgm     ON articles USING gin(title gin_trgm_ops);
@@ -341,6 +491,8 @@ CREATE INDEX IF NOT EXISTS idx_pipeline_runs_type_started ON pipeline_runs(type,
 CREATE INDEX IF NOT EXISTS idx_pipeline_logs_run_id     ON pipeline_logs(run_id);
 CREATE INDEX IF NOT EXISTS idx_pipeline_logs_created_at ON pipeline_logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_pipeline_logs_level      ON pipeline_logs(level);
+-- [NEW] 複合インデックス: run_id + level フィルタ
+CREATE INDEX IF NOT EXISTS idx_pipeline_logs_run_level  ON pipeline_logs(run_id, level);
 
 -- generation_costs
 CREATE INDEX IF NOT EXISTS idx_generation_costs_job_id      ON generation_costs(job_id);
@@ -365,14 +517,23 @@ CREATE INDEX IF NOT EXISTS idx_article_review_queue_status        ON article_rev
 CREATE INDEX IF NOT EXISTS idx_article_review_queue_category      ON article_review_queue(category);
 CREATE INDEX IF NOT EXISTS idx_article_review_queue_generated_at  ON article_review_queue(generated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_article_review_queue_slug          ON article_review_queue(slug);
+-- [NEW] 複合インデックス: status + generated_at (ダッシュボードクエリ高速化)
+CREATE INDEX IF NOT EXISTS idx_article_review_queue_status_generated
+  ON article_review_queue(status, generated_at DESC);
 
 -- asp_programs
 CREATE INDEX IF NOT EXISTS idx_asp_programs_asp_name   ON asp_programs(asp_name);
 CREATE INDEX IF NOT EXISTS idx_asp_programs_category   ON asp_programs(category);
 CREATE INDEX IF NOT EXISTS idx_asp_programs_is_active  ON asp_programs(is_active);
 
+-- audit_log
+CREATE INDEX IF NOT EXISTS idx_audit_log_table_name    ON audit_log(table_name);
+CREATE INDEX IF NOT EXISTS idx_audit_log_record_id     ON audit_log(record_id);
+CREATE INDEX IF NOT EXISTS idx_audit_log_created_at    ON audit_log(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_log_changed_by    ON audit_log(changed_by);
+
 -- ============================================================
--- 8. Triggers
+-- 11. Triggers
 -- ============================================================
 
 -- updated_at 自動更新トリガー関数
@@ -406,7 +567,7 @@ BEGIN
 END$$;
 
 -- ============================================================
--- 9. Views
+-- 12. Views
 -- ============================================================
 
 -- 記事パフォーマンス集計 (30日間)
@@ -495,10 +656,10 @@ ORDER BY avg_epc DESC;
 COMMENT ON VIEW v_revenue_by_asp IS 'ASP別収益集計';
 
 -- ============================================================
--- 10. Row Level Security (RLS)
+-- 13. Row Level Security (RLS)
 -- ============================================================
 
--- RLS有効化 (IF NOT EXISTS は ALTER TABLE ENABLE RLS にはないが、再実行しても問題なし)
+-- RLS有効化 (再実行しても問題なし)
 ALTER TABLE articles        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE categories      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE keywords        ENABLE ROW LEVEL SECURITY;
@@ -512,10 +673,12 @@ ALTER TABLE monitoring_alerts     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE batch_generation_jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE article_review_queue  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE asp_programs          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE article_keywords      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_log             ENABLE ROW LEVEL SECURITY;
 
 -- service_role は RLS をデフォルトでバイパスするため追加ポリシー不要
 
--- anon ロール: articles / categories の SELECT のみ
+-- anon ロール: 公開データのSELECTのみ
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'anon_select_published_articles' AND tablename = 'articles') THEN
     CREATE POLICY "anon_select_published_articles" ON articles FOR SELECT TO anon USING (status = 'published');
@@ -528,7 +691,14 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- authenticated ロール
+-- [NEW] anon: asp_programs のアクティブなプログラムのみ閲覧可
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'anon_select_asp_programs' AND tablename = 'asp_programs') THEN
+    CREATE POLICY "anon_select_asp_programs" ON asp_programs FOR SELECT TO anon USING (is_active = TRUE);
+  END IF;
+END $$;
+
+-- authenticated ロール: SELECT
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'authenticated_select_articles' AND tablename = 'articles') THEN
     CREATE POLICY "authenticated_select_articles" ON articles FOR SELECT TO authenticated USING (true);
@@ -541,31 +711,87 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- Pipeline: authenticated SELECT
-CREATE POLICY IF NOT EXISTS "authenticated_select_pipeline_runs"
-  ON pipeline_runs FOR SELECT TO authenticated USING (true);
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'authenticated_select_keywords' AND tablename = 'keywords') THEN
+    CREATE POLICY "authenticated_select_keywords" ON keywords FOR SELECT TO authenticated USING (true);
+  END IF;
+END $$;
 
-CREATE POLICY IF NOT EXISTS "authenticated_select_pipeline_logs"
-  ON pipeline_logs FOR SELECT TO authenticated USING (true);
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'authenticated_select_analytics_daily' AND tablename = 'analytics_daily') THEN
+    CREATE POLICY "authenticated_select_analytics_daily" ON analytics_daily FOR SELECT TO authenticated USING (true);
+  END IF;
+END $$;
 
--- Phase 2 tables: authenticated SELECT
-CREATE POLICY IF NOT EXISTS "authenticated_select_generation_costs"
-  ON generation_costs FOR SELECT TO authenticated USING (true);
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'authenticated_select_affiliate_links' AND tablename = 'affiliate_links') THEN
+    CREATE POLICY "authenticated_select_affiliate_links" ON affiliate_links FOR SELECT TO authenticated USING (true);
+  END IF;
+END $$;
 
-CREATE POLICY IF NOT EXISTS "authenticated_select_monitoring_alerts"
-  ON monitoring_alerts FOR SELECT TO authenticated USING (true);
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'authenticated_select_compliance_logs' AND tablename = 'compliance_logs') THEN
+    CREATE POLICY "authenticated_select_compliance_logs" ON compliance_logs FOR SELECT TO authenticated USING (true);
+  END IF;
+END $$;
 
-CREATE POLICY IF NOT EXISTS "authenticated_select_batch_generation_jobs"
-  ON batch_generation_jobs FOR SELECT TO authenticated USING (true);
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'authenticated_select_pipeline_runs' AND tablename = 'pipeline_runs') THEN
+    CREATE POLICY "authenticated_select_pipeline_runs" ON pipeline_runs FOR SELECT TO authenticated USING (true);
+  END IF;
+END $$;
 
-CREATE POLICY IF NOT EXISTS "authenticated_select_article_review_queue"
-  ON article_review_queue FOR SELECT TO authenticated USING (true);
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'authenticated_select_pipeline_logs' AND tablename = 'pipeline_logs') THEN
+    CREATE POLICY "authenticated_select_pipeline_logs" ON pipeline_logs FOR SELECT TO authenticated USING (true);
+  END IF;
+END $$;
 
-CREATE POLICY IF NOT EXISTS "authenticated_select_asp_programs"
-  ON asp_programs FOR SELECT TO authenticated USING (true);
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'authenticated_select_generation_costs' AND tablename = 'generation_costs') THEN
+    CREATE POLICY "authenticated_select_generation_costs" ON generation_costs FOR SELECT TO authenticated USING (true);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'authenticated_select_monitoring_alerts' AND tablename = 'monitoring_alerts') THEN
+    CREATE POLICY "authenticated_select_monitoring_alerts" ON monitoring_alerts FOR SELECT TO authenticated USING (true);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'authenticated_select_batch_generation_jobs' AND tablename = 'batch_generation_jobs') THEN
+    CREATE POLICY "authenticated_select_batch_generation_jobs" ON batch_generation_jobs FOR SELECT TO authenticated USING (true);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'authenticated_select_article_review_queue' AND tablename = 'article_review_queue') THEN
+    CREATE POLICY "authenticated_select_article_review_queue" ON article_review_queue FOR SELECT TO authenticated USING (true);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'authenticated_select_asp_programs' AND tablename = 'asp_programs') THEN
+    CREATE POLICY "authenticated_select_asp_programs" ON asp_programs FOR SELECT TO authenticated USING (true);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'authenticated_select_article_keywords' AND tablename = 'article_keywords') THEN
+    CREATE POLICY "authenticated_select_article_keywords" ON article_keywords FOR SELECT TO authenticated USING (true);
+  END IF;
+END $$;
+
+-- audit_log: authenticated SELECT only (書き込みは service_role のみ)
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'authenticated_select_audit_log' AND tablename = 'audit_log') THEN
+    CREATE POLICY "authenticated_select_audit_log" ON audit_log FOR SELECT TO authenticated USING (true);
+  END IF;
+END $$;
 
 -- ============================================================
--- 11. Seed Data (カテゴリマスタ)
+-- 14. Seed Data (カテゴリマスタ)
 -- ============================================================
 
 INSERT INTO categories (name, slug, description, display_order) VALUES
@@ -573,9 +799,10 @@ INSERT INTO categories (name, slug, description, display_order) VALUES
   ('ED・性機能',       'ed',            'ED治療・性機能改善関連',       2),
   ('脱毛・ヒゲ',       'hair-removal',  '医療脱毛・ヒゲ脱毛関連',       3),
   ('スキンケア・美容', 'skincare',      'メンズスキンケア・美容医療',   4),
-  ('ダイエット・健康', 'diet',          'メンズダイエット・健康管理',   5)
+  ('ダイエット・健康', 'diet',          'メンズダイエット・健康管理',   5),
+  ('コラム',           'column',        'メンズ美容コラム・トレンド',   6)
 ON CONFLICT (slug) DO NOTHING;
 
 -- ============================================================
--- Done
+-- Done — v2.0 (Phase 4 review improvements applied)
 -- ============================================================

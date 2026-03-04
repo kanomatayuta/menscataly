@@ -13,6 +13,14 @@ const nextConfig: NextConfig = {
   // Cache Components のビルド時レンダリングと非互換なため無効化中。
   // ============================================================
   cacheComponents: false,
+
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: 'images.microcms-assets.io' },
+      { protocol: 'https', hostname: 'res.cloudinary.com' },
+      { protocol: 'https', hostname: 'via.placeholder.com' },
+    ],
+  },
 };
 
 export default nextConfig;
