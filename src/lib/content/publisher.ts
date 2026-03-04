@@ -96,24 +96,60 @@ function referencesToMicroCMS(refs: Reference[]): Record<string, unknown>[] {
 }
 
 /**
+ * セクションの content を改行で <p> タグに分割する
+ * 空の <p></p> を生成しないよう、空行をフィルタリングする
+ */
+function contentToParagraphs(text: string): string {
+  return text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => `<p>${line}</p>`)
+    .join("\n");
+}
+
+/**
  * Article 型を microCMS のリクエストボディに変換する
  */
 function articleToMicroCMSBody(article: Article): Record<string, unknown> {
   // セクションを HTML に変換（microCMS はリッチテキストHTMLを受け付ける）
-  const sectionsHtml = article.sections
-    .map((section) => {
-      const levelTag = section.level;
-      const subsectionsHtml =
-        section.subsections
-          ?.map(
-            (sub) =>
-              `<${sub.level}>${sub.heading}</${sub.level}>\n<p>${sub.content.replace(/\n/g, "</p><p>")}</p>`
-          )
-          .join("\n") ?? "";
+  let sectionsHtml: string;
 
-      return `<${levelTag}>${section.heading}</${levelTag}>\n<p>${section.content.replace(/\n/g, "</p><p>")}</p>\n${subsectionsHtml}`;
-    })
-    .join("\n");
+  if (article.sections.length > 0) {
+    sectionsHtml = article.sections
+      .map((section) => {
+        const levelTag = section.level;
+        const subsectionsHtml =
+          section.subsections
+            ?.map(
+              (sub) =>
+                `<${sub.level}>${sub.heading}</${sub.level}>\n${contentToParagraphs(sub.content)}`
+            )
+            .join("\n") ?? "";
+
+        return `<${levelTag}>${section.heading}</${levelTag}>\n${contentToParagraphs(section.content)}\n${subsectionsHtml}`;
+      })
+      .join("\n");
+  } else if (article.content) {
+    // sections が空の場合は article.content (Markdown) をフォールバックとして使用
+    console.warn("[ArticlePublisher] sections is empty, using article.content as fallback");
+    // Markdown を基本的な HTML に変換
+    sectionsHtml = article.content
+      .split("\n")
+      .map((line) => {
+        const trimmed = line.trim();
+        if (!trimmed) return "";
+        if (trimmed.startsWith("## ")) return `<h2>${trimmed.slice(3)}</h2>`;
+        if (trimmed.startsWith("### ")) return `<h3>${trimmed.slice(4)}</h3>`;
+        if (trimmed.startsWith("#### ")) return `<h4>${trimmed.slice(5)}</h4>`;
+        return `<p>${trimmed}</p>`;
+      })
+      .filter((line) => line.length > 0)
+      .join("\n");
+  } else {
+    console.error("[ArticlePublisher] Both sections and content are empty!");
+    sectionsHtml = "";
+  }
 
   // PR表記をリード文の先頭に付加
   const prDisclosure = article.hasPRDisclosure

@@ -185,23 +185,63 @@ function parseArticleResponse(
   request: ContentGenerationRequest,
   now: string
 ): Article {
-  // JSONコードブロックを抽出
+  // JSONコードブロックを抽出（複数の ```json ブロックにも対応）
   const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
-  const jsonStr = jsonMatch ? jsonMatch[1] : content;
+  let jsonStr = jsonMatch ? jsonMatch[1] : content;
 
   let raw: RawArticleJSON;
   try {
     raw = JSON.parse(jsonStr) as RawArticleJSON;
   } catch {
-    // JSONパース失敗時はコンテンツをそのまま使用
-    console.warn("[ArticleGenerator] Failed to parse JSON response. Using raw content.");
-    raw = {
-      title: `${request.keyword} 完全ガイド`,
-      lead: content.slice(0, 300),
-      sections: [],
-      tags: [request.keyword],
-      references: [],
-    };
+    // 2回目の試行: コンテンツ内の最初の { ... } ブロックを抽出
+    console.warn("[ArticleGenerator] First JSON parse failed. Trying to extract JSON object...");
+    const braceStart = content.indexOf("{");
+    const braceEnd = content.lastIndexOf("}");
+    if (braceStart >= 0 && braceEnd > braceStart) {
+      jsonStr = content.slice(braceStart, braceEnd + 1);
+      try {
+        raw = JSON.parse(jsonStr) as RawArticleJSON;
+        console.info("[ArticleGenerator] Successfully extracted JSON from response.");
+      } catch {
+        // 3回目の試行: コンテンツをMarkdownとして解釈
+        console.warn("[ArticleGenerator] All JSON parse attempts failed. Treating as Markdown.");
+        const lines = content.split("\n");
+        const sections: RawArticleJSON["sections"] = [];
+        let currentSection: { heading: string; level: string; content: string } | null = null;
+
+        for (const line of lines) {
+          const h2Match = line.match(/^##\s+(.+)/);
+          const h3Match = line.match(/^###\s+(.+)/);
+          if (h2Match) {
+            if (currentSection) sections.push(currentSection);
+            currentSection = { heading: h2Match[1], level: "h2", content: "" };
+          } else if (h3Match && currentSection) {
+            currentSection.content += `\n### ${h3Match[1]}`;
+          } else if (currentSection && line.trim()) {
+            currentSection.content += `\n${line.trim()}`;
+          }
+        }
+        if (currentSection) sections.push(currentSection);
+
+        raw = {
+          title: `${request.keyword} 完全ガイド`,
+          lead: lines.find((l) => l.trim() && !l.startsWith("#"))?.trim() ?? "",
+          sections: sections.length > 0 ? sections : undefined,
+          tags: [request.keyword],
+          references: [],
+        };
+      }
+    } else {
+      // JSONオブジェクトが見つからない — Markdownとして解釈
+      console.warn("[ArticleGenerator] No JSON object found. Treating as plain text.");
+      raw = {
+        title: `${request.keyword} 完全ガイド`,
+        lead: content.slice(0, 300).replace(/[`#*]/g, "").trim(),
+        sections: [],
+        tags: [request.keyword],
+        references: [],
+      };
+    }
   }
 
   // セクション変換

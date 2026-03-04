@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
 import { getArticles } from "@/lib/microcms/client";
 import type { ArticleCategory } from "@/components/ui/Badge";
 import type { MicroCMSArticle } from "@/types/microcms";
@@ -10,6 +9,7 @@ const CATEGORY_MAP: Record<string, ArticleCategory> = {
   "hair-removal": "hair-removal",
   skincare: "skincare",
   ed: "ed",
+  column: "column",
 };
 
 const CATEGORY_PAGE_TITLES: Record<ArticleCategory, string> = {
@@ -18,6 +18,16 @@ const CATEGORY_PAGE_TITLES: Record<ArticleCategory, string> = {
   skincare: "スキンケア",
   ed: "ED治療",
   column: "コラム",
+};
+
+/** カテゴリのアクセントカラー（アクティブ時の背景・ボーダー） */
+const CATEGORY_COLORS: Record<ArticleCategory | "", { bg: string; text: string; border: string; hoverBg: string }> = {
+  "": { bg: "#1a365d", text: "#ffffff", border: "#1a365d", hoverBg: "#f0f0f0" },
+  aga: { bg: "#2563eb", text: "#ffffff", border: "#2563eb", hoverBg: "#eff6ff" },
+  "hair-removal": { bg: "#7c3aed", text: "#ffffff", border: "#7c3aed", hoverBg: "#f5f3ff" },
+  skincare: { bg: "#059669", text: "#ffffff", border: "#059669", hoverBg: "#ecfdf5" },
+  ed: { bg: "#dc2626", text: "#ffffff", border: "#dc2626", hoverBg: "#fef2f2" },
+  column: { bg: "#d97706", text: "#ffffff", border: "#d97706", hoverBg: "#fffbeb" },
 };
 
 const ALL_CATEGORIES: { value: ArticleCategory | ""; label: string }[] = [
@@ -106,34 +116,32 @@ export async function ArticleListContent({ searchParams }: Props) {
             const isActive =
               (!value && !activeCategory) || value === activeCategory;
             const href = value ? `/articles?category=${value}` : "/articles";
+            const colors = CATEGORY_COLORS[value];
 
             return (
               <li key={value || "all"}>
                 <Link
                   href={href}
-                  className={`inline-flex items-center rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                  className={`inline-flex items-center rounded-full px-5 py-2 text-sm font-semibold transition-all duration-200 ${
                     isActive
-                      ? "text-white"
-                      : "border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-100"
+                      ? "shadow-sm"
+                      : "bg-white hover:shadow-sm"
                   }`}
                   style={
                     isActive
                       ? {
-                          backgroundColor:
-                            "var(--color-primary-500, #1a365d)",
+                          backgroundColor: colors.bg,
+                          color: colors.text,
+                          border: `2px solid ${colors.border}`,
                         }
-                      : undefined
+                      : {
+                          border: `2px solid ${colors.border}`,
+                          color: colors.bg,
+                        }
                   }
                   aria-current={isActive ? "page" : undefined}
                 >
-                  {value ? (
-                    <Badge
-                      category={value as ArticleCategory}
-                      className={`p-0 text-sm ${isActive ? "bg-transparent text-white" : ""}`}
-                    />
-                  ) : (
-                    label
-                  )}
+                  {label}
                 </Link>
               </li>
             );

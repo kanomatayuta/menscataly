@@ -444,21 +444,81 @@ function convertMarkdownLists(html: string): string {
 }
 
 /**
+ * HTML内に埋め込まれたJSON/Markdownを検出し抽出する前処理
+ *
+ * publisher.ts が JSON parse 失敗時に生のClaude応答を <p> でラップして
+ * microCMS に保存するケースで、content が以下のような形になる:
+ *   <p>```json { "title": "...", ... } ```</p>
+ *   <p>{ "title": "...", "lead": "..." }</p>
+ *
+ * これを検出して内部フォーマットに戻す。
+ */
+function unwrapEmbeddedContent(content: string): string {
+  const trimmed = content.trim();
+
+  // Case 1: <p> タグ内に ```json コードブロックがある
+  const jsonCodeblockInHtml = trimmed.match(
+    /<p[^>]*>\s*(```json[\s\S]*?```)\s*<\/p>/i
+  );
+  if (jsonCodeblockInHtml) {
+    return jsonCodeblockInHtml[1];
+  }
+
+  // Case 2: コンテンツ全体が少数の <p> タグで、中身がJSON
+  // <p>PR表記</p><p>{ "title": ... }</p> のようなパターン
+  const paragraphs = trimmed.match(/<p[^>]*>([\s\S]*?)<\/p>/g);
+  if (paragraphs) {
+    for (const p of paragraphs) {
+      const inner = p.replace(/<p[^>]*>\s*/, "").replace(/\s*<\/p>/, "").trim();
+      // JSON オブジェクト検出
+      if (inner.startsWith("{") && inner.includes('"title"') && inner.includes('"lead"')) {
+        try {
+          JSON.parse(inner);
+          return inner;
+        } catch {
+          // 不完全なJSON — ```json ラッパーなしの生JSONかもしれない
+          // 閉じ括弧を探す
+          const fullContent = trimmed.replace(/<\/?p[^>]*>/g, "\n").trim();
+          const jsonStart = fullContent.indexOf("{");
+          if (jsonStart >= 0) {
+            const candidate = fullContent.slice(jsonStart);
+            try {
+              JSON.parse(candidate);
+              return candidate;
+            } catch {
+              // fall through
+            }
+          }
+        }
+      }
+      // ```json コードブロック検出
+      if (inner.startsWith("```json") || inner.startsWith("```JSON")) {
+        return inner;
+      }
+    }
+  }
+
+  return content;
+}
+
+/**
  * コンテンツを適切な HTML に変換する
  */
 function normalizeContent(content: string): string {
-  const format = detectFormat(content);
+  // 前処理: HTML内に埋め込まれたJSON/Markdownを抽出
+  const unwrapped = unwrapEmbeddedContent(content);
+  const format = detectFormat(unwrapped);
 
   switch (format) {
     case "json":
     case "json-codeblock": {
-      const html = jsonToHtml(content);
+      const html = jsonToHtml(unwrapped);
       if (html) return html;
       // JSON parse succeeded but wasn't article format — show as markdown
-      return markdownToHtml(content);
+      return markdownToHtml(unwrapped);
     }
     case "markdown":
-      return markdownToHtml(content);
+      return markdownToHtml(unwrapped);
     case "html":
     default:
       // HTML内にMarkdown構文が残っている場合のハイブリッド変換
