@@ -1,4 +1,6 @@
-import type { ButtonHTMLAttributes, AnchorHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes } from "react";
+import Link from "next/link";
+import type { ComponentProps } from "react";
 
 type ButtonVariant = "primary" | "secondary" | "outline";
 type ButtonSize = "sm" | "md" | "lg";
@@ -46,9 +48,9 @@ export function Button({
 type ButtonLinkProps = {
   variant?: ButtonVariant;
   size?: ButtonSize;
-} & AnchorHTMLAttributes<HTMLAnchorElement>;
+} & Omit<ComponentProps<typeof Link>, "variant">;
 
-// アンカー要素として使う場合のButtonLink
+// Next.js Link を使用したボタンスタイルのリンク
 export function ButtonLink({
   variant = "primary",
   size = "md",
@@ -57,11 +59,11 @@ export function ButtonLink({
   ...props
 }: ButtonLinkProps) {
   return (
-    <a
+    <Link
       className={`${BASE_CLASSES} ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${className}`}
       {...props}
     >
       {children}
-    </a>
+    </Link>
   );
 }

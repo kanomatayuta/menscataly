@@ -1,11 +1,30 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { Card } from "@/components/ui/Card";
 import { ButtonLink } from "@/components/ui/Button";
-import { MOCK_ARTICLES } from "@/lib/mock/articles";
+import { getArticles } from "@/lib/microcms/client";
+import type { MicroCMSArticle } from "@/types/microcms";
 import type { ArticleCategory } from "@/components/ui/Badge";
 
-// TODO: microCMS接続後に差し替える
-const RECENT_ARTICLES = MOCK_ARTICLES.slice(0, 3);
+/** MicroCMSArticle を Card コンポーネント用データに変換 */
+function articleToCardData(article: MicroCMSArticle) {
+  const category = (article.category?.slug ?? "aga") as ArticleCategory;
+  return {
+    slug: article.slug ?? article.id,
+    title: article.title,
+    excerpt: article.excerpt ?? "",
+    category,
+    publishedAt: article.publishedAt,
+    updatedAt: article.updatedAt,
+    eyecatch: (article.thumbnail_url || article.thumbnail)
+      ? {
+          url: article.thumbnail_url ?? article.thumbnail!.url,
+          width: article.thumbnail?.width ?? 1200,
+          height: article.thumbnail?.height ?? 630,
+        }
+      : undefined,
+  };
+}
 
 const CATEGORIES: { value: ArticleCategory; label: string; description: string; href: string }[] = [
   {
@@ -33,6 +52,33 @@ const CATEGORIES: { value: ArticleCategory; label: string; description: string; 
     href: "/articles?category=ed",
   },
 ];
+
+/** 最新記事を非同期取得する内部コンポーネント */
+async function RecentArticles() {
+  const result = await getArticles({ limit: 3 });
+  const articles = result.contents;
+
+  if (articles.length === 0) {
+    return (
+      <p className="py-8 text-center text-sm text-neutral-500">
+        記事はまだありません。
+      </p>
+    );
+  }
+
+  return (
+    <ul
+      className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
+      role="list"
+    >
+      {articles.map((article) => (
+        <li key={article.id}>
+          <Card article={articleToCardData(article)} />
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export default function HomePage() {
   return (
@@ -127,16 +173,15 @@ export default function HomePage() {
               すべての記事を見る →
             </Link>
           </div>
-          <ul
-            className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
-            role="list"
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center py-12">
+                <span className="text-sm text-neutral-500">読み込み中...</span>
+              </div>
+            }
           >
-            {RECENT_ARTICLES.map((article) => (
-              <li key={article.slug}>
-                <Card article={article} />
-              </li>
-            ))}
-          </ul>
+            <RecentArticles />
+          </Suspense>
         </div>
       </section>
 
