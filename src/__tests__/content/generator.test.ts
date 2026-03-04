@@ -416,6 +416,74 @@ describe('ArticleGenerator', () => {
 
       expect(result.article.content).toContain('rel="sponsored noopener"')
     })
+
+    it('アフィリエイトリンクにアンカーテキストとURLが含まれること', async () => {
+      const responseWithAnchor = JSON.stringify({
+        ...JSON.parse(validJsonResponse),
+        sections: [
+          {
+            heading: 'AGA治療の費用相場',
+            level: 'h2',
+            content: 'AGAスキンクリニックは信頼できるクリニックです。',
+          },
+        ],
+      })
+
+      mockGenerate.mockResolvedValue({
+        content: `\`\`\`json\n${responseWithAnchor}\n\`\`\``,
+        model: 'claude-sonnet-4-6',
+        tokenUsage: { inputTokens: 1000, outputTokens: 2000, totalTokens: 3000 },
+        durationMs: 5000,
+      })
+
+      mockCheck.mockReturnValue(compliantResult)
+
+      const request = createRequest({
+        affiliateLinks: [
+          {
+            programName: 'AGAスキンクリニック',
+            aspName: 'A8',
+            url: 'https://example.com/aff/aga-skin',
+            rewardAmount: 15000,
+            anchorText: 'AGAスキンクリニック',
+          },
+        ],
+      })
+
+      const result = await generator.generate(request)
+
+      // リンクにアンカーテキストが含まれること
+      expect(result.article.content).toContain('AGAスキンクリニック')
+      // リンクにURLが含まれること
+      expect(result.article.content).toContain('https://example.com/aff/aga-skin')
+    })
+
+    it('アンカーテキストがコンテンツに存在しない場合はリンクが注入されないこと', async () => {
+      mockGenerate.mockResolvedValue({
+        content: `\`\`\`json\n${validJsonResponse}\n\`\`\``,
+        model: 'claude-sonnet-4-6',
+        tokenUsage: { inputTokens: 1000, outputTokens: 2000, totalTokens: 3000 },
+        durationMs: 5000,
+      })
+
+      mockCheck.mockReturnValue(compliantResult)
+
+      const request = createRequest({
+        affiliateLinks: [
+          {
+            programName: '存在しないクリニック',
+            aspName: 'A8',
+            url: 'https://example.com/aff/nonexistent',
+            rewardAmount: 10000,
+            anchorText: '存在しないクリニックのテキスト',
+          },
+        ],
+      })
+
+      const result = await generator.generate(request)
+
+      expect(result.article.content).not.toContain('https://example.com/aff/nonexistent')
+    })
   })
 
   // ============================================================
