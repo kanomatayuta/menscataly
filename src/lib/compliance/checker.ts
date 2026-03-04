@@ -15,6 +15,9 @@ import beautyTermsExtended from "./dictionaries/beauty-terms";
 import priceTermsExtended from "./dictionaries/price-terms";
 // Phase 3 拡張辞書
 import comparisonTermsExtended from "./dictionaries/comparison-terms";
+import supplementTermsExtended from "./dictionaries/supplement-terms";
+import hairRemovalTermsExtended from "./dictionaries/hair-removal-terms";
+import skincareTermsExtended from "./dictionaries/skincare-terms";
 import { checkPharmaceuticalLawPatterns, checkRequiredElements } from "./rules/pharmaceutical-law";
 import { checkRepresentationLawPatterns } from "./rules/representation-law";
 import { checkStealthMarketingPatterns } from "./rules/stealth-marketing";
@@ -133,9 +136,10 @@ function mergeDictionaries(base: DictionaryFile, ...extensions: DictionaryFile[]
 
 const DICTIONARIES: Record<string, DictionaryFile> = {
   aga: mergeDictionaries(agaDictionary as DictionaryFile, agaTermsExtended),
-  hair_removal: hairRemovalDictionary as DictionaryFile,
-  skincare: skincareDictionary as DictionaryFile,
+  hair_removal: mergeDictionaries(hairRemovalDictionary as DictionaryFile, hairRemovalTermsExtended),
+  skincare: mergeDictionaries(skincareDictionary as DictionaryFile, skincareTermsExtended),
   ed: mergeDictionaries(edDictionary as DictionaryFile, edTermsExtended),
+  supplement: supplementTermsExtended,
   common: mergeDictionaries(
     commonDictionary as DictionaryFile,
     beautyTermsExtended,
@@ -233,7 +237,7 @@ export class ComplianceChecker {
 
   constructor(options: CheckerOptions = {}) {
     this.options = {
-      categories: options.categories ?? ["aga", "hair_removal", "skincare", "ed", "common"],
+      categories: options.categories ?? ["aga", "hair_removal", "skincare", "ed", "supplement", "common"],
       autoFix: options.autoFix ?? false,
       strictMode: options.strictMode ?? false,
     };

@@ -1,6 +1,6 @@
 /**
- * Phase 2 コンプライアンス辞書 Unit Tests
- * 60新規エントリ (AGA 20 + ED 15 + Beauty 15 + Price 10) のテスト
+ * Phase 2/3 コンプライアンス辞書 Unit Tests
+ * 72新規エントリ (AGA 28 + ED 19 + Beauty 15 + Price 10) のテスト
  */
 
 import { describe, it, expect } from 'vitest'
@@ -31,8 +31,8 @@ function getAllPhase2Entries(): NGEntry[] {
 
 describe('Phase 2 コンプライアンス辞書 構造テスト', () => {
   const dictionaries: Array<{ name: string; dict: DictionaryFile; expectedCount: number }> = [
-    { name: 'AGA治療 拡張辞書', dict: agaTermsDictionary, expectedCount: 20 },
-    { name: 'ED治療 拡張辞書', dict: edTermsDictionary, expectedCount: 15 },
+    { name: 'AGA治療 拡張辞書', dict: agaTermsDictionary, expectedCount: 28 },
+    { name: 'ED治療 拡張辞書', dict: edTermsDictionary, expectedCount: 19 },
     { name: '美容全般 拡張辞書', dict: beautyTermsDictionary, expectedCount: 15 },
     { name: '価格・費用 拡張辞書', dict: priceTermsDictionary, expectedCount: 10 },
   ]
@@ -81,9 +81,9 @@ describe('Phase 2 コンプライアンス辞書 構造テスト', () => {
     })
   }
 
-  it('全60エントリが存在すること', () => {
+  it('全72エントリが存在すること', () => {
     const allEntries = getAllPhase2Entries()
-    expect(allEntries.length).toBe(60)
+    expect(allEntries.length).toBe(72)
   })
 
   it('全Phase2辞書のIDがユニークであること', () => {

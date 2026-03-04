@@ -594,6 +594,194 @@ function generateOptimalAnchorText(target: ArticleMeta): string {
 }
 
 // ============================================================
+// 循環リンク検出
+// ============================================================
+
+/** 循環リンク（ループ）の検出結果 */
+export interface LinkLoop {
+  /** ループに含まれる記事IDの配列（循環パス） */
+  path: string[]
+  /** ループの長さ（パス内の記事数） */
+  length: number
+}
+
+/** 内部リンクのグラフ表現（記事ID → リンク先記事ID群） */
+export type LinkGraph = Map<string, Set<string>>
+
+/**
+ * 内部リンク提案リストからリンクグラフを構築する
+ *
+ * @param linkMap 記事ID → その記事の内部リンク提案リスト のマップ
+ * @returns リンクグラフ（隣接リスト形式）
+ */
+export function buildLinkGraph(
+  linkMap: Map<string, InternalLink[]>
+): LinkGraph {
+  const graph: LinkGraph = new Map()
+
+  for (const [sourceId, links] of linkMap) {
+    if (!graph.has(sourceId)) {
+      graph.set(sourceId, new Set())
+    }
+    for (const link of links) {
+      graph.get(sourceId)!.add(link.targetArticleId)
+    }
+  }
+
+  return graph
+}
+
+/**
+ * DFSベースの循環リンク（ループ）検出
+ *
+ * リンクグラフ内の全ての循環パス（サイクル）を検出する。
+ * Johnson's algorithm の簡易版で、スタックベースのDFSにより
+ * バックエッジ（祖先ノードへのエッジ）を検出する。
+ *
+ * @param graph リンクグラフ（隣接リスト形式）
+ * @returns 検出された循環リンクのリスト
+ *
+ * @example
+ * ```ts
+ * const linkMap = new Map([
+ *   ['a', [{ targetArticleId: 'b', ... }]],
+ *   ['b', [{ targetArticleId: 'c', ... }]],
+ *   ['c', [{ targetArticleId: 'a', ... }]],
+ * ]);
+ * const graph = buildLinkGraph(linkMap);
+ * const loops = detectLinkLoops(graph);
+ * // loops = [{ path: ['a', 'b', 'c', 'a'], length: 3 }]
+ * ```
+ */
+export function detectLinkLoops(graph: LinkGraph): LinkLoop[] {
+  const loops: LinkLoop[] = []
+  const globalVisited = new Set<string>()
+
+  for (const startNode of graph.keys()) {
+    if (globalVisited.has(startNode)) continue
+
+    // DFS using a color-based approach:
+    // white = unvisited, gray = in current path, black = fully processed
+    const color = new Map<string, 'white' | 'gray' | 'black'>()
+    const parent = new Map<string, string | null>()
+
+    // Initialize all nodes as white
+    for (const node of graph.keys()) {
+      color.set(node, 'white')
+    }
+
+    const dfs = (node: string): void => {
+      color.set(node, 'gray')
+      globalVisited.add(node)
+
+      const neighbors = graph.get(node) ?? new Set()
+      for (const neighbor of neighbors) {
+        if (color.get(neighbor) === 'gray') {
+          // Back edge found: reconstruct the cycle
+          const cyclePath: string[] = [neighbor]
+          let current = node
+          while (current !== neighbor) {
+            cyclePath.push(current)
+            current = parent.get(current) ?? neighbor
+          }
+          cyclePath.reverse()
+          cyclePath.push(neighbor) // Close the loop
+
+          // Avoid duplicate loops (normalize by starting from smallest ID)
+          const cycleBody = cyclePath.slice(0, -1)
+          const minIndex = cycleBody.indexOf(
+            cycleBody.reduce((min, id) => (id < min ? id : min), cycleBody[0])
+          )
+          const normalized = [
+            ...cycleBody.slice(minIndex),
+            ...cycleBody.slice(0, minIndex),
+            cycleBody[minIndex],
+          ]
+
+          // Check if this normalized loop already exists
+          const key = normalized.join('->')
+          const isDuplicate = loops.some(
+            (existing) => existing.path.join('->') === key
+          )
+
+          if (!isDuplicate) {
+            loops.push({
+              path: normalized,
+              length: normalized.length - 1,
+            })
+          }
+        } else if (color.get(neighbor) === 'white' || !color.has(neighbor)) {
+          parent.set(neighbor, node)
+          dfs(neighbor)
+        }
+      }
+
+      color.set(node, 'black')
+    }
+
+    parent.set(startNode, null)
+    dfs(startNode)
+  }
+
+  return loops
+}
+
+/**
+ * 内部リンク提案から循環リンクを検出し、問題のあるリンクを除外したリストを返す
+ *
+ * @param linkMap 記事ID → 内部リンク提案リスト のマップ
+ * @returns 循環リンクの検出結果と、修正されたリンクマップ
+ *
+ * @example
+ * ```ts
+ * const result = detectAndRemoveLoops(linkMap);
+ * console.log(`検出されたループ数: ${result.loops.length}`);
+ * console.log(`除去されたリンク数: ${result.removedCount}`);
+ * ```
+ */
+export function detectAndRemoveLoops(
+  linkMap: Map<string, InternalLink[]>
+): {
+  loops: LinkLoop[]
+  cleanedLinkMap: Map<string, InternalLink[]>
+  removedCount: number
+} {
+  const graph = buildLinkGraph(linkMap)
+  const loops = detectLinkLoops(graph)
+
+  if (loops.length === 0) {
+    return { loops: [], cleanedLinkMap: new Map(linkMap), removedCount: 0 }
+  }
+
+  // Collect edges to remove (take the last edge of each loop to break it)
+  const edgesToRemove = new Set<string>()
+  for (const loop of loops) {
+    // Remove the edge that closes the loop (last -> first)
+    const from = loop.path[loop.path.length - 2]
+    const to = loop.path[loop.path.length - 1]
+    edgesToRemove.add(`${from}->${to}`)
+  }
+
+  // Build cleaned link map
+  const cleanedLinkMap = new Map<string, InternalLink[]>()
+  let removedCount = 0
+
+  for (const [sourceId, links] of linkMap) {
+    const filtered = links.filter((link) => {
+      const edgeKey = `${sourceId}->${link.targetArticleId}`
+      if (edgesToRemove.has(edgeKey)) {
+        removedCount++
+        return false
+      }
+      return true
+    })
+    cleanedLinkMap.set(sourceId, filtered)
+  }
+
+  return { loops, cleanedLinkMap, removedCount }
+}
+
+// ============================================================
 // ユーティリティ
 // ============================================================
 
