@@ -6,7 +6,7 @@
  * info     → Slack（低優先度チャンネル）
  */
 
-import type { AlertSeverity } from '@/types/admin'
+import type { AlertLevel } from '@/types/admin'
 import { SlackNotifier } from './slack'
 
 // ============================================================
@@ -15,7 +15,7 @@ import { SlackNotifier } from './slack'
 
 export interface NotificationPayload {
   /** アラート重要度 */
-  severity: AlertSeverity
+  severity: AlertLevel
   /** 通知タイトル */
   title: string
   /** 通知メッセージ本文 */

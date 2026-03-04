@@ -10,7 +10,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   createMockMonitoringAlert,
 } from '@/test/helpers'
-import type { MonitoringAlert, AlertSeverity, AlertStatus, AlertType } from '@/types/admin'
+import type { MonitoringAlert, AlertLevel, AlertStatus, AlertType } from '@/types/admin'
 
 // 契約模倣関数
 const createAlert = vi.fn()
@@ -21,10 +21,10 @@ const checkThresholds = vi.fn()
 
 describe('アラートマネージャー', () => {
   const sampleAlerts: MonitoringAlert[] = [
-    createMockMonitoringAlert({ id: 'alert-001', type: 'pipeline_failure', severity: 'critical', status: 'active' }),
-    createMockMonitoringAlert({ id: 'alert-002', type: 'cost_threshold', severity: 'warning', status: 'active' }),
-    createMockMonitoringAlert({ id: 'alert-003', type: 'compliance_violation', severity: 'critical', status: 'acknowledged', acknowledgedAt: '2026-03-01T12:00:00Z' }),
-    createMockMonitoringAlert({ id: 'alert-004', type: 'api_error', severity: 'info', status: 'resolved', resolvedAt: '2026-03-02T00:00:00Z' }),
+    createMockMonitoringAlert({ id: 'alert-001', type: 'pipeline_failure', level: 'critical', status: 'active' }),
+    createMockMonitoringAlert({ id: 'alert-002', type: 'cost_threshold', level: 'warning', status: 'active' }),
+    createMockMonitoringAlert({ id: 'alert-003', type: 'compliance_violation', level: 'critical', status: 'acknowledged', acknowledgedAt: '2026-03-01T12:00:00Z' }),
+    createMockMonitoringAlert({ id: 'alert-004', type: 'api_error', level: 'info', status: 'resolved', resolvedAt: '2026-03-02T00:00:00Z' }),
   ]
 
   beforeEach(() => {
@@ -55,7 +55,7 @@ describe('アラートマネージャー', () => {
 
     checkThresholds.mockResolvedValue({
       triggered: [
-        { type: 'cost_threshold' as AlertType, severity: 'warning' as AlertSeverity, message: 'Monthly cost exceeded $10' },
+        { type: 'cost_threshold' as AlertType, level: 'warning' as AlertLevel, message: 'Monthly cost exceeded $10' },
       ],
       checked: ['cost_threshold', 'performance_degradation', 'pipeline_failure'],
     })
@@ -65,7 +65,7 @@ describe('アラートマネージャー', () => {
     it('新規アラートを作成できること', async () => {
       const alert: MonitoringAlert = await createAlert({
         type: 'pipeline_failure',
-        severity: 'critical',
+        level: 'critical',
         title: 'Pipeline failed',
         message: 'Step fetch-trends failed',
         metadata: { step: 'fetch-trends', retryCount: 3 },
@@ -74,7 +74,7 @@ describe('アラートマネージャー', () => {
       expect(alert).toBeDefined()
       expect(alert.id).toBeDefined()
       expect(alert.type).toBe('pipeline_failure')
-      expect(alert.severity).toBe('critical')
+      expect(alert.level).toBe('critical')
       expect(alert.status).toBe('active')
       expect(alert.createdAt).toBeDefined()
     })
@@ -82,7 +82,7 @@ describe('アラートマネージャー', () => {
     it('作成されたアラートにtitle, messageが含まれること', async () => {
       const alert: MonitoringAlert = await createAlert({
         type: 'api_error',
-        severity: 'warning',
+        level: 'warning',
         title: 'Claude API rate limit',
         message: 'Rate limit exceeded for claude-sonnet-4-6',
         metadata: {},
@@ -98,7 +98,7 @@ describe('アラートマネージャー', () => {
       for (const type of types) {
         const alert: MonitoringAlert = await createAlert({
           type,
-          severity: 'warning',
+          level: 'warning',
           title: `Test ${type}`,
           message: `Test message for ${type}`,
           metadata: {},
@@ -121,7 +121,7 @@ describe('アラートマネージャー', () => {
       alerts.forEach(alert => {
         expect(alert.id).toBeDefined()
         expect(alert.type).toBeDefined()
-        expect(alert.severity).toBeDefined()
+        expect(alert.level).toBeDefined()
         expect(alert.status).toBeDefined()
         expect(alert.title).toBeDefined()
         expect(alert.message).toBeDefined()
@@ -189,12 +189,12 @@ describe('アラートマネージャー', () => {
       expect(result.checked.length).toBeGreaterThan(0)
     })
 
-    it('トリガーされた閾値にtype, severity, messageが含まれること', async () => {
+    it('トリガーされた閾値にtype, level, messageが含まれること', async () => {
       const result = await checkThresholds()
 
-      result.triggered.forEach((trigger: { type: string; severity: string; message: string }) => {
+      result.triggered.forEach((trigger: { type: string; level: string; message: string }) => {
         expect(trigger.type).toBeDefined()
-        expect(trigger.severity).toBeDefined()
+        expect(trigger.level).toBeDefined()
         expect(trigger.message).toBeDefined()
       })
     })

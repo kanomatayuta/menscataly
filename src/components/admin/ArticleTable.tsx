@@ -7,9 +7,12 @@ interface ArticleTableProps {
 }
 
 const STATUS_STYLES: Record<ReviewStatus, { bg: string; text: string }> = {
+  draft: { bg: "bg-neutral-100", text: "text-neutral-700" },
   pending: { bg: "bg-yellow-100", text: "text-yellow-800" },
   approved: { bg: "bg-green-100", text: "text-green-800" },
   rejected: { bg: "bg-red-100", text: "text-red-800" },
+  revision: { bg: "bg-orange-100", text: "text-orange-800" },
+  published: { bg: "bg-blue-100", text: "text-blue-800" },
 };
 
 function formatDate(dateString: string): string {

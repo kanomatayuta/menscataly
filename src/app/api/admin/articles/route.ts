@@ -7,22 +7,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateAdminAuth } from '@/lib/admin/auth'
 import type { ArticleReviewItem } from '@/types/admin'
-
 // ============================================================
 // モックデータ
 // ============================================================
 
-function getMockArticles(): ArticleReviewItem[] {
+function getMockArticles() {
   return [
     {
       id: 'review-1',
+      contentId: 'article-1',
       articleId: 'article-1',
       microcmsId: null,
       title: 'AGA治療の費用相場と選び方ガイド',
       slug: 'aga-treatment-cost-guide',
-      category: 'aga',
+      category: 'aga' as const,
       complianceScore: 96.5,
-      status: 'pending',
+      status: 'pending' as const,
       authorName: 'MENS CATALY 編集部',
       generatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
       reviewedAt: null,
@@ -31,13 +31,14 @@ function getMockArticles(): ArticleReviewItem[] {
     },
     {
       id: 'review-2',
+      contentId: 'article-2',
       articleId: 'article-2',
       microcmsId: 'mc-article-2',
       title: 'メンズ医療脱毛おすすめクリニック比較',
       slug: 'mens-hair-removal-comparison',
-      category: 'hair-removal',
+      category: 'hair-removal' as const,
       complianceScore: 98.0,
-      status: 'approved',
+      status: 'approved' as const,
       authorName: 'MENS CATALY 編集部',
       generatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
       reviewedAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),

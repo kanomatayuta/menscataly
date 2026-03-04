@@ -126,8 +126,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         success: true,
         jobId: progress.jobId,
         status: progress.status,
-        totalKeywords: progress.totalKeywords,
-        message: `Batch generation started for ${progress.totalKeywords} keywords`,
+        totalKeywords: progress.total,
+        message: `Batch generation started for ${progress.total} keywords`,
       },
       { status: 202 }
     )

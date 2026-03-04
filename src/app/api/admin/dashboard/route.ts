@@ -13,31 +13,29 @@ import type { AdminDashboardData } from '@/types/admin'
 
 function getMockDashboardData(): AdminDashboardData {
   return {
-    pipelineStatus: {
-      currentStatus: 'idle',
+    pipeline: {
+      status: 'idle',
       lastRunAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-      lastRunDurationMs: 45000,
-      successRate7d: 92.5,
+      lastRunSuccess: true,
+      totalRuns: 42,
     },
-    articleStats: {
-      totalArticles: 24,
-      publishedCount: 18,
-      draftCount: 4,
-      pendingReviewCount: 2,
+    articles: {
+      total: 24,
+      published: 18,
+      draft: 4,
+      pendingReview: 2,
       avgComplianceScore: 96.3,
     },
-    revenueSummary: {
-      totalRevenue30d: 127500,
-      totalClicks30d: 3420,
-      totalConversions30d: 15,
-      topAsp: 'afb',
+    revenue: {
+      monthlyTotalJpy: 127500,
+      monthOverMonthChange: 12.5,
+      byAsp: [],
     },
-    activeAlerts: [],
-    costSummary: {
-      totalCost30d: 12.45,
-      articleGenerationCost: 9.80,
-      imageGenerationCost: 1.85,
-      avgCostPerArticle: 0.52,
+    alerts: [],
+    costs: {
+      monthlyTotalUsd: 12.45,
+      articleAvgUsd: 0.52,
+      budgetRemainingUsd: 87.55,
     },
   }
 }
@@ -85,12 +83,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     ])
 
     // 記事統計
-    const articles = articlesResult.status === 'fulfilled' ? (articlesResult.value.data ?? []) : []
-    const totalArticles = articles.length
-    const publishedCount = articles.filter((a: { status: string }) => a.status === 'published').length
-    const draftCount = articles.filter((a: { status: string }) => a.status === 'draft').length
-    const pendingReviewCount = articles.filter((a: { status: string }) => a.status === 'review').length
-    const complianceScores = articles
+    const articleRows = articlesResult.status === 'fulfilled' ? (articlesResult.value.data ?? []) : []
+    const total = articleRows.length
+    const published = articleRows.filter((a: { status: string }) => a.status === 'published').length
+    const draft = articleRows.filter((a: { status: string }) => a.status === 'draft').length
+    const pendingReview = articleRows.filter((a: { status: string }) => a.status === 'review').length
+    const complianceScores = articleRows
       .map((a: { compliance_score: number | null }) => a.compliance_score)
       .filter((s: number | null): s is number => s !== null)
     const avgComplianceScore = complianceScores.length > 0
@@ -100,76 +98,57 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // パイプライン統計
     const pipelineRuns = pipelineResult.status === 'fulfilled' ? (pipelineResult.value.data ?? []) : []
     const successRuns = pipelineRuns.filter((r: { status: string }) => r.status === 'success').length
-    const successRate7d = pipelineRuns.length > 0
-      ? (successRuns / pipelineRuns.length) * 100
-      : 0
     const lastRun = pipelineRuns[0]
 
     // アクティブアラート
-    const activeAlerts = alertsResult.status === 'fulfilled' ? (alertsResult.value.data ?? []) : []
+    const alertRows = alertsResult.status === 'fulfilled' ? (alertsResult.value.data ?? []) : []
 
     // コストサマリー
-    const costs = costsResult.status === 'fulfilled' ? (costsResult.value.data ?? []) : []
-    let totalCost30d = 0
-    let articleGenerationCost = 0
-    let imageGenerationCost = 0
+    const costRows = costsResult.status === 'fulfilled' ? (costsResult.value.data ?? []) : []
+    let monthlyTotalUsd = 0
     const costArticleIds = new Set<string>()
 
-    for (const cost of costs) {
+    for (const cost of costRows) {
       const costUsd = parseFloat(cost.cost_usd ?? '0')
-      totalCost30d += costUsd
-      if (cost.cost_type === 'article_generation') {
-        articleGenerationCost += costUsd
-        if (cost.article_id) costArticleIds.add(cost.article_id)
-      }
-      if (cost.cost_type === 'image_generation') {
-        imageGenerationCost += costUsd
-      }
+      monthlyTotalUsd += costUsd
+      if (cost.article_id) costArticleIds.add(cost.article_id)
     }
 
     const costArticleCount = Math.max(costArticleIds.size, 1)
 
     const dashboard: AdminDashboardData = {
-      pipelineStatus: {
-        currentStatus: lastRun?.status ?? 'idle',
-        lastRunAt: lastRun?.started_at ?? null,
-        lastRunDurationMs: lastRun
-          ? (lastRun.completed_at
-            ? new Date(lastRun.completed_at).getTime() - new Date(lastRun.started_at).getTime()
-            : null)
-          : null,
-        successRate7d,
+      pipeline: {
+        status: lastRun?.status === 'running' ? 'running' : lastRun?.status === 'error' ? 'error' : 'idle',
+        lastRunAt: lastRun?.started_at ?? undefined,
+        lastRunSuccess: lastRun?.status === 'success',
+        totalRuns: pipelineRuns.length,
       },
-      articleStats: {
-        totalArticles,
-        publishedCount,
-        draftCount,
-        pendingReviewCount,
+      articles: {
+        total,
+        published,
+        draft,
+        pendingReview,
         avgComplianceScore: Math.round(avgComplianceScore * 100) / 100,
       },
-      revenueSummary: {
-        totalRevenue30d: 0,
-        totalClicks30d: 0,
-        totalConversions30d: 0,
-        topAsp: null,
+      revenue: {
+        monthlyTotalJpy: 0,
+        monthOverMonthChange: 0,
+        byAsp: [],
       },
-      activeAlerts: activeAlerts.map((a: Record<string, unknown>) => ({
-        id: a.id,
-        type: a.type,
-        severity: a.severity,
-        status: a.status,
-        title: a.title,
-        message: a.message,
-        metadata: a.metadata ?? {},
-        createdAt: a.created_at,
-        acknowledgedAt: a.acknowledged_at ?? null,
-        resolvedAt: a.resolved_at ?? null,
+      alerts: alertRows.map((a: Record<string, unknown>) => ({
+        id: String(a.id),
+        level: (a.severity as 'info' | 'warning' | 'critical') ?? 'info',
+        status: (a.status as 'active' | 'acknowledged' | 'resolved') ?? 'active',
+        title: String(a.title ?? ''),
+        message: String(a.message ?? ''),
+        source: String(a.source ?? ''),
+        createdAt: String(a.created_at ?? ''),
+        resolvedAt: a.resolved_at ? String(a.resolved_at) : undefined,
       })),
-      costSummary: {
-        totalCost30d: Math.round(totalCost30d * 100) / 100,
-        articleGenerationCost: Math.round(articleGenerationCost * 100) / 100,
-        imageGenerationCost: Math.round(imageGenerationCost * 100) / 100,
-        avgCostPerArticle: Math.round((totalCost30d / costArticleCount) * 100) / 100,
+      costs: {
+        monthlyTotalUsd: Math.round(monthlyTotalUsd * 100) / 100,
+        articleAvgUsd: Math.round((monthlyTotalUsd / costArticleCount) * 100) / 100,
+        budgetRemainingUsd: Math.round((100 - monthlyTotalUsd) * 100) / 100,
       },
     }
 

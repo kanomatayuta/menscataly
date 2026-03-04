@@ -11,52 +11,66 @@ import type { RevenueSummary } from '@/types/admin'
 // モックデータ
 // ============================================================
 
-function getMockRevenueSummary(startDate: string, endDate: string): RevenueSummary[] {
+function getMockRevenueSummary(): RevenueSummary[] {
   return [
     {
       aspName: 'afb',
-      programCount: 4,
       totalClicks: 1250,
       totalConversions: 8,
       totalRevenue: 92500,
       conversionRate: 0.64,
-      period: { startDate, endDate },
+      monthlyConversions: 8,
+      monthlyRevenueJpy: 92500,
+      monthOverMonthChange: 15.2,
+      topArticles: [
+        { slug: 'aga-treatment-cost-guide', title: 'AGA治療の費用相場と選び方ガイド', conversions: 5 },
+      ],
     },
     {
       aspName: 'a8',
-      programCount: 4,
       totalClicks: 890,
       totalConversions: 5,
       totalRevenue: 43000,
       conversionRate: 0.56,
-      period: { startDate, endDate },
+      monthlyConversions: 5,
+      monthlyRevenueJpy: 43000,
+      monthOverMonthChange: 8.3,
+      topArticles: [
+        { slug: 'mens-hair-removal-comparison', title: 'メンズ医療脱毛おすすめクリニック比較', conversions: 3 },
+      ],
     },
     {
       aspName: 'accesstrade',
-      programCount: 4,
       totalClicks: 670,
       totalConversions: 3,
       totalRevenue: 36000,
       conversionRate: 0.45,
-      period: { startDate, endDate },
+      monthlyConversions: 3,
+      monthlyRevenueJpy: 36000,
+      monthOverMonthChange: -2.1,
+      topArticles: [],
     },
     {
       aspName: 'valuecommerce',
-      programCount: 4,
       totalClicks: 420,
       totalConversions: 2,
       totalRevenue: 22000,
       conversionRate: 0.48,
-      period: { startDate, endDate },
+      monthlyConversions: 2,
+      monthlyRevenueJpy: 22000,
+      monthOverMonthChange: 5.0,
+      topArticles: [],
     },
     {
       aspName: 'felmat',
-      programCount: 4,
       totalClicks: 310,
       totalConversions: 2,
       totalRevenue: 45000,
       conversionRate: 0.65,
-      period: { startDate, endDate },
+      monthlyConversions: 2,
+      monthlyRevenueJpy: 45000,
+      monthOverMonthChange: 22.0,
+      topArticles: [],
     },
   ]
 }
@@ -82,7 +96,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   if (!supabaseUrl || !serviceRoleKey) {
     return NextResponse.json({
-      revenue: getMockRevenueSummary(startDate, endDate),
+      revenue: getMockRevenueSummary(),
       period: { startDate, endDate },
     })
   }
@@ -101,7 +115,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (error) {
       console.error('[admin/revenue] Query error:', error.message)
       return NextResponse.json({
-        revenue: getMockRevenueSummary(startDate, endDate),
+        revenue: getMockRevenueSummary(),
         period: { startDate, endDate },
       })
     }
@@ -117,14 +131,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     const revenue: RevenueSummary[] = Array.from(aspGroups.entries()).map(
-      ([aspName, programs]) => ({
+      ([aspName]) => ({
         aspName,
-        programCount: programs.length,
         totalClicks: 0,
         totalConversions: 0,
         totalRevenue: 0,
         conversionRate: 0,
-        period: { startDate, endDate },
+        monthlyConversions: 0,
+        monthlyRevenueJpy: 0,
+        monthOverMonthChange: 0,
+        topArticles: [],
       })
     )
 
@@ -132,7 +148,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   } catch (err) {
     console.error('[admin/revenue] Error:', err)
     return NextResponse.json({
-      revenue: getMockRevenueSummary(startDate, endDate),
+      revenue: getMockRevenueSummary(),
       period: { startDate, endDate },
     })
   }

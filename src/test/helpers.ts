@@ -167,10 +167,8 @@ export function createMockBatchGenerationJob(overrides?: Partial<BatchGeneration
     completedCount: 0,
     failedCount: 0,
     startedAt: '2026-03-01T00:00:00Z',
-    completedAt: null,
     totalCostUsd: 0,
-    createdBy: 'admin',
-    errorMessages: [],
+    results: [],
     ...overrides,
   }
 }
@@ -181,18 +179,15 @@ export function createMockBatchGenerationJob(overrides?: Partial<BatchGeneration
 export function createMockArticleReviewItem(overrides?: Partial<ArticleReviewItem>): ArticleReviewItem {
   return {
     id: 'review-001',
-    articleId: 'article-001',
-    microcmsId: 'mc-001',
+    contentId: 'article-001',
     title: 'AGA治療の基礎知識',
     slug: 'aga-basics',
     category: 'aga',
     complianceScore: 96,
     status: 'pending',
-    authorName: 'MENS CATALY 編集部',
     generatedAt: '2026-03-01T00:00:00Z',
     reviewedAt: null,
     reviewedBy: null,
-    reviewNotes: null,
     ...overrides,
   }
 }
@@ -204,7 +199,7 @@ export function createMockMonitoringAlert(overrides?: Partial<MonitoringAlert>):
   return {
     id: 'alert-001',
     type: 'pipeline_failure',
-    severity: 'warning',
+    level: 'warning',
     status: 'active',
     title: 'Pipeline step failed',
     message: 'fetch-trends step failed after 3 retries',
@@ -222,12 +217,14 @@ export function createMockMonitoringAlert(overrides?: Partial<MonitoringAlert>):
 export function createMockRevenueSummary(overrides?: Partial<RevenueSummary>): RevenueSummary {
   return {
     aspName: 'afb',
-    programCount: 4,
     totalClicks: 500,
     totalConversions: 5,
     totalRevenue: 50000,
     conversionRate: 1.0,
-    period: { startDate: '2026-02-01', endDate: '2026-03-01' },
+    monthlyConversions: 5,
+    monthlyRevenueJpy: 50000,
+    monthOverMonthChange: 12.5,
+    topArticles: [],
     ...overrides,
   }
 }
@@ -239,13 +236,13 @@ export function createMockBatchGenerationProgress(overrides?: Partial<BatchGener
   return {
     jobId: 'job-001',
     status: 'running',
-    totalKeywords: 10,
-    completedCount: 3,
-    failedCount: 0,
-    inProgressCount: 2,
-    progress: [],
+    total: 10,
+    completed: 3,
+    failed: 0,
+    progressPercent: 30,
+    currentKeywords: ['AGA治療 おすすめ', '医療脱毛 メンズ'],
     totalCostUsd: 0.15,
-    estimatedRemainingMs: 60000,
+    estimatedRemainingSeconds: 60,
     startedAt: '2026-03-01T00:00:00Z',
     updatedAt: '2026-03-01T00:05:00Z',
     ...overrides,
@@ -280,8 +277,8 @@ export function createMockKeywordTarget(overrides?: Partial<KeywordTarget>): Key
     subKeywords: ['AGA クリニック', 'AGA 費用'],
     category: 'aga',
     priority: 'high',
-    searchVolume: 5400,
-    difficulty: 45,
+    estimatedVolume: 5400,
+    competitionScore: 45,
     targetAudience: '20代〜40代男性',
     tone: 'informative',
     targetLength: 3000,

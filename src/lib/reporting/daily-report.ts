@@ -484,8 +484,8 @@ export class DailyReportGenerator {
 
       return {
         activeAlertCount: activeAlerts.length,
-        criticalCount: activeAlerts.filter((a) => a.severity === 'critical').length,
-        warningCount: activeAlerts.filter((a) => a.severity === 'warning').length,
+        criticalCount: activeAlerts.filter((a) => a.level === 'critical').length,
+        warningCount: activeAlerts.filter((a) => a.level === 'warning').length,
         depublishedCount: activeAlerts.filter(
           (a) => a.type === 'compliance_violation' && (a.metadata?.autoDepublished === true || a.metadata?.depublished === true)
         ).length,

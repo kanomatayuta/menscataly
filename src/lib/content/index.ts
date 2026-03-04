@@ -165,3 +165,76 @@ export type {
   DepublishResult,
   AutoDepublishConfig,
 } from "./auto-depublish";
+
+// ============================================================
+// Phase 2: ロングテールキーワード
+// ============================================================
+
+export {
+  PHASE2_KEYWORDS,
+  getPhase2KeywordsByCategory,
+  getPhase2KeywordsByIntent,
+  getPhase2KeywordsByDifficulty,
+  getPhase2KeywordsByVolume,
+  getPhase2KeywordById,
+} from "./keywords/phase2-keywords";
+export type {
+  Phase2Keyword,
+  SearchIntent as Phase2SearchIntent,
+  ArticleType,
+} from "./keywords/phase2-keywords";
+
+// ============================================================
+// Phase 2: カテゴリ別記事テンプレート
+// ============================================================
+
+export { AGA_ARTICLE_TEMPLATE } from "./templates/aga-template";
+export type { AGAArticleTemplate, AGATemplateSection } from "./templates/aga-template";
+
+export { ED_ARTICLE_TEMPLATE } from "./templates/ed-template";
+export type { EDArticleTemplate, EDTemplateSection } from "./templates/ed-template";
+
+export { HAIR_REMOVAL_ARTICLE_TEMPLATE } from "./templates/hair-removal-template";
+export type { HairRemovalArticleTemplate, HairRemovalTemplateSection } from "./templates/hair-removal-template";
+
+export { SKINCARE_ARTICLE_TEMPLATE } from "./templates/skincare-template";
+export type { SkincareArticleTemplate, SkincareTemplateSection } from "./templates/skincare-template";
+
+export { SUPPLEMENT_ARTICLE_TEMPLATE } from "./templates/supplement-template";
+export type { SupplementArticleTemplate, SupplementTemplateSection } from "./templates/supplement-template";
+
+// ============================================================
+// Phase 2: 監修者・参考文献テンプレート
+// ============================================================
+
+export {
+  getSupervisorTemplateForCategory,
+  formatReferences,
+  generateUpdateInfo,
+  getRecommendedReferencesForCategory,
+  getMinimumReferenceCount,
+  getAllSupervisorTemplates,
+} from "./templates/supervisor-info";
+export type {
+  SupervisorTemplate,
+  FormattedReference,
+  UpdateInfo,
+} from "./templates/supervisor-info";
+
+// ============================================================
+// Phase 2: 内部リンク戦略
+// ============================================================
+
+export {
+  generateInternalLinks,
+  suggestRelatedArticles,
+  optimizeAnchorText,
+  getCategoryLinkRelations,
+  analyzeLinkDensity,
+} from "./internal-linking";
+export type {
+  ArticleMeta,
+  InternalLink,
+  RelatedArticleSuggestion,
+  OptimizedAnchorText,
+} from "./internal-linking";

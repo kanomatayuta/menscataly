@@ -4,7 +4,7 @@
  * 重要度に応じた色分け・アクションボタン対応
  */
 
-import type { AlertSeverity } from '@/types/admin'
+import type { AlertLevel } from '@/types/admin'
 
 // ============================================================
 // Slack Block Kit 型定義
@@ -58,13 +58,13 @@ export interface SlackMessage {
 // 重要度 → 色マッピング
 // ============================================================
 
-const SEVERITY_COLORS: Record<AlertSeverity, string> = {
+const SEVERITY_COLORS: Record<AlertLevel, string> = {
   critical: '#FF0000',  // 赤
   warning: '#FFA500',   // 黄色/オレンジ
   info: '#0000FF',      // 青
 }
 
-const SEVERITY_EMOJI: Record<AlertSeverity, string> = {
+const SEVERITY_EMOJI: Record<AlertLevel, string> = {
   critical: ':rotating_light:',
   warning: ':warning:',
   info: ':information_source:',
@@ -133,7 +133,7 @@ export class SlackNotifier {
    * @param metadata 追加メタデータ（オプション）
    */
   async sendAlert(
-    severity: AlertSeverity,
+    severity: AlertLevel,
     title: string,
     message: string,
     metadata?: Record<string, unknown>
@@ -249,8 +249,8 @@ export class SlackNotifier {
   /**
    * 重要度に応じたチャンネル名を返す
    */
-  private getChannelForSeverity(severity: AlertSeverity): string {
-    const channels: Record<AlertSeverity, string> = {
+  private getChannelForSeverity(severity: AlertLevel): string {
+    const channels: Record<AlertLevel, string> = {
       critical: process.env.SLACK_CHANNEL_CRITICAL ?? '#alerts-critical',
       warning: process.env.SLACK_CHANNEL_WARNING ?? '#alerts-warning',
       info: process.env.SLACK_CHANNEL_INFO ?? '#alerts-info',

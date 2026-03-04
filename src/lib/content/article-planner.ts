@@ -138,7 +138,7 @@ function calculatePriorityScore(
   trendScore: number,
   maxSearchVolume: number
 ): number {
-  const normalizedVolume = normalizeSearchVolume(keyword.searchVolume, maxSearchVolume)
+  const normalizedVolume = normalizeSearchVolume(keyword.searchVolume ?? keyword.estimatedVolume ?? 0, maxSearchVolume)
   const revenuePotential = (
     priorityToScore(keyword.priority) * 0.5 +
     getCategoryRevenuePotential(keyword.category) * 0.5
@@ -244,7 +244,7 @@ export class ArticlePlanner {
     )
 
     // 最大検索ボリュームを算出（正規化用）
-    const maxSearchVolume = Math.max(...keywords.map((k) => k.searchVolume), 1)
+    const maxSearchVolume = Math.max(...keywords.map((k) => k.searchVolume ?? k.estimatedVolume ?? 0), 1)
 
     // 候補をスコアリング
     const candidates = keywords
@@ -270,8 +270,8 @@ export class ArticlePlanner {
         if (kw.priority === 'high') {
           reasons.push('高優先度キーワード')
         }
-        if (kw.searchVolume >= 5000) {
-          reasons.push(`検索ボリューム: ${kw.searchVolume.toLocaleString()}`)
+        if ((kw.searchVolume ?? kw.estimatedVolume ?? 0) >= 5000) {
+          reasons.push(`検索ボリューム: ${(kw.searchVolume ?? kw.estimatedVolume ?? 0).toLocaleString()}`)
         }
         const revPotential = getCategoryRevenuePotential(kw.category)
         if (revPotential >= 70) {
@@ -403,7 +403,7 @@ export class ArticlePlanner {
     const trendMap = new Map(
       trendData.map((t) => [t.keyword.toLowerCase(), t])
     )
-    const maxSearchVolume = Math.max(...KEYWORD_TARGETS.map((k) => k.searchVolume), 1)
+    const maxSearchVolume = Math.max(...KEYWORD_TARGETS.map((k) => k.searchVolume ?? k.estimatedVolume ?? 0), 1)
 
     const selectedNewArticles: PlannedNewArticle[] = []
 

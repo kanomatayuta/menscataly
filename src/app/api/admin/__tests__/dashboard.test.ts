@@ -18,34 +18,32 @@ vi.mock('@/lib/admin/auth', () => ({
 
 // Supabase モック
 const mockDashboardData: AdminDashboardData = {
-  pipelineStatus: {
-    currentStatus: 'idle',
+  pipeline: {
+    status: 'idle',
     lastRunAt: '2026-03-01T06:00:00Z',
-    lastRunDurationMs: 45000,
-    successRate7d: 95.5,
+    lastRunSuccess: true,
+    totalRuns: 42,
   },
-  articleStats: {
-    totalArticles: 50,
-    publishedCount: 42,
-    draftCount: 5,
-    pendingReviewCount: 3,
+  articles: {
+    total: 50,
+    published: 42,
+    draft: 5,
+    pendingReview: 3,
     avgComplianceScore: 94.2,
   },
-  revenueSummary: {
-    totalRevenue30d: 150000,
-    totalClicks30d: 12000,
-    totalConversions30d: 15,
-    topAsp: 'afb',
+  revenue: {
+    monthlyTotalJpy: 150000,
+    monthOverMonthChange: 12.5,
+    byAsp: [],
   },
-  activeAlerts: [
-    createMockMonitoringAlert({ severity: 'warning' }),
-    createMockMonitoringAlert({ id: 'alert-002', severity: 'info', type: 'api_error' }),
+  alerts: [
+    createMockMonitoringAlert({ level: 'warning' }),
+    createMockMonitoringAlert({ id: 'alert-002', level: 'info', type: 'api_error' }),
   ],
-  costSummary: {
-    totalCost30d: 5.50,
-    articleGenerationCost: 3.80,
-    imageGenerationCost: 1.20,
-    avgCostPerArticle: 0.11,
+  costs: {
+    monthlyTotalUsd: 5.50,
+    articleAvgUsd: 0.11,
+    budgetRemainingUsd: 94.50,
   },
 }
 
@@ -98,40 +96,39 @@ describe('GET /api/admin/dashboard', () => {
       const response = await mockGetDashboard(new Request('http://localhost/api/admin/dashboard'))
       const data: AdminDashboardData = await response.json()
 
-      // pipelineStatus
-      expect(data.pipelineStatus).toBeDefined()
-      expect(['idle', 'running', 'success', 'failed', 'partial']).toContain(data.pipelineStatus.currentStatus)
-      expect(typeof data.pipelineStatus.successRate7d).toBe('number')
+      // pipeline
+      expect(data.pipeline).toBeDefined()
+      expect(['idle', 'running', 'error']).toContain(data.pipeline.status)
+      expect(typeof data.pipeline.totalRuns).toBe('number')
 
-      // articleStats
-      expect(data.articleStats).toBeDefined()
-      expect(typeof data.articleStats.totalArticles).toBe('number')
-      expect(typeof data.articleStats.publishedCount).toBe('number')
-      expect(typeof data.articleStats.avgComplianceScore).toBe('number')
+      // articles
+      expect(data.articles).toBeDefined()
+      expect(typeof data.articles.total).toBe('number')
+      expect(typeof data.articles.published).toBe('number')
+      expect(typeof data.articles.avgComplianceScore).toBe('number')
 
-      // revenueSummary
-      expect(data.revenueSummary).toBeDefined()
-      expect(typeof data.revenueSummary.totalRevenue30d).toBe('number')
-      expect(typeof data.revenueSummary.totalClicks30d).toBe('number')
+      // revenue
+      expect(data.revenue).toBeDefined()
+      expect(typeof data.revenue.monthlyTotalJpy).toBe('number')
+      expect(typeof data.revenue.monthOverMonthChange).toBe('number')
 
-      // activeAlerts
-      expect(Array.isArray(data.activeAlerts)).toBe(true)
+      // alerts
+      expect(Array.isArray(data.alerts)).toBe(true)
 
-      // costSummary
-      expect(data.costSummary).toBeDefined()
-      expect(typeof data.costSummary.totalCost30d).toBe('number')
-      expect(typeof data.costSummary.avgCostPerArticle).toBe('number')
+      // costs
+      expect(data.costs).toBeDefined()
+      expect(typeof data.costs.monthlyTotalUsd).toBe('number')
+      expect(typeof data.costs.articleAvgUsd).toBe('number')
     })
 
     it('アクティブアラートが正しい形式であること', async () => {
       const response = await mockGetDashboard(new Request('http://localhost/api/admin/dashboard'))
       const data: AdminDashboardData = await response.json()
 
-      data.activeAlerts.forEach(alert => {
+      data.alerts.forEach(alert => {
         expect(alert.id).toBeDefined()
-        expect(alert.type).toBeDefined()
-        expect(alert.severity).toBeDefined()
-        expect(alert.status).toBe('active')
+        expect(alert.level).toBeDefined()
+        expect(alert.status).toBeDefined()
         expect(alert.title).toBeDefined()
         expect(alert.message).toBeDefined()
       })

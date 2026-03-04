@@ -8,6 +8,11 @@ import hairRemovalDictionary from "./dictionaries/hair-removal.json";
 import skincareDictionary from "./dictionaries/skincare.json";
 import edDictionary from "./dictionaries/ed.json";
 import commonDictionary from "./dictionaries/common.json";
+// Phase 2 拡張辞書
+import agaTermsExtended from "./dictionaries/aga-terms";
+import edTermsExtended from "./dictionaries/ed-terms";
+import beautyTermsExtended from "./dictionaries/beauty-terms";
+import priceTermsExtended from "./dictionaries/price-terms";
 import { checkPharmaceuticalLawPatterns, checkRequiredElements } from "./rules/pharmaceutical-law";
 import { checkRepresentationLawPatterns } from "./rules/representation-law";
 import { checkStealthMarketingPatterns } from "./rules/stealth-marketing";
@@ -109,12 +114,31 @@ function isNegationContext(text: string, position: number): boolean {
   return NEGATION_CONTEXT_PATTERNS.some((p) => p.test(surrounding));
 }
 
+/**
+ * 辞書エントリを結合するヘルパー
+ * 同一カテゴリの既存辞書と拡張辞書のエントリをマージする
+ */
+function mergeDictionaries(base: DictionaryFile, ...extensions: DictionaryFile[]): DictionaryFile {
+  const mergedEntries = [...base.entries];
+  for (const ext of extensions) {
+    mergedEntries.push(...ext.entries);
+  }
+  return {
+    ...base,
+    entries: mergedEntries,
+  };
+}
+
 const DICTIONARIES: Record<string, DictionaryFile> = {
-  aga: agaDictionary as DictionaryFile,
+  aga: mergeDictionaries(agaDictionary as DictionaryFile, agaTermsExtended),
   hair_removal: hairRemovalDictionary as DictionaryFile,
   skincare: skincareDictionary as DictionaryFile,
-  ed: edDictionary as DictionaryFile,
-  common: commonDictionary as DictionaryFile,
+  ed: mergeDictionaries(edDictionary as DictionaryFile, edTermsExtended),
+  common: mergeDictionaries(
+    commonDictionary as DictionaryFile,
+    beautyTermsExtended,
+    priceTermsExtended
+  ),
 };
 
 /**

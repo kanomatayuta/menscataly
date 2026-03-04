@@ -16,17 +16,25 @@ export interface KeywordTarget {
   tone: ContentTone;
   targetLength: number;
   priority: KeywordPriority;
+  searchVolume?: number;
   estimatedVolume?: number;
+  difficulty?: number;
   competitionScore?: number;
+  outlineHints?: string[];
 }
 
 export interface BatchGenerationRequest {
+  /** Inline keyword targets for batch generation */
+  keywords?: KeywordTarget[];
+  /** Reference existing keyword IDs instead of inline data */
   keywordIds?: string[];
   categoryFilter?: ContentCategory;
   priorityFilter?: KeywordPriority;
   maxConcurrent?: number;
   complianceThreshold?: number;
   dryRun?: boolean;
+  continueOnError?: boolean;
+  requestedBy?: string;
 }
 
 export interface BatchGenerationProgress {
@@ -41,4 +49,42 @@ export interface BatchGenerationProgress {
   totalCostUsd: number;
   startedAt: string;
   updatedAt: string;
+}
+
+export type KeywordGenerationStatus = "pending" | "generating" | "compliance_check" | "completed" | "failed";
+
+export interface KeywordGenerationProgress {
+  keywordId: string;
+  keyword: string;
+  status: KeywordGenerationStatus;
+  articleId: string | null;
+  complianceScore: number | null;
+  costUsd: number | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  error: string | null;
+}
+
+export type CostType = "article_generation" | "image_generation" | "analysis" | "compliance_check";
+
+export interface GenerationCostRecord {
+  id: string;
+  jobId: string | null;
+  articleId: string | null;
+  costType: CostType;
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+  model: string;
+  createdAt: string;
+}
+
+export interface CostSummary {
+  totalCostUsd: number;
+  articleGenerationCost: number;
+  imageGenerationCost: number;
+  analysisCost: number;
+  articleCount: number;
+  avgCostPerArticle: number;
+  period: { startDate: string; endDate: string };
 }

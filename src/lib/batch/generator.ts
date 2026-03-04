@@ -10,7 +10,6 @@ import type {
   KeywordGenerationProgress,
   KeywordTarget,
 } from '@/types/batch-generation'
-import type { BatchJobStatus } from '@/types/admin'
 
 // ============================================================
 // セマフォ (並行数制限)
@@ -43,16 +42,42 @@ class Semaphore {
 }
 
 // ============================================================
+// 内部拡張型: BatchGenerationProgress + キーワード別進捗
+// ============================================================
+
+interface InternalBatchProgress extends BatchGenerationProgress {
+  /** 各キーワードの個別進捗 */
+  keywordProgress: KeywordGenerationProgress[]
+  /** 現在処理中のキーワード数 */
+  inProgressCount: number
+}
+
+// ============================================================
 // バッチ生成進捗ストア (インメモリ)
 // ============================================================
 
-const progressStore = new Map<string, BatchGenerationProgress>()
+const progressStore = new Map<string, InternalBatchProgress>()
 
 /**
  * ジョブIDから進捗を取得する
  */
 export function getBatchProgress(jobId: string): BatchGenerationProgress | null {
-  return progressStore.get(jobId) ?? null
+  const internal = progressStore.get(jobId)
+  if (!internal) return null
+  // Return the public shape (InternalBatchProgress extends BatchGenerationProgress)
+  return {
+    jobId: internal.jobId,
+    status: internal.status,
+    total: internal.total,
+    completed: internal.completed,
+    failed: internal.failed,
+    progressPercent: internal.progressPercent,
+    currentKeywords: internal.currentKeywords,
+    estimatedRemainingSeconds: internal.estimatedRemainingSeconds,
+    totalCostUsd: internal.totalCostUsd,
+    startedAt: internal.startedAt,
+    updatedAt: internal.updatedAt,
+  }
 }
 
 // ============================================================
@@ -68,16 +93,19 @@ export class BatchArticleGenerator {
   ): Promise<BatchGenerationProgress> {
     const jobId = randomUUID()
     const now = new Date().toISOString()
+    const keywords = request.keywords ?? []
 
     // 進捗オブジェクトを初期化
-    const progress: BatchGenerationProgress = {
+    const progress: InternalBatchProgress = {
       jobId,
       status: 'running',
-      totalKeywords: request.keywords.length,
-      completedCount: 0,
-      failedCount: 0,
+      total: keywords.length,
+      completed: 0,
+      failed: 0,
+      progressPercent: 0,
+      currentKeywords: [],
       inProgressCount: 0,
-      progress: request.keywords.map((kw) => ({
+      keywordProgress: keywords.map((kw) => ({
         keywordId: kw.id,
         keyword: kw.keyword,
         status: 'pending',
@@ -89,7 +117,7 @@ export class BatchArticleGenerator {
         error: null,
       })),
       totalCostUsd: 0,
-      estimatedRemainingMs: null,
+      estimatedRemainingSeconds: undefined,
       startedAt: now,
       updatedAt: now,
     }
@@ -104,16 +132,17 @@ export class BatchArticleGenerator {
     if (request.dryRun) {
       progress.status = 'completed'
       progress.updatedAt = new Date().toISOString()
-      progress.progress = progress.progress.map((p) => ({
+      progress.keywordProgress = progress.keywordProgress.map((p) => ({
         ...p,
-        status: 'completed',
+        status: 'completed' as const,
         complianceScore: 95,
         costUsd: 0,
         completedAt: new Date().toISOString(),
       }))
-      progress.completedCount = request.keywords.length
+      progress.completed = keywords.length
+      progress.progressPercent = 100
       progressStore.set(jobId, progress)
-      return progress
+      return getBatchProgress(jobId)!
     }
 
     // バックグラウンドで生成を実行
@@ -124,7 +153,7 @@ export class BatchArticleGenerator {
       progressStore.set(jobId, progress)
     })
 
-    return progress
+    return getBatchProgress(jobId)!
   }
 
   /**
@@ -133,12 +162,14 @@ export class BatchArticleGenerator {
   private async executeGeneration(
     jobId: string,
     request: BatchGenerationRequest,
-    progress: BatchGenerationProgress
+    progress: InternalBatchProgress
   ): Promise<void> {
-    const semaphore = new Semaphore(request.maxConcurrent)
+    const maxConcurrent = request.maxConcurrent ?? 2
+    const semaphore = new Semaphore(maxConcurrent)
     const startTime = Date.now()
+    const keywords = request.keywords ?? []
 
-    const promises = request.keywords.map((keyword, index) =>
+    const promises = keywords.map((keyword, index) =>
       this.processKeyword(
         keyword,
         index,
@@ -152,18 +183,17 @@ export class BatchArticleGenerator {
     await Promise.allSettled(promises)
 
     // 最終ステータスを更新
-    const hasFailures = progress.failedCount > 0
-    const allFailed = progress.failedCount === request.keywords.length
+    const allFailed = progress.failed === keywords.length
 
     if (allFailed) {
       progress.status = 'failed'
-    } else if (hasFailures) {
-      progress.status = 'completed' // 一部失敗でも completed
     } else {
       progress.status = 'completed'
     }
 
-    progress.estimatedRemainingMs = 0
+    progress.estimatedRemainingSeconds = 0
+    progress.progressPercent = 100
+    progress.currentKeywords = []
     progress.updatedAt = new Date().toISOString()
     progressStore.set(jobId, progress)
 
@@ -178,16 +208,19 @@ export class BatchArticleGenerator {
     keyword: KeywordTarget,
     index: number,
     request: BatchGenerationRequest,
-    progress: BatchGenerationProgress,
+    progress: InternalBatchProgress,
     semaphore: Semaphore,
     batchStartTime: number
   ): Promise<void> {
     await semaphore.acquire()
 
-    const kwProgress = progress.progress[index]
+    const kwProgress = progress.keywordProgress[index]
     kwProgress.status = 'generating'
     kwProgress.startedAt = new Date().toISOString()
     progress.inProgressCount++
+    progress.currentKeywords = progress.keywordProgress
+      .filter((p) => p.status === 'generating')
+      .map((p) => p.keyword)
     progress.updatedAt = new Date().toISOString()
 
     try {
@@ -202,7 +235,6 @@ export class BatchArticleGenerator {
         targetAudience: keyword.targetAudience,
         tone: keyword.tone,
         targetLength: keyword.targetLength,
-        outlineHints: keyword.outlineHints,
       })
 
       // コンプライアンスチェック
@@ -213,9 +245,10 @@ export class BatchArticleGenerator {
       kwProgress.complianceScore = complianceScore
 
       // コンプライアンス閾値チェック
-      if (complianceScore < request.complianceThreshold) {
+      const threshold = request.complianceThreshold ?? 80
+      if (complianceScore < threshold) {
         throw new Error(
-          `Compliance score ${complianceScore} is below threshold ${request.complianceThreshold}`
+          `Compliance score ${complianceScore} is below threshold ${threshold}`
         )
       }
 
@@ -230,19 +263,23 @@ export class BatchArticleGenerator {
       kwProgress.status = 'completed'
       kwProgress.articleId = response.article.id ?? randomUUID()
       kwProgress.completedAt = new Date().toISOString()
-      progress.completedCount++
+      progress.completed++
 
-      // 残り時間推定
+      // 進捗率と残り時間推定を更新
+      const keywords = request.keywords ?? []
+      progress.progressPercent = Math.round(
+        ((progress.completed + progress.failed) / keywords.length) * 100
+      )
       const elapsed = Date.now() - batchStartTime
-      const avgTimePerArticle = elapsed / progress.completedCount
-      const remaining = progress.totalKeywords - progress.completedCount - progress.failedCount
-      progress.estimatedRemainingMs = Math.round(avgTimePerArticle * remaining)
+      const avgTimePerArticle = elapsed / progress.completed
+      const remaining = keywords.length - progress.completed - progress.failed
+      progress.estimatedRemainingSeconds = Math.round((avgTimePerArticle * remaining) / 1000)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err)
       kwProgress.status = 'failed'
       kwProgress.error = errorMessage
       kwProgress.completedAt = new Date().toISOString()
-      progress.failedCount++
+      progress.failed++
 
       console.error(
         `[BatchGenerator] Keyword "${keyword.keyword}" failed: ${errorMessage}`
@@ -250,16 +287,25 @@ export class BatchArticleGenerator {
 
       if (!request.continueOnError) {
         // 残りのキーワードをスキップ扱いにする
-        for (const p of progress.progress) {
+        for (const p of progress.keywordProgress) {
           if (p.status === 'pending') {
             p.status = 'failed'
             p.error = 'Batch aborted due to error'
-            progress.failedCount++
+            progress.failed++
           }
         }
       }
+
+      // 進捗率を更新
+      const keywords = request.keywords ?? []
+      progress.progressPercent = Math.round(
+        ((progress.completed + progress.failed) / keywords.length) * 100
+      )
     } finally {
       progress.inProgressCount = Math.max(0, progress.inProgressCount - 1)
+      progress.currentKeywords = progress.keywordProgress
+        .filter((p) => p.status === 'generating')
+        .map((p) => p.keyword)
       progress.updatedAt = new Date().toISOString()
       semaphore.release()
     }
@@ -290,7 +336,7 @@ export class BatchArticleGenerator {
         .insert({
           id: jobId,
           status: 'running',
-          total_keywords: request.keywords.length,
+          total_keywords: (request.keywords ?? []).length,
           created_by: request.requestedBy,
         })
 
@@ -307,7 +353,7 @@ export class BatchArticleGenerator {
    */
   private async updateJobInSupabase(
     jobId: string,
-    progress: BatchGenerationProgress
+    progress: InternalBatchProgress
   ): Promise<void> {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -320,7 +366,7 @@ export class BatchArticleGenerator {
       const { createServerSupabaseClient } = await import('@/lib/supabase/client')
       const supabase = createServerSupabaseClient()
 
-      const errorMessages = progress.progress
+      const errorMessages = progress.keywordProgress
         .filter((p) => p.error)
         .map((p) => `${p.keyword}: ${p.error}`)
 
@@ -329,8 +375,8 @@ export class BatchArticleGenerator {
         .from('batch_generation_jobs')
         .update({
           status: progress.status,
-          completed_count: progress.completedCount,
-          failed_count: progress.failedCount,
+          completed_count: progress.completed,
+          failed_count: progress.failed,
           completed_at: new Date().toISOString(),
           total_cost_usd: progress.totalCostUsd,
           error_messages: errorMessages,

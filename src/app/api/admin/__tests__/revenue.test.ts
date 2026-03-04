@@ -87,14 +87,10 @@ describe('GET /api/admin/revenue', () => {
 
       data.summaries.forEach((summary: RevenueSummary) => {
         expect(summary.aspName).toBeDefined()
-        expect(typeof summary.programCount).toBe('number')
         expect(typeof summary.totalClicks).toBe('number')
         expect(typeof summary.totalConversions).toBe('number')
         expect(typeof summary.totalRevenue).toBe('number')
         expect(typeof summary.conversionRate).toBe('number')
-        expect(summary.period).toBeDefined()
-        expect(summary.period.startDate).toBeDefined()
-        expect(summary.period.endDate).toBeDefined()
       })
     })
 

@@ -10,22 +10,59 @@ import type { ContentCategory } from "@/types/content";
 // ============================================================
 
 /** レビューステータス */
-export type ReviewStatus = "pending" | "approved" | "rejected" | "published";
+export type ReviewStatus = "draft" | "pending" | "approved" | "rejected" | "revision" | "published";
 
-/** 記事レビューアイテム */
+/** コンプライアンススコア内訳 */
+export interface ComplianceScoreBreakdown {
+  /** 薬機法スコア (0-100) */
+  yakkinhou: number;
+  /** 景表法スコア (0-100) */
+  keihinhou: number;
+  /** ステマ規制スコア (0-100) */
+  sutema: number;
+  /** E-E-A-Tスコア (0-100) */
+  eeat: number;
+}
+
+/** レビューコメント履歴 */
+export interface ReviewComment {
+  id: string;
+  author: string;
+  content: string;
+  action: "approve" | "reject" | "revision" | "comment";
+  createdAt: string;
+}
+
+/** 記事レビューアイテム (一覧表示用) */
 export interface ArticleReviewItem {
+  id: string;
   contentId: string;
   title: string;
   slug: string;
   category: ContentCategory;
-  reviewStatus: ReviewStatus;
+  status: ReviewStatus;
   complianceScore: number;
   eeatScore?: number;
   generatedAt: string;
-  reviewedAt?: string;
-  reviewedBy?: string;
-  reviewComment?: string;
+  reviewedAt?: string | null;
+  reviewedBy?: string | null;
+  reviewComment?: string | null;
   generationCostUsd?: number;
+}
+
+/** 記事レビュー詳細 (個別ページ用) */
+export interface ArticleReviewDetail extends ArticleReviewItem {
+  articleId: string;
+  microcmsId: string | null;
+  authorName: string;
+  reviewNotes: string | null;
+  complianceBreakdown: ComplianceScoreBreakdown;
+  reviewHistory: ReviewComment[];
+  content?: string;
+  htmlContent?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  jsonLd?: Record<string, unknown>;
 }
 
 // ============================================================
@@ -63,6 +100,10 @@ export interface BatchGenerationResult {
 
 export interface RevenueSummary {
   aspName: string;
+  totalClicks: number;
+  totalConversions: number;
+  totalRevenue: number;
+  conversionRate: number;
   monthlyConversions: number;
   monthlyRevenueJpy: number;
   monthOverMonthChange: number;
@@ -74,17 +115,23 @@ export interface RevenueSummary {
 // ============================================================
 
 export type AlertLevel = "info" | "warning" | "critical";
+/** Alias for AlertLevel used by alert-manager and notification subsystems */
+export type AlertSeverity = AlertLevel;
+export type AlertType = "pipeline_failure" | "compliance_violation" | "cost_threshold" | "performance_degradation" | "api_error";
 export type AlertStatus = "active" | "acknowledged" | "resolved";
 
 export interface MonitoringAlert {
   id: string;
+  type?: AlertType;
   level: AlertLevel;
   status: AlertStatus;
   title: string;
   message: string;
-  source: string;
+  source?: string;
+  metadata?: Record<string, unknown>;
   createdAt: string;
-  resolvedAt?: string;
+  acknowledgedAt?: string | null;
+  resolvedAt?: string | null;
 }
 
 // ============================================================

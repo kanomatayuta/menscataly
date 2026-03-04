@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import type { MonitoringAlert, AlertSeverity } from "@/types/admin";
+import type { MonitoringAlert, AlertLevel } from "@/types/admin";
 
 interface AlertsListProps {
   alerts: MonitoringAlert[];
 }
 
 const SEVERITY_STYLES: Record<
-  AlertSeverity,
+  AlertLevel,
   { bg: string; text: string; dot: string }
 > = {
   critical: {
@@ -82,7 +82,7 @@ export function AlertsList({ alerts: initialAlerts }: AlertsListProps) {
   return (
     <div className="space-y-3">
       {alerts.map((alert) => {
-        const styles = SEVERITY_STYLES[alert.severity];
+        const styles = SEVERITY_STYLES[alert.level];
         const isPending = pendingIds.has(alert.id);
         return (
           <div

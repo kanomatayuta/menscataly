@@ -39,37 +39,37 @@ async function fetchDashboardData(): Promise<AdminDashboardData> {
 
 async function DashboardStats() {
   const data = await fetchDashboardData();
-  const { articleStats, revenueSummary, costSummary } = data;
+  const { articles, revenue, costs } = data;
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <StatCard
         title="Total Articles"
-        value={articleStats.totalArticles}
-        subtitle={`${articleStats.publishedCount} published, ${articleStats.draftCount} drafts`}
+        value={articles.total}
+        subtitle={`${articles.published} published, ${articles.draft} drafts`}
       />
       <StatCard
         title="Revenue (30d)"
-        value={`¥${revenueSummary.totalRevenue30d.toLocaleString()}`}
-        subtitle={`${revenueSummary.totalConversions30d} conversions`}
+        value={`¥${revenue.monthlyTotalJpy.toLocaleString()}`}
+        subtitle={`${revenue.byAsp.reduce((sum, a) => sum + a.monthlyConversions, 0)} conversions`}
         variant="success"
       />
       <StatCard
         title="Avg Compliance"
-        value={`${articleStats.avgComplianceScore}%`}
+        value={`${articles.avgComplianceScore}%`}
         subtitle="Target: 95%"
         variant={
-          articleStats.avgComplianceScore >= 95
+          articles.avgComplianceScore >= 95
             ? "success"
-            : articleStats.avgComplianceScore >= 80
+            : articles.avgComplianceScore >= 80
               ? "warning"
               : "danger"
         }
       />
       <StatCard
         title="AI Cost (30d)"
-        value={`$${costSummary.totalCost30d.toFixed(2)}`}
-        subtitle={`$${costSummary.avgCostPerArticle.toFixed(2)} per article`}
+        value={`$${costs.monthlyTotalUsd.toFixed(2)}`}
+        subtitle={`$${costs.articleAvgUsd.toFixed(2)} per article`}
       />
     </div>
   );
@@ -77,7 +77,7 @@ async function DashboardStats() {
 
 async function DashboardPipelineAndAlerts() {
   const data = await fetchDashboardData();
-  const { pipelineStatus, activeAlerts } = data;
+  const { pipeline, alerts } = data;
 
   return (
     <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -87,9 +87,9 @@ async function DashboardPipelineAndAlerts() {
           Pipeline
         </h2>
         <PipelineStatusCard
-          status={pipelineStatus.currentStatus}
-          lastRunAt={pipelineStatus.lastRunAt}
-          successRate={pipelineStatus.successRate7d}
+          status={pipeline.status}
+          lastRunAt={pipeline.lastRunAt ?? null}
+          successRate={pipeline.totalRuns > 0 ? (pipeline.lastRunSuccess ? 100 : 50) : 0}
         />
         <div className="mt-4">
           <h3 className="mb-2 text-sm font-medium text-neutral-600">
@@ -104,7 +104,7 @@ async function DashboardPipelineAndAlerts() {
         <h2 className="mb-3 text-lg font-semibold text-neutral-800">
           Active Alerts
         </h2>
-        <AlertsList alerts={activeAlerts} />
+        <AlertsList alerts={alerts} />
       </div>
     </div>
   );
@@ -112,7 +112,10 @@ async function DashboardPipelineAndAlerts() {
 
 async function DashboardCosts() {
   const data = await fetchDashboardData();
-  const { costSummary, articleStats } = data;
+  const { costs, articles } = data;
+
+  const estimatedArticleCost = costs.monthlyTotalUsd * 0.7;
+  const estimatedImageCost = costs.monthlyTotalUsd * 0.3;
 
   return (
     <div className="mt-6">
@@ -122,19 +125,19 @@ async function DashboardCosts() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
           title="Article Generation"
-          value={`$${costSummary.articleGenerationCost.toFixed(2)}`}
-          subtitle={`${costSummary.totalCost30d > 0 ? ((costSummary.articleGenerationCost / costSummary.totalCost30d) * 100).toFixed(0) : 0}% of total`}
+          value={`$${estimatedArticleCost.toFixed(2)}`}
+          subtitle={`${costs.monthlyTotalUsd > 0 ? ((estimatedArticleCost / costs.monthlyTotalUsd) * 100).toFixed(0) : 0}% of total`}
         />
         <StatCard
           title="Image Generation"
-          value={`$${costSummary.imageGenerationCost.toFixed(2)}`}
-          subtitle={`${costSummary.totalCost30d > 0 ? ((costSummary.imageGenerationCost / costSummary.totalCost30d) * 100).toFixed(0) : 0}% of total`}
+          value={`$${estimatedImageCost.toFixed(2)}`}
+          subtitle={`${costs.monthlyTotalUsd > 0 ? ((estimatedImageCost / costs.monthlyTotalUsd) * 100).toFixed(0) : 0}% of total`}
         />
         <StatCard
           title="Pending Review"
-          value={articleStats.pendingReviewCount}
+          value={articles.pendingReview}
           subtitle="Articles awaiting review"
-          variant={articleStats.pendingReviewCount > 5 ? "warning" : "default"}
+          variant={articles.pendingReview > 5 ? "warning" : "default"}
         />
       </div>
     </div>

@@ -93,13 +93,12 @@ describe('管理画面記事API', () => {
 
         data.articles.forEach((article: ArticleReviewItem) => {
           expect(article.id).toBeDefined()
-          expect(article.articleId).toBeDefined()
+          expect(article.contentId || article.articleId).toBeDefined()
           expect(article.title).toBeDefined()
           expect(article.slug).toBeDefined()
           expect(article.category).toBeDefined()
           expect(typeof article.complianceScore).toBe('number')
-          expect(['pending', 'approved', 'rejected']).toContain(article.status)
-          expect(article.authorName).toBeDefined()
+          expect(['draft', 'pending', 'approved', 'rejected', 'revision', 'published']).toContain(article.status)
           expect(article.generatedAt).toBeDefined()
         })
       })

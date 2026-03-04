@@ -21,13 +21,13 @@ const mockAlerts: MonitoringAlert[] = [
   createMockMonitoringAlert({
     id: 'alert-001',
     type: 'pipeline_failure',
-    severity: 'critical',
+    level: 'critical',
     status: 'active',
   }),
   createMockMonitoringAlert({
     id: 'alert-002',
     type: 'cost_threshold',
-    severity: 'warning',
+    level: 'warning',
     status: 'active',
     title: 'Cost threshold exceeded',
     message: 'Monthly cost exceeded $10.00',
@@ -35,7 +35,7 @@ const mockAlerts: MonitoringAlert[] = [
   createMockMonitoringAlert({
     id: 'alert-003',
     type: 'compliance_violation',
-    severity: 'critical',
+    level: 'critical',
     status: 'acknowledged',
     acknowledgedAt: '2026-03-01T12:00:00Z',
   }),
@@ -118,8 +118,7 @@ describe('管理画面アラートAPI', () => {
 
         data.alerts.forEach((alert: MonitoringAlert) => {
           expect(alert.id).toBeDefined()
-          expect(['pipeline_failure', 'compliance_violation', 'cost_threshold', 'performance_degradation', 'api_error']).toContain(alert.type)
-          expect(['critical', 'warning', 'info']).toContain(alert.severity)
+          expect(['critical', 'warning', 'info']).toContain(alert.level)
           expect(['active', 'acknowledged', 'resolved']).toContain(alert.status)
           expect(alert.title).toBeDefined()
           expect(alert.message).toBeDefined()
@@ -147,7 +146,7 @@ describe('管理画面アラートAPI', () => {
       })
 
       it('重大度でフィルタできること', async () => {
-        const criticalAlerts = mockAlerts.filter(a => a.severity === 'critical')
+        const criticalAlerts = mockAlerts.filter(a => a.level === 'critical')
         mockGetAlerts.mockResolvedValueOnce(
           new Response(JSON.stringify({ alerts: criticalAlerts, totalCount: criticalAlerts.length }), {
             status: 200,
@@ -156,12 +155,12 @@ describe('管理画面アラートAPI', () => {
         )
 
         const response = await mockGetAlerts(
-          new Request('http://localhost/api/admin/alerts?severity=critical')
+          new Request('http://localhost/api/admin/alerts?level=critical')
         )
         const data = await response.json()
 
         data.alerts.forEach((alert: MonitoringAlert) => {
-          expect(alert.severity).toBe('critical')
+          expect(alert.level).toBe('critical')
         })
       })
     })

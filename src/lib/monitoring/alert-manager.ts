@@ -5,7 +5,7 @@
 
 import { randomUUID } from 'crypto'
 import type {
-  AlertSeverity,
+  AlertLevel,
   AlertStatus,
   AlertType,
   MonitoringAlert,
@@ -31,7 +31,7 @@ export class AlertManager {
   async createAlert(
     params: {
       type: AlertType
-      severity: AlertSeverity
+      severity: AlertLevel
       title: string
       message: string
       metadata?: Record<string, unknown>
@@ -41,7 +41,7 @@ export class AlertManager {
     const alert: MonitoringAlert = {
       id: randomUUID(),
       type: params.type,
-      severity: params.severity,
+      level: params.severity,
       status: 'active',
       title: params.title,
       message: params.message,
@@ -70,7 +70,7 @@ export class AlertManager {
         .insert({
           id: alert.id,
           type: alert.type,
-          severity: alert.severity,
+          severity: alert.level,
           status: alert.status,
           title: alert.title,
           message: alert.message,
@@ -87,7 +87,7 @@ export class AlertManager {
     }
 
     console.log(
-      `[AlertManager] Created ${alert.severity} alert: ${alert.title}`
+      `[AlertManager] Created ${alert.level} alert: ${alert.title}`
     )
 
     // 外部通知を送信（skipNotification が true でない場合）
@@ -212,7 +212,7 @@ export class AlertManager {
       return (data ?? []).map((row: Record<string, unknown>) => ({
         id: row.id as string,
         type: row.type as AlertType,
-        severity: row.severity as AlertSeverity,
+        level: (row.severity as AlertLevel) ?? 'info',
         status: row.status as AlertStatus,
         title: row.title as string,
         message: row.message as string,
@@ -238,7 +238,7 @@ export class AlertManager {
       const { NotificationRouter } = await import('@/lib/notification')
       const router = new NotificationRouter()
       await router.notify({
-        severity: alert.severity,
+        severity: alert.level,
         title: alert.title,
         message: alert.message,
         metadata: alert.metadata,
