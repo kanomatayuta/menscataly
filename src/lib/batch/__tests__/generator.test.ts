@@ -226,6 +226,102 @@ describe('バッチ記事生成', () => {
     })
   })
 
+  describe('onArticleGenerated コールバック', () => {
+    it('should call onArticleGenerated callback after each article', async () => {
+      const mockCallback = vi.fn()
+
+      mockRunBatch.mockImplementation(async (request: BatchGenerationRequest) => {
+        // コールバックが設定されていればシミュレート
+        if (request.onArticleGenerated) {
+          for (const kw of request.keywords ?? []) {
+            request.onArticleGenerated(kw.keyword, `article-${kw.id}`, 95)
+          }
+        }
+
+        const job = createMockBatchGenerationJob({
+          totalKeywords: (request.keywords ?? []).length,
+          status: 'completed',
+          completedCount: (request.keywords ?? []).length,
+          failedCount: 0,
+        })
+        const progress = createMockBatchGenerationProgress({
+          totalKeywords: (request.keywords ?? []).length,
+          completedCount: (request.keywords ?? []).length,
+          status: 'completed',
+        })
+        return { job, progress }
+      })
+
+      const request: BatchGenerationRequest = {
+        keywords: mockKeywords,
+        maxConcurrent: 2,
+        complianceThreshold: 90,
+        dryRun: false,
+        continueOnError: true,
+        requestedBy: 'admin',
+        onArticleGenerated: mockCallback,
+      }
+
+      await mockRunBatch(request)
+
+      expect(mockCallback).toHaveBeenCalledTimes(3)
+      expect(mockCallback).toHaveBeenCalledWith('AGA治療 おすすめ', 'article-kw-001', 95)
+      expect(mockCallback).toHaveBeenCalledWith('AGA クリニック 比較', 'article-kw-002', 95)
+      expect(mockCallback).toHaveBeenCalledWith('ED治療 費用', 'article-kw-003', 95)
+    })
+
+    it('should continue batch even if callback throws', async () => {
+      const throwingCallback = vi.fn().mockImplementation(() => {
+        throw new Error('Callback error')
+      })
+
+      mockRunBatch.mockImplementation(async (request: BatchGenerationRequest) => {
+        // コールバックがエラーを投げてもバッチ処理は続行される
+        for (const kw of request.keywords ?? []) {
+          if (request.onArticleGenerated) {
+            try {
+              request.onArticleGenerated(kw.keyword, `article-${kw.id}`, 95)
+            } catch {
+              // コールバックエラーは無視してバッチを続行
+            }
+          }
+        }
+
+        const job = createMockBatchGenerationJob({
+          totalKeywords: (request.keywords ?? []).length,
+          status: 'completed',
+          completedCount: (request.keywords ?? []).length,
+          failedCount: 0,
+        })
+        const progress = createMockBatchGenerationProgress({
+          totalKeywords: (request.keywords ?? []).length,
+          completedCount: (request.keywords ?? []).length,
+          status: 'completed',
+        })
+        return { job, progress }
+      })
+
+      const request: BatchGenerationRequest = {
+        keywords: mockKeywords,
+        maxConcurrent: 2,
+        complianceThreshold: 90,
+        dryRun: false,
+        continueOnError: true,
+        requestedBy: 'admin',
+        onArticleGenerated: throwingCallback,
+      }
+
+      const { job } = await mockRunBatch(request)
+
+      // コールバックは3回呼ばれる（全キーワード分）
+      expect(throwingCallback).toHaveBeenCalledTimes(3)
+      // バッチ自体は正常完了
+      expect(job.status).toBe('completed')
+      expect(job.completedCount).toBe(3)
+      expect(job.failedCount).toBe(0)
+    })
+  })
+
   describe('BatchGenerationRequest バリデーション', () => {
     it('リクエストオブジェクトの型が正しいこと', () => {
       const request: BatchGenerationRequest = {

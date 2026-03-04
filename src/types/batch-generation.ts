@@ -35,6 +35,8 @@ export interface BatchGenerationRequest {
   dryRun?: boolean;
   continueOnError?: boolean;
   requestedBy?: string;
+  /** Callback invoked after each article is generated (keyword, articleId, complianceScore) */
+  onArticleGenerated?: (keyword: string, articleId: string, complianceScore: number) => void;
 }
 
 export interface BatchGenerationProgress {
