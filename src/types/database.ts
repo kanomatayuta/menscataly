@@ -104,6 +104,209 @@ export interface ComplianceLogRow {
 }
 
 // ============================================================
+// ASP Programs テーブル
+// ============================================================
+
+export interface AspProgramRow {
+  id: string
+  asp_name: string
+  program_name: string
+  program_id: string
+  category: string
+  affiliate_url: string
+  reward_amount: number
+  reward_type: string
+  conversion_condition: string | null
+  approval_rate: number
+  epc: number
+  itp_support: boolean
+  cookie_duration: number
+  is_active: boolean
+  priority: number
+  recommended_anchors: string[]
+  landing_page_url: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type AspProgramInsert = {
+  id?: string
+  asp_name: string
+  program_name: string
+  program_id: string
+  category: string
+  affiliate_url: string
+  reward_amount: number
+  reward_type: string
+  conversion_condition?: string | null
+  approval_rate?: number
+  epc?: number
+  itp_support?: boolean
+  cookie_duration?: number
+  is_active?: boolean
+  priority?: number
+  recommended_anchors?: string[]
+  landing_page_url?: string | null
+  notes?: string | null
+}
+
+export type AspProgramUpdate = Partial<Omit<AspProgramRow, 'id' | 'created_at'>>
+
+// ============================================================
+// Pipeline Runs テーブル
+// ============================================================
+
+export interface PipelineRunRow {
+  id: string
+  type: string
+  status: string
+  started_at: string
+  completed_at: string | null
+  steps_json: Json
+  error: string | null
+  created_at: string
+}
+
+export type PipelineRunInsert = {
+  id?: string
+  type: string
+  status?: string
+  started_at?: string
+  completed_at?: string | null
+  steps_json?: Json
+  error?: string | null
+}
+
+export type PipelineRunUpdate = Partial<Omit<PipelineRunRow, 'id' | 'created_at'>>
+
+// ============================================================
+// Article Reviews テーブル
+// ============================================================
+
+export interface ArticleReviewRow {
+  id: string
+  article_id: string
+  content_id: string | null
+  status: string
+  reviewer: string | null
+  comment: string | null
+  action: string | null
+  compliance_score: number | null
+  eeat_score: number | null
+  created_at: string
+  updated_at: string
+}
+
+export type ArticleReviewInsert = {
+  id?: string
+  article_id: string
+  content_id?: string | null
+  status?: string
+  reviewer?: string | null
+  comment?: string | null
+  action?: string | null
+  compliance_score?: number | null
+  eeat_score?: number | null
+}
+
+export type ArticleReviewUpdate = Partial<Omit<ArticleReviewRow, 'id' | 'created_at'>>
+
+// ============================================================
+// Batch Generation Jobs テーブル
+// ============================================================
+
+export interface BatchGenerationJobRow {
+  id: string
+  status: string
+  total_keywords: number
+  completed_count: number
+  failed_count: number
+  total_cost_usd: number
+  created_by: string | null
+  error_messages: string[] | null
+  started_at: string
+  completed_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type BatchGenerationJobInsert = {
+  id?: string
+  status?: string
+  total_keywords: number
+  completed_count?: number
+  failed_count?: number
+  total_cost_usd?: number
+  created_by?: string | null
+  error_messages?: string[] | null
+  started_at?: string
+  completed_at?: string | null
+}
+
+export type BatchGenerationJobUpdate = Partial<Omit<BatchGenerationJobRow, 'id' | 'created_at'>>
+
+// ============================================================
+// Monitoring Alerts テーブル
+// ============================================================
+
+export interface MonitoringAlertRow {
+  id: string
+  type: string | null
+  severity: string
+  status: string
+  title: string
+  message: string
+  source: string | null
+  metadata: Json | null
+  acknowledged_at: string | null
+  resolved_at: string | null
+  created_at: string
+}
+
+export type MonitoringAlertInsert = {
+  id?: string
+  type?: string | null
+  severity: string
+  status?: string
+  title: string
+  message: string
+  source?: string | null
+  metadata?: Json | null
+}
+
+export type MonitoringAlertUpdate = Partial<Omit<MonitoringAlertRow, 'id' | 'created_at'>>
+
+// ============================================================
+// Generation Costs テーブル
+// ============================================================
+
+export interface GenerationCostRow {
+  id: string
+  job_id: string | null
+  article_id: string | null
+  cost_type: string
+  input_tokens: number
+  output_tokens: number
+  cost_usd: number
+  model: string
+  created_at: string
+}
+
+export type GenerationCostInsert = {
+  id?: string
+  job_id?: string | null
+  article_id?: string | null
+  cost_type: string
+  input_tokens: number
+  output_tokens: number
+  cost_usd: number
+  model: string
+}
+
+export type GenerationCostUpdate = Partial<Omit<GenerationCostRow, 'id' | 'created_at'>>
+
+// ============================================================
 // INSERT 型
 // ============================================================
 
@@ -303,6 +506,50 @@ export interface Database {
             referencedColumns: ['id']
           },
         ]
+      }
+      asp_programs: {
+        Row: AspProgramRow
+        Insert: AspProgramInsert
+        Update: AspProgramUpdate
+        Relationships: []
+      }
+      pipeline_runs: {
+        Row: PipelineRunRow
+        Insert: PipelineRunInsert
+        Update: PipelineRunUpdate
+        Relationships: []
+      }
+      article_reviews: {
+        Row: ArticleReviewRow
+        Insert: ArticleReviewInsert
+        Update: ArticleReviewUpdate
+        Relationships: [
+          {
+            foreignKeyName: 'article_reviews_article_id_fkey'
+            columns: ['article_id']
+            isOneToOne: false
+            referencedRelation: 'articles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      batch_generation_jobs: {
+        Row: BatchGenerationJobRow
+        Insert: BatchGenerationJobInsert
+        Update: BatchGenerationJobUpdate
+        Relationships: []
+      }
+      monitoring_alerts: {
+        Row: MonitoringAlertRow
+        Insert: MonitoringAlertInsert
+        Update: MonitoringAlertUpdate
+        Relationships: []
+      }
+      generation_costs: {
+        Row: GenerationCostRow
+        Insert: GenerationCostInsert
+        Update: GenerationCostUpdate
+        Relationships: []
       }
     }
     Views: {

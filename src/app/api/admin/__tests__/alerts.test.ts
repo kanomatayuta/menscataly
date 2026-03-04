@@ -14,6 +14,7 @@ import type { MonitoringAlert } from '@/types/admin'
 const mockValidateAuth = vi.fn()
 vi.mock('@/lib/admin/auth', () => ({
   validateAdminAuth: mockValidateAuth,
+  getAuthErrorStatus: vi.fn((error: { code: string }) => error.code === 'FORBIDDEN' ? 403 : 401),
 }))
 
 // モックデータ

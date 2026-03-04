@@ -5,34 +5,19 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { validatePipelineAuth, getAuthErrorStatus } from '@/lib/admin/auth'
 import type { PipelineHistoryResponse, PipelineType } from '@/lib/pipeline/types'
-
-// ============================================================
-// 認証ヘルパー
-// ============================================================
-
-function authenticateRequest(request: NextRequest): boolean {
-  const apiKey = process.env.PIPELINE_API_KEY
-  if (!apiKey) {
-    if (process.env.NODE_ENV === 'development') {
-      return true
-    }
-    return false
-  }
-
-  const providedKey = request.headers.get('X-Pipeline-Api-Key')
-  return providedKey === apiKey
-}
 
 // ============================================================
 // Route Handler
 // ============================================================
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  if (!authenticateRequest(request)) {
+  const auth = validatePipelineAuth(request)
+  if (!auth.authorized) {
     return NextResponse.json(
-      { error: 'Unauthorized: Invalid or missing X-Pipeline-Api-Key' },
-      { status: 401 }
+      { error: auth.error },
+      { status: getAuthErrorStatus(auth.error!) }
     )
   }
 

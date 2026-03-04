@@ -1,181 +1,219 @@
 /**
- * Admin Auth Helper Unit Tests
- * 認証ヘルパー validateAdminAuth のテスト
- * 正常認証 / 不正キー / キーなし / 環境変数なし
+ * Admin Auth Module Tests
+ * - timing-safe comparison
+ * - Authorization: Bearer support
+ * - X-Admin-Api-Key / X-Pipeline-Api-Key fallback
+ * - Unified error response format
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { validateAdminAuth } from '@/lib/admin/auth'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import {
+  validateAdminAuth,
+  validatePipelineAuth,
+  getAuthErrorStatus,
+  type AuthResult,
+} from '@/lib/admin/auth'
 
-// ============================================================
-// ヘルパー: テスト用リクエスト生成
-// ============================================================
+describe('Admin Auth Module', () => {
+  const ORIGINAL_ENV = process.env
 
-function createMockRequest(headers: Record<string, string> = {}): Request {
-  const reqHeaders = new Headers()
-  for (const [key, value] of Object.entries(headers)) {
-    reqHeaders.set(key, value)
-  }
-  return new Request('http://localhost:3000/api/admin/test', {
-    method: 'GET',
-    headers: reqHeaders,
+  beforeEach(() => {
+    vi.resetModules()
+    process.env = { ...ORIGINAL_ENV }
   })
-}
-
-// ============================================================
-// テスト
-// ============================================================
-
-describe('validateAdminAuth', () => {
-  const originalEnv = { ...process.env }
 
   afterEach(() => {
-    process.env = { ...originalEnv }
+    process.env = ORIGINAL_ENV
   })
 
-  // ============================================================
-  // 正常認証
-  // ============================================================
-
-  describe('正常認証', () => {
-    it('正しいAPIキーで認証が成功すること', () => {
-      process.env.ADMIN_API_KEY = 'valid-secret-key-123'
-
-      const request = createMockRequest({
-        'X-Admin-Api-Key': 'valid-secret-key-123',
-      })
-
-      const result = validateAdminAuth(request)
-
-      expect(result.authorized).toBe(true)
-      expect(result.error).toBeUndefined()
-    })
-  })
-
-  // ============================================================
-  // 不正キー
-  // ============================================================
-
-  describe('不正キー', () => {
-    it('不正なAPIキーで認証が失敗すること', () => {
-      process.env.ADMIN_API_KEY = 'valid-secret-key-123'
-
-      const request = createMockRequest({
-        'X-Admin-Api-Key': 'wrong-key',
-      })
-
-      const result = validateAdminAuth(request)
-
-      expect(result.authorized).toBe(false)
-      expect(result.error).toBe('Unauthorized: Invalid API key')
-    })
-
-    it('空文字のAPIキーで認証が失敗すること', () => {
-      process.env.ADMIN_API_KEY = 'valid-secret-key-123'
-
-      const request = createMockRequest({
-        'X-Admin-Api-Key': '',
-      })
-
-      const result = validateAdminAuth(request)
-
-      expect(result.authorized).toBe(false)
-      // 空文字はHeaders.getで空文字を返すため、不一致として処理される
-      expect(result.error).toBeDefined()
-    })
-  })
-
-  // ============================================================
-  // キーなし（ヘッダー欠如）
-  // ============================================================
-
-  describe('キーなし', () => {
-    it('X-Admin-Api-Key ヘッダーがない場合に認証が失敗すること', () => {
-      process.env.ADMIN_API_KEY = 'valid-secret-key-123'
-
-      const request = createMockRequest({})
-
-      const result = validateAdminAuth(request)
-
-      expect(result.authorized).toBe(false)
-      expect(result.error).toBe('Unauthorized: Missing X-Admin-Api-Key header')
-    })
-  })
-
-  // ============================================================
-  // 環境変数なし
-  // ============================================================
-
-  describe('環境変数なし', () => {
-    it('本番環境でADMIN_API_KEY未設定の場合に認証が失敗すること', () => {
-      delete process.env.ADMIN_API_KEY
-      process.env.NODE_ENV = 'production'
-
-      const request = createMockRequest({
-        'X-Admin-Api-Key': 'any-key',
-      })
-
-      const result = validateAdminAuth(request)
-
-      expect(result.authorized).toBe(false)
-      expect(result.error).toBe('Server configuration error: ADMIN_API_KEY not set')
-    })
-
-    it('開発環境でADMIN_API_KEY未設定の場合に認証がバイパスされること', () => {
-      delete process.env.ADMIN_API_KEY
+  // ==============================================================
+  // validateAdminAuth
+  // ==============================================================
+  describe('validateAdminAuth', () => {
+    it('開発環境でAPIキー未設定の場合、認証をバイパスすること', () => {
       process.env.NODE_ENV = 'development'
+      delete process.env.ADMIN_API_KEY
 
-      const request = createMockRequest({})
-
-      const result = validateAdminAuth(request)
+      const req = new Request('http://localhost/api/test')
+      const result = validateAdminAuth(req)
 
       expect(result.authorized).toBe(true)
       expect(result.error).toBeUndefined()
     })
 
-    it('test環境でADMIN_API_KEY未設定の場合に認証が失敗すること', () => {
+    it('本番環境でAPIキー未設定の場合、FORBIDDEN エラーを返すこと', () => {
+      process.env.NODE_ENV = 'production'
       delete process.env.ADMIN_API_KEY
-      process.env.NODE_ENV = 'test'
 
-      const request = createMockRequest({
-        'X-Admin-Api-Key': 'any-key',
-      })
-
-      const result = validateAdminAuth(request)
+      const req = new Request('http://localhost/api/test')
+      const result = validateAdminAuth(req)
 
       expect(result.authorized).toBe(false)
-      expect(result.error).toContain('ADMIN_API_KEY not set')
+      expect(result.error?.code).toBe('FORBIDDEN')
+    })
+
+    it('Authorization: Bearer ヘッダーで認証できること', () => {
+      process.env.ADMIN_API_KEY = 'test-secret-key-123'
+
+      const req = new Request('http://localhost/api/test', {
+        headers: { Authorization: 'Bearer test-secret-key-123' },
+      })
+      const result = validateAdminAuth(req)
+
+      expect(result.authorized).toBe(true)
+    })
+
+    it('X-Admin-Api-Key ヘッダーでフォールバック認証できること', () => {
+      process.env.ADMIN_API_KEY = 'test-secret-key-123'
+
+      const req = new Request('http://localhost/api/test', {
+        headers: { 'X-Admin-Api-Key': 'test-secret-key-123' },
+      })
+      const result = validateAdminAuth(req)
+
+      expect(result.authorized).toBe(true)
+    })
+
+    it('ヘッダーなしの場合、UNAUTHORIZED エラーを返すこと', () => {
+      process.env.ADMIN_API_KEY = 'test-secret-key-123'
+
+      const req = new Request('http://localhost/api/test')
+      const result = validateAdminAuth(req)
+
+      expect(result.authorized).toBe(false)
+      expect(result.error?.code).toBe('UNAUTHORIZED')
+      expect(result.error?.message).toContain('Missing authentication credentials')
+    })
+
+    it('不正なAPIキーの場合、UNAUTHORIZED エラーを返すこと', () => {
+      process.env.ADMIN_API_KEY = 'correct-key'
+
+      const req = new Request('http://localhost/api/test', {
+        headers: { Authorization: 'Bearer wrong-key' },
+      })
+      const result = validateAdminAuth(req)
+
+      expect(result.authorized).toBe(false)
+      expect(result.error?.code).toBe('UNAUTHORIZED')
+      expect(result.error?.message).toContain('Invalid API key')
+    })
+
+    it('長さの異なるキーでも安全に拒否すること (timing-safe)', () => {
+      process.env.ADMIN_API_KEY = 'short'
+
+      const req = new Request('http://localhost/api/test', {
+        headers: { Authorization: 'Bearer very-long-incorrect-key-that-differs-in-length' },
+      })
+      const result = validateAdminAuth(req)
+
+      expect(result.authorized).toBe(false)
+      expect(result.error?.code).toBe('UNAUTHORIZED')
+    })
+
+    it('Bearer prefix が大文字小文字を区別しないこと', () => {
+      process.env.ADMIN_API_KEY = 'test-key'
+
+      const req = new Request('http://localhost/api/test', {
+        headers: { Authorization: 'bearer test-key' },
+      })
+      const result = validateAdminAuth(req)
+
+      expect(result.authorized).toBe(true)
+    })
+
+    it('Authorization ヘッダーが Bearer でない場合、フォールバックを試みること', () => {
+      process.env.ADMIN_API_KEY = 'test-key'
+
+      const req = new Request('http://localhost/api/test', {
+        headers: {
+          Authorization: 'Basic dXNlcjpwYXNz',
+          'X-Admin-Api-Key': 'test-key',
+        },
+      })
+      const result = validateAdminAuth(req)
+
+      expect(result.authorized).toBe(true)
     })
   })
 
-  // ============================================================
-  // エッジケース
-  // ============================================================
+  // ==============================================================
+  // validatePipelineAuth
+  // ==============================================================
+  describe('validatePipelineAuth', () => {
+    it('Authorization: Bearer ヘッダーで認証できること', () => {
+      process.env.PIPELINE_API_KEY = 'pipeline-secret-123'
 
-  describe('エッジケース', () => {
-    it('APIキーの大文字小文字が異なる場合に不一致として処理されること', () => {
-      process.env.ADMIN_API_KEY = 'Valid-Key-123'
-
-      const request = createMockRequest({
-        'X-Admin-Api-Key': 'valid-key-123',
+      const req = new Request('http://localhost/api/pipeline/run', {
+        headers: { Authorization: 'Bearer pipeline-secret-123' },
       })
-
-      const result = validateAdminAuth(request)
-
-      expect(result.authorized).toBe(false)
-    })
-
-    it('非常に長いAPIキーでも正常に比較できること', () => {
-      const longKey = 'a'.repeat(1024)
-      process.env.ADMIN_API_KEY = longKey
-
-      const request = createMockRequest({
-        'X-Admin-Api-Key': longKey,
-      })
-
-      const result = validateAdminAuth(request)
+      const result = validatePipelineAuth(req)
 
       expect(result.authorized).toBe(true)
+    })
+
+    it('X-Pipeline-Api-Key ヘッダーでフォールバック認証できること', () => {
+      process.env.PIPELINE_API_KEY = 'pipeline-secret-123'
+
+      const req = new Request('http://localhost/api/pipeline/run', {
+        headers: { 'X-Pipeline-Api-Key': 'pipeline-secret-123' },
+      })
+      const result = validatePipelineAuth(req)
+
+      expect(result.authorized).toBe(true)
+    })
+
+    it('開発環境でAPIキー未設定の場合、認証をバイパスすること', () => {
+      process.env.NODE_ENV = 'development'
+      delete process.env.PIPELINE_API_KEY
+
+      const req = new Request('http://localhost/api/pipeline/run')
+      const result = validatePipelineAuth(req)
+
+      expect(result.authorized).toBe(true)
+    })
+
+    it('不正なキーで UNAUTHORIZED を返すこと', () => {
+      process.env.PIPELINE_API_KEY = 'correct-key'
+
+      const req = new Request('http://localhost/api/pipeline/run', {
+        headers: { Authorization: 'Bearer wrong-key' },
+      })
+      const result = validatePipelineAuth(req)
+
+      expect(result.authorized).toBe(false)
+      expect(result.error?.code).toBe('UNAUTHORIZED')
+    })
+  })
+
+  // ==============================================================
+  // getAuthErrorStatus
+  // ==============================================================
+  describe('getAuthErrorStatus', () => {
+    it('UNAUTHORIZED エラーの場合、401 を返すこと', () => {
+      expect(getAuthErrorStatus({ code: 'UNAUTHORIZED', message: 'test' })).toBe(401)
+    })
+
+    it('FORBIDDEN エラーの場合、403 を返すこと', () => {
+      expect(getAuthErrorStatus({ code: 'FORBIDDEN', message: 'test' })).toBe(403)
+    })
+  })
+
+  // ==============================================================
+  // Error response format
+  // ==============================================================
+  describe('エラーレスポンス形式', () => {
+    it('エラーレスポンスが統一形式であること', () => {
+      process.env.ADMIN_API_KEY = 'test-key'
+
+      const req = new Request('http://localhost/api/test')
+      const result: AuthResult = validateAdminAuth(req)
+
+      expect(result.authorized).toBe(false)
+      expect(result.error).toBeDefined()
+      expect(result.error).toHaveProperty('code')
+      expect(result.error).toHaveProperty('message')
+      expect(['UNAUTHORIZED', 'FORBIDDEN']).toContain(result.error!.code)
+      expect(typeof result.error!.message).toBe('string')
     })
   })
 })

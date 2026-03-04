@@ -17,6 +17,7 @@ vi.stubEnv('MICROCMS_API_KEY', '')
 // 認証モック
 vi.mock('@/lib/admin/auth', () => ({
   validateAdminAuth: vi.fn(() => ({ authorized: true })),
+  getAuthErrorStatus: vi.fn((error: { code: string }) => error.code === 'FORBIDDEN' ? 403 : 401),
 }))
 
 import { validateAdminAuth } from '@/lib/admin/auth'

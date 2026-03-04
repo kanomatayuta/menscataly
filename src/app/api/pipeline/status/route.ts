@@ -4,34 +4,20 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { validatePipelineAuth, getAuthErrorStatus } from '@/lib/admin/auth'
 import type { PipelineStatusResponse } from '@/lib/pipeline/types'
-
-// ============================================================
-// 認証ヘルパー
-// ============================================================
-
-function authenticateRequest(request: NextRequest): boolean {
-  const apiKey = process.env.PIPELINE_API_KEY
-  if (!apiKey) {
-    if (process.env.NODE_ENV === 'development') {
-      return true
-    }
-    return false
-  }
-
-  const providedKey = request.headers.get('X-Pipeline-Api-Key')
-  return providedKey === apiKey
-}
+import type { PipelineRunRow } from '@/types/database'
 
 // ============================================================
 // Route Handler
 // ============================================================
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  if (!authenticateRequest(request)) {
+  const auth = validatePipelineAuth(request)
+  if (!auth.authorized) {
     return NextResponse.json(
-      { error: 'Unauthorized: Invalid or missing X-Pipeline-Api-Key' },
-      { status: 401 }
+      { error: auth.error },
+      { status: getAuthErrorStatus(auth.error!) }
     )
   }
 
@@ -57,14 +43,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const { createServerSupabaseClient } = await import('@/lib/supabase/client')
     const supabase = createServerSupabaseClient()
 
-    // 最新の実行レコードを取得
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any)
       .from('pipeline_runs')
       .select('*')
       .order('started_at', { ascending: false })
       .limit(1)
-      .single()
+      .single() as { data: PipelineRunRow | null; error: { code: string; message: string } | null }
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -84,15 +69,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       throw error
     }
 
-    const run = data as {
-      id: string
-      type: string
-      status: string
-      started_at: string
-      completed_at: string | null
-      steps_json: unknown[]
-      error: string | null
-    }
+    const run = data!
 
     const durationMs =
       run.completed_at
@@ -106,7 +83,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       startedAt: run.started_at,
       completedAt: run.completed_at,
       durationMs,
-      stepLogs: run.steps_json as PipelineStatusResponse['stepLogs'],
+      stepLogs: run.steps_json as unknown as PipelineStatusResponse['stepLogs'],
       error: run.error,
     }
 

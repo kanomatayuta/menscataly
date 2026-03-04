@@ -21,7 +21,7 @@ async function fetchArticles(): Promise<ArticlesResponse> {
   const res = await fetch(`${protocol}://${host}/api/admin/articles`, {
     cache: "no-store",
     headers: {
-      "X-Admin-Api-Key": process.env.ADMIN_API_KEY ?? "",
+      Authorization: `Bearer ${process.env.ADMIN_API_KEY ?? ""}`,
     },
   });
 

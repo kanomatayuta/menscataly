@@ -6,8 +6,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { validateAdminAuth } from '@/lib/admin/auth'
+import { validateAdminAuth, getAuthErrorStatus } from '@/lib/admin/auth'
 import { type AspProgramSeed } from '@/lib/asp/seed'
+import { mapRowToProgram } from '@/lib/asp/helpers'
+import type { AspProgramRow } from '@/types/database'
 import { getInMemoryPrograms } from '../route'
 
 // ============================================================
@@ -20,7 +22,10 @@ export async function GET(
 ): Promise<NextResponse> {
   const auth = validateAdminAuth(request)
   if (!auth.authorized) {
-    return NextResponse.json({ error: auth.error }, { status: 401 })
+    return NextResponse.json(
+      { error: auth.error },
+      { status: getAuthErrorStatus(auth.error!) }
+    )
   }
 
   const { id } = await params
@@ -56,7 +61,7 @@ export async function GET(
       .from('asp_programs')
       .select('*')
       .eq('id', id)
-      .single()
+      .single() as { data: AspProgramRow | null; error: { code: string; message: string } | null }
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -72,7 +77,7 @@ export async function GET(
       )
     }
 
-    return NextResponse.json({ program: mapRowToProgram(data) })
+    return NextResponse.json({ program: mapRowToProgram(data!) })
   } catch (err) {
     console.error('[admin/asp/[id]] Error:', err)
     return NextResponse.json(
@@ -109,7 +114,10 @@ export async function PUT(
 ): Promise<NextResponse> {
   const auth = validateAdminAuth(request)
   if (!auth.authorized) {
-    return NextResponse.json({ error: auth.error }, { status: 401 })
+    return NextResponse.json(
+      { error: auth.error },
+      { status: getAuthErrorStatus(auth.error!) }
+    )
   }
 
   const { id } = await params
@@ -201,7 +209,7 @@ export async function PUT(
       .update(updatePayload)
       .eq('id', id)
       .select()
-      .single()
+      .single() as { data: AspProgramRow | null; error: { code: string; message: string } | null }
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -217,7 +225,7 @@ export async function PUT(
       )
     }
 
-    return NextResponse.json({ success: true, program: mapRowToProgram(data) })
+    return NextResponse.json({ success: true, program: mapRowToProgram(data!) })
   } catch (err) {
     console.error('[admin/asp/[id]] Error:', err)
     return NextResponse.json(
@@ -237,7 +245,10 @@ export async function DELETE(
 ): Promise<NextResponse> {
   const auth = validateAdminAuth(request)
   if (!auth.authorized) {
-    return NextResponse.json({ error: auth.error }, { status: 401 })
+    return NextResponse.json(
+      { error: auth.error },
+      { status: getAuthErrorStatus(auth.error!) }
+    )
   }
 
   const { id } = await params
@@ -298,33 +309,5 @@ export async function DELETE(
       { error: 'Internal server error' },
       { status: 500 }
     )
-  }
-}
-
-// ============================================================
-// ヘルパー関数
-// ============================================================
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapRowToProgram(row: any): AspProgramSeed {
-  return {
-    id: row.id,
-    aspName: row.asp_name ?? row.aspName,
-    programName: row.program_name ?? row.programName,
-    programId: row.program_id ?? row.programId,
-    category: row.category,
-    affiliateUrl: row.affiliate_url ?? row.affiliateUrl,
-    rewardAmount: parseFloat(String(row.reward_amount ?? row.rewardAmount ?? '0')),
-    rewardType: row.reward_type ?? row.rewardType,
-    conversionCondition: row.conversion_condition ?? row.conversionCondition ?? '',
-    approvalRate: parseFloat(String(row.approval_rate ?? row.approvalRate ?? '0')),
-    epc: parseFloat(String(row.epc ?? '0')),
-    itpSupport: Boolean(row.itp_support ?? row.itpSupport),
-    cookieDuration: parseInt(String(row.cookie_duration ?? row.cookieDuration ?? '30'), 10),
-    isActive: Boolean(row.is_active ?? row.isActive),
-    priority: parseInt(String(row.priority ?? '3'), 10),
-    recommendedAnchors: row.recommended_anchors ?? row.recommendedAnchors ?? [],
-    landingPageUrl: row.landing_page_url ?? row.landingPageUrl ?? '',
-    notes: row.notes ?? undefined,
   }
 }
