@@ -40,14 +40,13 @@ const MOCK_PREVIEW_ARTICLES: Record<string, PreviewArticle> = {
     seoDescription:
       "AGA（男性型脱毛症）の原因、最新の治療法、費用相場を医師監修のもと徹底解説。フィナステリド・デュタステリド・ミノキシジルの効果と副作用も紹介します。",
     htmlContent: `
-      <div class="prose prose-neutral max-w-none">
-        <p class="text-sm text-neutral-500 border-l-4 border-blue-400 pl-3 mb-6 bg-blue-50 py-2">
+        <p class="pr-disclosure">
           【PR】本記事には広告・アフィリエイトリンクが含まれています。
         </p>
 
-        <p class="lead">AGA（男性型脱毛症）は、日本人男性の約3人に1人が悩むとされる脱毛症です。本記事では、AGAの原因から最新の治療法、費用相場まで徹底的に解説します。</p>
+        <p class="article-lead">AGA（男性型脱毛症）は、日本人男性の約3人に1人が悩むとされる脱毛症です。本記事では、AGAの原因から最新の治療法、費用相場まで徹底的に解説します。</p>
 
-        <h2>AGAとは？ — 男性型脱毛症の基礎知識</h2>
+        <h2>AGAとは？ -- 男性型脱毛症の基礎知識</h2>
         <p>AGA（Androgenetic Alopecia）は、男性ホルモンの影響により進行する脱毛症です。遺伝的要因と男性ホルモン（DHT: ジヒドロテストステロン）が主な原因とされています。</p>
         <p>日本皮膚科学会の「男性型および女性型脱毛症診療ガイドライン 2017年版」によると、AGAは思春期以降に始まり、徐々に進行する特徴があります。</p>
 
@@ -82,12 +81,11 @@ const MOCK_PREVIEW_ARTICLES: Record<string, PreviewArticle> = {
         <h2>まとめ</h2>
         <p>AGA治療は早期に開始することで、より効果が期待できるとされています。まずは専門のクリニックで無料カウンセリングを受けることをおすすめします。</p>
 
-        <div class="mt-8 border-t border-neutral-200 pt-4">
-          <p class="text-xs text-neutral-400">監修: 山田太郎（皮膚科専門医）</p>
-          <p class="text-xs text-neutral-400">参考文献: 日本皮膚科学会「男性型および女性型脱毛症診療ガイドライン 2017年版」</p>
-          <p class="text-xs text-neutral-400">最終更新日: 2026年3月1日</p>
+        <div style="margin-top:2rem; border-top:1px solid #e0e0e0; padding-top:1rem;">
+          <p style="font-size:0.75rem; color:#a0a0a0;">監修: 山田太郎（皮膚科専門医）</p>
+          <p style="font-size:0.75rem; color:#a0a0a0;">参考文献: 日本皮膚科学会「男性型および女性型脱毛症診療ガイドライン 2017年版」</p>
+          <p style="font-size:0.75rem; color:#a0a0a0;">最終更新日: 2026年3月1日</p>
         </div>
-      </div>
     `,
     jsonLd: {
       "@context": "https://schema.org",
@@ -132,16 +130,14 @@ const MOCK_PREVIEW_ARTICLES: Record<string, PreviewArticle> = {
     seoDescription:
       "2026年最新のメンズ医療脱毛クリニックを徹底比較。料金・痛み・回数・口コミから最適なクリニックを紹介します。",
     htmlContent: `
-      <div class="prose prose-neutral max-w-none">
-        <p class="text-sm text-neutral-500 border-l-4 border-blue-400 pl-3 mb-6 bg-blue-50 py-2">
+        <p class="pr-disclosure">
           【PR】本記事には広告・アフィリエイトリンクが含まれています。
         </p>
-        <p class="lead">メンズ医療脱毛の需要は年々増加しています。本記事では、主要クリニックの料金・痛み・回数を徹底比較し、あなたに最適なクリニック選びをサポートします。</p>
+        <p class="article-lead">メンズ医療脱毛の需要は年々増加しています。本記事では、主要クリニックの料金・痛み・回数を徹底比較し、あなたに最適なクリニック選びをサポートします。</p>
         <h2>メンズ医療脱毛とは</h2>
         <p>医療脱毛は、医療機関でのみ使用できる高出力レーザーを使用した脱毛方法です。エステ脱毛と比較して、少ない回数で効果が期待できるとされています。</p>
         <h2>おすすめクリニック比較</h2>
         <p>（調査時点: 2026年3月時点の情報です。最新の料金・キャンペーンは各クリニックの公式サイトをご確認ください。）</p>
-      </div>
     `,
     jsonLd: {
       "@context": "https://schema.org",
@@ -342,7 +338,7 @@ export default function ArticlePreviewPage() {
                   </header>
 
                   <div
-                    className="prose prose-neutral prose-sm max-w-none"
+                    className="article-body max-w-none"
                     dangerouslySetInnerHTML={{ __html: article.htmlContent }}
                   />
                 </article>
