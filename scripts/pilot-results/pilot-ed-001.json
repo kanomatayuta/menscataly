@@ -1,0 +1,197 @@
+{
+  "target": {
+    "id": "pilot-ed-001",
+    "category": "ed",
+    "keyword": "ED治療 オンライン診療 おすすめ",
+    "subKeywords": [
+      "ED薬 オンライン処方",
+      "バイアグラ オンライン",
+      "ED治療 安い"
+    ],
+    "targetAudience": "ED治療をオンラインで受けたい30〜50代男性",
+    "targetLength": 4000,
+    "tone": "comparison"
+  },
+  "success": true,
+  "isDryRun": true,
+  "article": {
+    "title": "【ダミー】ED治療 オンライン診療 おすすめの完全ガイド",
+    "slug": "dummy-ed-treatment-online-medical-recommended",
+    "lead": "※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。ED治療 オンライン診療 おすすめについて、ED治療をオンラインで受けたい30〜50代男性向けに詳しく解説します。",
+    "contentLength": 357,
+    "sectionCount": 3,
+    "subsectionCount": 3,
+    "readingTime": 1,
+    "tags": [
+      "ED治療 オンライン診療 おすすめ",
+      "ed"
+    ],
+    "hasSupervisor": true,
+    "referenceCount": 2
+  },
+  "compliance": {
+    "isCompliant": false,
+    "score": 35,
+    "violationCount": 1,
+    "hasPRDisclosure": false,
+    "missingItems": [
+      "監修者情報が未記載です（E-E-A-T対応必須）",
+      "参考文献・出典が未記載です（E-E-A-T対応必須）",
+      "更新日・公開日が未記載です（E-E-A-T対応必須）"
+    ],
+    "violationsByType": {
+      "missing_pr_disclosure": 1
+    },
+    "violationsBySeverity": {
+      "high": 1,
+      "medium": 0,
+      "low": 0
+    },
+    "topViolations": [
+      {
+        "ngText": "(PR表記なし)",
+        "suggestedText": "※本記事はアフィリエイト広告を含みます",
+        "severity": "high",
+        "reason": "ステマ規制：アフィリエイト広告記事にはPR表記が必須"
+      }
+    ]
+  },
+  "eeat": {
+    "total": 39,
+    "experience": 3,
+    "expertise": 14,
+    "authoritativeness": 13,
+    "trustworthiness": 9,
+    "details": [
+      "Experience: 体験・実績への言及がありません (0)",
+      "Experience: 具体的なデータ・数値の引用がありません (0)",
+      "Experience: セクション数は3件です (+3)",
+      "Expertise: 監修者の資格情報が記載されています (+10)",
+      "Expertise: 専門用語の使用が不足しています (0)",
+      "Expertise: 著者プロフィールが充実しています (+4)",
+      "Authoritativeness: 参考文献が2件あります (+3)",
+      "Authoritativeness: 権威性の高い参考文献が2件あります (+5)",
+      "Authoritativeness: 監修者に高い権威性があります (+5)",
+      "Trustworthiness: 公開日が記載されています (+3)",
+      "Trustworthiness: 更新日が記載されています (+3)",
+      "Trustworthiness: PR表記がありません (0)",
+      "Trustworthiness: コンプライアンスチェック未合格です (0)",
+      "Trustworthiness: 注意書き・免責事項が2件あります (+3)",
+      "Trustworthiness: 情報鮮度に関する注記がありません (0)"
+    ]
+  },
+  "model": "dry-run (no API key)",
+  "generatedAt": "2026-03-04T10:05:55.765Z",
+  "processingTimeMs": 0,
+  "fullArticle": {
+    "title": "【ダミー】ED治療 オンライン診療 おすすめの完全ガイド",
+    "slug": "dummy-ed-treatment-online-medical-recommended",
+    "lead": "※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。ED治療 オンライン診療 おすすめについて、ED治療をオンラインで受けたい30〜50代男性向けに詳しく解説します。",
+    "content": "## ED治療 オンライン診療 おすすめとは？基本的な知識を解説\n\nED治療 オンライン診療 おすすめについて、基本的な情報をわかりやすく解説します。\n\n※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。\n\n### ED治療 オンライン診療 おすすめの原因と仕組み\n\n原因についての詳細解説がここに入ります。\n\n### セルフチェックの方法\n\nセルフチェック方法の詳細がここに入ります。\n\n## 治療・対処法の選び方\n\n治療方法の比較と選び方の解説がここに入ります。\n\n### 専門クリニックへの相談\n\n専門医への相談を推奨します。\n\n## まとめ\n\n- ED治療 オンライン診療 おすすめについての要点1\n- 要点2\n- 要点3\n\n詳細は専門医にご相談ください。",
+    "sections": [
+      {
+        "heading": "ED治療 オンライン診療 おすすめとは？基本的な知識を解説",
+        "level": "h2",
+        "content": "ED治療 オンライン診療 おすすめについて、基本的な情報をわかりやすく解説します。\n\n※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。",
+        "subsections": [
+          {
+            "heading": "ED治療 オンライン診療 おすすめの原因と仕組み",
+            "level": "h3",
+            "content": "原因についての詳細解説がここに入ります。"
+          },
+          {
+            "heading": "セルフチェックの方法",
+            "level": "h3",
+            "content": "セルフチェック方法の詳細がここに入ります。"
+          }
+        ]
+      },
+      {
+        "heading": "治療・対処法の選び方",
+        "level": "h2",
+        "content": "治療方法の比較と選び方の解説がここに入ります。",
+        "subsections": [
+          {
+            "heading": "専門クリニックへの相談",
+            "level": "h3",
+            "content": "専門医への相談を推奨します。"
+          }
+        ]
+      },
+      {
+        "heading": "まとめ",
+        "level": "h2",
+        "content": "- ED治療 オンライン診療 おすすめについての要点1\n- 要点2\n- 要点3\n\n詳細は専門医にご相談ください。"
+      }
+    ],
+    "category": "ed",
+    "seo": {
+      "title": "【ダミー】ED治療 オンライン診療 おすすめの完全ガイド",
+      "description": "ED治療 オンライン診療 おすすめとは？基本的な知識を解説 ED治療 オンライン診療 おすすめについて、基本的な情報をわかりやすく解説します。 ※ これはダミー記事です。ANTHROPICAPIKEY を設定すると実際の記事が生成されます。",
+      "keywords": [
+        "ED治療 オンライン診療 おすすめ",
+        "ED薬 オンライン処方",
+        "バイアグラ オンライン",
+        "ED治療 安い"
+      ]
+    },
+    "author": {
+      "name": "MENS CATALY 編集部",
+      "credentials": "メンズ医療・美容メディア編集スタッフ",
+      "bio": "男性向け医療・美容情報を専門に扱うメディア編集部。医師・薬剤師監修のもと、信頼性の高い情報を提供しています。"
+    },
+    "supervisor": {
+      "name": "監修医師（泌尿器科専門医）",
+      "credentials": "日本泌尿器科学会認定 泌尿器科専門医",
+      "bio": "泌尿器科専門医として〇〇年以上の診療経験を持ち、ED・メンズヘルス領域を専門とする。〇〇大学医学部卒業。"
+    },
+    "references": [
+      {
+        "title": "勃起障害診療ガイドライン",
+        "url": "https://www.urol.or.jp/lib/files/other/guideline/36_ed.pdf",
+        "source": "日本泌尿器科学会",
+        "year": 2018
+      },
+      {
+        "title": "バイアグラ錠25mg・50mg 添付文書",
+        "url": "https://www.pmda.go.jp/",
+        "source": "独立行政法人 医薬品医療機器総合機構（PMDA）"
+      }
+    ],
+    "publishedAt": "2026-03-04T10:05:55.765Z",
+    "updatedAt": "2026-03-04T10:05:55.765Z",
+    "readingTime": 1,
+    "tags": [
+      "ED治療 オンライン診療 おすすめ",
+      "ed"
+    ],
+    "hasPRDisclosure": false,
+    "isCompliant": false,
+    "complianceScore": 35
+  },
+  "fullCompliance": {
+    "isCompliant": false,
+    "violations": [
+      {
+        "id": "stealth_missing_pr",
+        "type": "missing_pr_disclosure",
+        "severity": "high",
+        "ngText": "(PR表記なし)",
+        "suggestedText": "※本記事はアフィリエイト広告を含みます",
+        "reason": "ステマ規制：アフィリエイト広告記事にはPR表記が必須",
+        "position": {
+          "start": 0,
+          "end": 0
+        }
+      }
+    ],
+    "fixedText": "## ED治療 オンライン診療 おすすめとは？基本的な知識を解説\n\nED治療 オンライン診療 おすすめについて、基本的な情報をわかりやすく解説します。\n\n※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。\n\n### ED治療 オンライン診療 おすすめの原因と仕組み\n\n原因についての詳細解説がここに入ります。\n\n### セルフチェックの方法\n\nセルフチェック方法の詳細がここに入ります。\n\n## 治療・対処法の選び方\n\n治療方法の比較と選び方の解説がここに入ります。\n\n### 専門クリニックへの相談\n\n専門医への相談を推奨します。\n\n## まとめ\n\n- ED治療 オンライン診療 おすすめについての要点1\n- 要点2\n- 要点3\n\n詳細は専門医にご相談ください。",
+    "hasPRDisclosure": false,
+    "missingItems": [
+      "監修者情報が未記載です（E-E-A-T対応必須）",
+      "参考文献・出典が未記載です（E-E-A-T対応必須）",
+      "更新日・公開日が未記載です（E-E-A-T対応必須）"
+    ],
+    "score": 35
+  }
+}
