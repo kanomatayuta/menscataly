@@ -70,3 +70,72 @@ test.describe('Core Web Vitals', () => {
     });
   }
 });
+
+// =============================================================================
+// ページ読み込み時間チェック (5秒以内)
+// =============================================================================
+
+const ALL_PAGES = [
+  { url: '/', name: 'トップページ' },
+  { url: '/articles', name: '記事一覧' },
+  { url: '/about', name: '運営情報' },
+  { url: '/supervisors', name: '監修者紹介' },
+  { url: '/privacy', name: 'プライバシーポリシー' },
+  { url: '/disclaimer', name: '免責事項' },
+  { url: '/contact', name: 'お問い合わせ' },
+  { url: '/advertising-policy', name: '広告掲載ポリシー' },
+];
+
+const PAGE_LOAD_TIMEOUT = 5000; // ms
+
+test.describe('ページ読み込み時間', () => {
+  for (const { url, name } of ALL_PAGES) {
+    test(`${name} (${url}): 5秒以内にロードが完了すること`, async ({ page }) => {
+      const start = Date.now();
+      const response = await page.goto(url, { waitUntil: 'domcontentloaded' });
+      const elapsed = Date.now() - start;
+
+      expect(response?.status()).toBe(200);
+      expect(elapsed, `${url} の読み込みに ${elapsed}ms かかった (上限: ${PAGE_LOAD_TIMEOUT}ms)`).toBeLessThan(
+        PAGE_LOAD_TIMEOUT
+      );
+    });
+  }
+});
+
+// =============================================================================
+// JavaScript バンドルサイズチェック
+// =============================================================================
+
+test.describe('JavaScript バンドルサイズ', () => {
+  test('トップページの総JSサイズが1MB未満であること', async ({ page }) => {
+    const jsResources: { url: string; size: number }[] = [];
+
+    page.on('response', async (response) => {
+      const url = response.url();
+      const contentType = response.headers()['content-type'] ?? '';
+      if (
+        contentType.includes('javascript') ||
+        url.endsWith('.js') ||
+        url.includes('/_next/static/')
+      ) {
+        try {
+          const body = await response.body();
+          jsResources.push({ url, size: body.length });
+        } catch {
+          // ストリーム切れは無視
+        }
+      }
+    });
+
+    await page.goto('/', { waitUntil: 'networkidle' });
+
+    const totalJsSize = jsResources.reduce((sum, r) => sum + r.size, 0);
+    const totalKB = Math.round(totalJsSize / 1024);
+
+    console.log(`[performance] Total JS size: ${totalKB} KB (${jsResources.length} files)`);
+
+    // 1MB = 1024KB 未満であること
+    expect(totalKB, `Total JS bundle size: ${totalKB}KB > 1024KB`).toBeLessThan(1024);
+  });
+});
