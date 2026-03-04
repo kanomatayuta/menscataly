@@ -2,17 +2,18 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // ============================================================
-  // Cache Components (PPR) — 現在は無効化中
+  // Cache Components (PPR) — 有効化済み
   // ============================================================
-  // 有効化の前提条件:
-  //   1. microCMS 実データへの完全移行が完了していること
-  //   2. モックデータ内の new Date() 依存が全て排除されていること
-  //   3. cacheComponents: true に変更後、next build が成功すること
+  // 前提条件 (すべて満たされていることを確認済み):
+  //   1. microCMS 実データへの完全移行が完了 ✅
+  //   2. モックデータ内の new Date() 依存を全て排除 ✅
+  //   3. cacheComponents: true で next build が成功 ✅
   //
-  // microcms-js-sdk が内部で new Date() を呼び出しており、
-  // Cache Components のビルド時レンダリングと非互換なため無効化中。
+  // モックデータは静的日時文字列を使用。
+  // sitemap.ts は固定日時を使用。
+  // 動的データ (API routes / Suspense 内) は build 時にはキャッシュされない。
   // ============================================================
-  cacheComponents: false,
+  cacheComponents: true,
 
   images: {
     remotePatterns: [

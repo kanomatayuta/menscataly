@@ -10,6 +10,7 @@ import {
   type MicroCMSQueries,
   type MicroCMSListResponse,
 } from 'microcms-js-sdk'
+import { connection } from 'next/server'
 import type { MicroCMSArticle, MicroCMSCategory, MicroCMSTag, MicroCMSArticleQueries } from '@/types/microcms'
 import {
   MOCK_ARTICLES,
@@ -153,7 +154,15 @@ export async function getArticles(
 ): Promise<MicroCMSListResponse<MicroCMSArticle>> {
   // 環境変数未設定時はモックデータにフォールバック
   if (!isMicroCMSConfigured()) {
-    const mocks = getMockArticlesByCategory(params.category as ArticleCategory | undefined)
+    let mocks = getMockArticlesByCategory(params.category as ArticleCategory | undefined)
+    // 全文検索 (q パラメータ) — タイトル・抜粋・コンテンツ・タグを対象に部分一致検索
+    if (params.q) {
+      const q = params.q.toLowerCase()
+      mocks = mocks.filter((m) => {
+        const searchable = [m.title, m.excerpt, m.content, ...(m.tags ?? [])].join(' ').toLowerCase()
+        return searchable.includes(q)
+      })
+    }
     const limit = params.limit ?? 10
     const offset = params.offset ?? 0
     const sliced = mocks.slice(offset, offset + limit)
@@ -161,6 +170,8 @@ export async function getArticles(
     return { contents, totalCount: mocks.length, offset, limit }
   }
 
+  // microCMS SDK は内部で new Date() を使用するため、PPR では connection() で動的宣言が必要
+  await connection()
   const client = getMicroCMSClient()
 
   // category クエリを microCMS filters 形式に変換
@@ -221,6 +232,7 @@ export async function getArticleBySlug(slug: string, draftKey?: string): Promise
     return mock ? mockToMicroCMSArticle(mock) : null
   }
 
+  await connection()
   const client = getMicroCMSClient()
 
   const queries: MicroCMSQueries = {
@@ -254,6 +266,7 @@ export async function getArticleById(
   id: string,
   draftKey?: string
 ): Promise<MicroCMSArticle> {
+  await connection()
   const client = getMicroCMSClient()
 
   const article = await client.getListDetail<MicroCMSArticle>({
@@ -272,6 +285,7 @@ export async function getAllArticleSlugs(): Promise<string[]> {
   if (!isMicroCMSConfigured()) {
     return MOCK_ARTICLES.map((a) => a.slug)
   }
+  // generateStaticParams から呼ばれるためリクエストスコープ外 — connection() 不使用
   const client = getMicroCMSClient()
   const response = await client.getList<MicroCMSArticle>({
     endpoint: ENDPOINTS.articles,
@@ -303,6 +317,7 @@ export async function getCategories(
     ]
     return { contents: fallback, totalCount: fallback.length, offset: 0, limit: 100 }
   }
+  await connection()
   const client = getMicroCMSClient()
   const queries: MicroCMSQueries = { limit: 100, orders: 'display_order', ...params }
   return await client.getList<MicroCMSCategory>({ endpoint: ENDPOINTS.categories, queries })
@@ -313,6 +328,7 @@ export async function getCategoryBySlug(slug: string): Promise<MicroCMSCategory 
     const categories = await getCategories()
     return categories.contents.find((c) => c.slug === slug) ?? null
   }
+  await connection()
   const client = getMicroCMSClient()
   const response = await client.getList<MicroCMSCategory>({
     endpoint: ENDPOINTS.categories,
@@ -331,6 +347,7 @@ export async function getTags(
   if (!isMicroCMSConfigured()) {
     return { contents: [], totalCount: 0, offset: 0, limit: 100 }
   }
+  await connection()
   const client = getMicroCMSClient()
   const queries: MicroCMSQueries = { limit: 100, ...params }
   return await client.getList<MicroCMSTag>({ endpoint: ENDPOINTS.tags, queries })

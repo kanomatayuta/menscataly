@@ -18,6 +18,12 @@ import comparisonTermsExtended from "./dictionaries/comparison-terms";
 import supplementTermsExtended from "./dictionaries/supplement-terms";
 import hairRemovalTermsExtended from "./dictionaries/hair-removal-terms";
 import skincareTermsExtended from "./dictionaries/skincare-terms";
+// Phase 4 拡張辞書
+import agaTermsPhase4 from "./dictionaries/aga-terms-phase4";
+import edTermsPhase4 from "./dictionaries/ed-terms-phase4";
+import hairRemovalTermsPhase4 from "./dictionaries/hair-removal-terms-phase4";
+import skincareTermsPhase4 from "./dictionaries/skincare-terms-phase4";
+import commonTermsPhase4 from "./dictionaries/common-terms-phase4";
 import { checkPharmaceuticalLawPatterns, checkRequiredElements } from "./rules/pharmaceutical-law";
 import { checkRepresentationLawPatterns } from "./rules/representation-law";
 import { checkStealthMarketingPatterns } from "./rules/stealth-marketing";
@@ -135,16 +141,17 @@ function mergeDictionaries(base: DictionaryFile, ...extensions: DictionaryFile[]
 }
 
 const DICTIONARIES: Record<string, DictionaryFile> = {
-  aga: mergeDictionaries(agaDictionary as DictionaryFile, agaTermsExtended),
-  hair_removal: mergeDictionaries(hairRemovalDictionary as DictionaryFile, hairRemovalTermsExtended),
-  skincare: mergeDictionaries(skincareDictionary as DictionaryFile, skincareTermsExtended),
-  ed: mergeDictionaries(edDictionary as DictionaryFile, edTermsExtended),
+  aga: mergeDictionaries(agaDictionary as DictionaryFile, agaTermsExtended, agaTermsPhase4),
+  hair_removal: mergeDictionaries(hairRemovalDictionary as DictionaryFile, hairRemovalTermsExtended, hairRemovalTermsPhase4),
+  skincare: mergeDictionaries(skincareDictionary as DictionaryFile, skincareTermsExtended, skincareTermsPhase4),
+  ed: mergeDictionaries(edDictionary as DictionaryFile, edTermsExtended, edTermsPhase4),
   supplement: supplementTermsExtended,
   common: mergeDictionaries(
     commonDictionary as DictionaryFile,
     beautyTermsExtended,
     priceTermsExtended,
-    comparisonTermsExtended
+    comparisonTermsExtended,
+    commonTermsPhase4
   ),
 };
 

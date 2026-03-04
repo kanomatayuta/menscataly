@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useCallback, useEffect, useRef, Suspense } from "react";
+import { SearchBox } from "@/components/search/SearchBox";
 
 const NAV_ITEMS = [
   { label: "AGA治療", href: "/articles?category=aga" },
@@ -17,9 +18,48 @@ const SECONDARY_NAV = [
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
 
   const toggleMenu = () => setIsMenuOpen((prev) => !prev);
   const closeMenu = () => setIsMenuOpen(false);
+
+  const toggleSearch = useCallback(() => {
+    setIsSearchOpen((prev) => !prev);
+    // Close mobile menu when search is toggled
+    setIsMenuOpen(false);
+  }, []);
+
+  const closeSearch = useCallback(() => {
+    setIsSearchOpen(false);
+  }, []);
+
+  // Close search on Escape key
+  useEffect(() => {
+    if (!isSearchOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsSearchOpen(false);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isSearchOpen]);
+
+  // Close search when clicking outside
+  useEffect(() => {
+    if (!isSearchOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(e.target as Node)
+      ) {
+        setIsSearchOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isSearchOpen]);
 
   return (
     <header className="sticky top-0 z-50 border-b border-neutral-200 bg-white shadow-sm">
@@ -73,44 +113,104 @@ export function Header() {
             </ul>
           </nav>
 
-          {/* モバイルハンバーガーボタン */}
-          <button
-            type="button"
-            className="inline-flex items-center justify-center rounded-md p-2 text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-offset-2 md:hidden"
-            aria-controls="mobile-menu"
-            aria-expanded={isMenuOpen}
-            aria-label={isMenuOpen ? "メニューを閉じる" : "メニューを開く"}
-            onClick={toggleMenu}
-          >
-            <span className="sr-only">
-              {isMenuOpen ? "メニューを閉じる" : "メニューを開く"}
-            </span>
-            {/* ハンバーガーアイコン */}
-            <svg
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              aria-hidden="true"
+          {/* 検索ボタン + モバイルハンバーガーボタン */}
+          <div className="flex items-center gap-1">
+            {/* 検索ボタン */}
+            <button
+              type="button"
+              className="inline-flex items-center justify-center rounded-md p-2 text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-offset-2"
+              aria-label={isSearchOpen ? "検索を閉じる" : "検索を開く"}
+              aria-expanded={isSearchOpen}
+              aria-controls="header-search"
+              onClick={toggleSearch}
             >
-              {isMenuOpen ? (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                />
+              {isSearchOpen ? (
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
               ) : (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-                />
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+                  />
+                </svg>
               )}
-            </svg>
-          </button>
+            </button>
+
+            {/* モバイルハンバーガーボタン */}
+            <button
+              type="button"
+              className="inline-flex items-center justify-center rounded-md p-2 text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-offset-2 md:hidden"
+              aria-controls="mobile-menu"
+              aria-expanded={isMenuOpen}
+              aria-label={isMenuOpen ? "メニューを閉じる" : "メニューを開く"}
+              onClick={toggleMenu}
+            >
+              <span className="sr-only">
+                {isMenuOpen ? "メニューを閉じる" : "メニューを開く"}
+              </span>
+              {/* ハンバーガーアイコン */}
+              <svg
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                {isMenuOpen ? (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                ) : (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                  />
+                )}
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* 検索バー (トグル表示) */}
+      {isSearchOpen && (
+        <div
+          id="header-search"
+          ref={searchContainerRef}
+          className="border-t border-neutral-200 bg-white px-4 py-3 sm:px-6 lg:px-8"
+        >
+          <div className="mx-auto max-w-xl">
+            <Suspense fallback={null}>
+              <SearchBox autoFocus onSubmit={closeSearch} />
+            </Suspense>
+          </div>
+        </div>
+      )}
 
       {/* モバイルメニュー */}
       {isMenuOpen && (

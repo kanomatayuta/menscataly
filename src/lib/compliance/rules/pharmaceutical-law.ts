@@ -72,6 +72,54 @@ const PHARMACEUTICAL_LAW_PATTERNS: PatternRule[] = [
     reason: "薬機法第66条：安全性の根拠なき断定禁止",
     suggestion: () => "安全性が確認されている（※医師の指導のもとで）",
   },
+  // Phase 4: 追加パターン — 「〜で治る」汎用パターン
+  {
+    pattern: /(AGA|ED|薄毛|ハゲ|ニキビ|シミ|シワ|肌荒れ)(が|は|を)?完全に(治る|改善する|消える|なくなる)/g,
+    type: "pharmaceutical_law",
+    severity: "high",
+    reason: "薬機法第66条：疾患・症状の完全改善の断定禁止",
+    suggestion: () => "症状の改善が期待できます（効果には個人差があります）",
+  },
+  // Phase 4: 「〜が治る」疾患治癒パターン
+  {
+    pattern: /(薄毛|ハゲ|ニキビ跡|毛穴|クレーター|シミ|シワ|肌荒れ)が治る/g,
+    type: "pharmaceutical_law",
+    severity: "high",
+    reason: "薬機法第66条：症状の治癒断定禁止",
+    suggestion: (match) => match.replace(/が治る/, 'の改善が期待できます（個人差があります）'),
+  },
+  // Phase 4: 「〜がなくなる」消失パターン
+  {
+    pattern: /(シミ|シワ|毛穴|ニキビ|ムダ毛|体毛|ヒゲ)が(完全に)?なくなる/g,
+    type: "pharmaceutical_law",
+    severity: "high",
+    reason: "薬機法第66条：完全消失の断定禁止",
+    suggestion: () => "改善が期待できます（効果には個人差があります）",
+  },
+  // Phase 4: 「絶対に〜」断定パターン
+  {
+    pattern: /絶対に(効く|治る|改善する|痛くない|安全|大丈夫|おすすめ)/g,
+    type: "pharmaceutical_law",
+    severity: "high",
+    reason: "薬機法第66条：絶対的断定表現禁止",
+    suggestion: () => "効果が期待できます（個人差があります）",
+  },
+  // Phase 4: 「誰でも〜できる」万人効果パターン
+  {
+    pattern: /誰でも(効果|改善|治療|発毛|脱毛|美肌)(を|が|に)?(実感|体験|得|期待)?(できる|ある|する)/g,
+    type: "pharmaceutical_law",
+    severity: "high",
+    reason: "薬機法第66条：万人への効果断定禁止",
+    suggestion: () => "多くの方に効果が期待できます（個人差があります）",
+  },
+  // Phase 4: 「〜を解消」完全解消パターン
+  {
+    pattern: /(悩み|コンプレックス|症状|問題)を(完全に)?解消(する|できる|します)/g,
+    type: "pharmaceutical_law",
+    severity: "medium",
+    reason: "薬機法第66条：完全解消の断定禁止",
+    suggestion: () => "改善が期待できます（効果には個人差があります）",
+  },
 ];
 
 /**

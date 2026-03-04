@@ -3,7 +3,13 @@
  * Phase 3b: 直接データ取得のテスト
  */
 
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+
+// connection() は Next.js のリクエストスコープ外 (テスト環境) では動作しないためモック
+vi.mock('next/server', () => ({
+  connection: vi.fn().mockResolvedValue(undefined),
+}))
+
 import { fetchDashboardData, getMockDashboardData } from '../dashboard-data'
 
 // ============================================================

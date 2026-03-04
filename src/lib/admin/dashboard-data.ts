@@ -5,6 +5,7 @@
  * /api/admin/dashboard のロジックを再利用可能な関数として抽出
  */
 
+import { connection } from 'next/server'
 import type { AdminDashboardData, MonitoringAlert } from '@/types/admin'
 
 // ============================================================
@@ -15,7 +16,8 @@ export function getMockDashboardData(): AdminDashboardData {
   return {
     pipeline: {
       status: 'idle',
-      lastRunAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+      // 静的な固定値を使用 (cacheComponents 有効時、Date.now() はプリレンダリングで禁止)
+      lastRunAt: '2026-03-01T00:00:00.000Z',
       lastRunSuccess: true,
       totalRuns: 42,
     },
@@ -51,6 +53,10 @@ export function getMockDashboardData(): AdminDashboardData {
  * Server Component / API Route の両方から利用可能
  */
 export async function fetchDashboardData(): Promise<AdminDashboardData> {
+  // connection() を呼んで動的レンダリングにオプトイン
+  // cacheComponents 有効時、Date.now() を使用するためプリレンダリングを回避する
+  await connection()
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 

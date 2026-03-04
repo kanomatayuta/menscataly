@@ -73,8 +73,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error('[sitemap] Failed to fetch articles:', err)
   }
 
-  // データ取得後は new Date() を使用可能
-  const lastModified = new Date()
+  // 静的ページの lastModified は固定日時を使用
+  // cacheComponents 有効時、new Date() はビルド時刻に固定されるため
+  // 静的ページでは明示的な固定日時を使用する
+  const lastModified = new Date('2026-03-01T00:00:00.000Z')
 
   // ── 静的ページ ─────────────────────────────────────────────
   const staticPages: MetadataRoute.Sitemap = [
