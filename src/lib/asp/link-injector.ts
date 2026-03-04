@@ -1,12 +1,118 @@
 /**
  * ASPアフィリエイトリンク注入モジュール
  * HTMLコンテンツ中のアンカーテキストをアフィリエイトリンクに変換する
+ *
+ * マッチング優先順位:
+ * 1. 完全一致（最速）
+ * 2. 正規化マッチング（助詞除去・空白正規化）
+ * 3. コアネーム マッチング（プログラム名で部分一致）
  */
 
 import type { ContentCategory } from '@/types/content'
 import type { AspProgram } from '@/types/asp-config'
-import { getProgramsByCategory } from './config'
 import { selectBestPrograms } from './selector'
+
+// ============================================================
+// 定数
+// ============================================================
+
+/** リンク注入を禁止するHTMLタグ（<a>, <h2>, <h3>, <script> 内には注入しない） */
+const FORBIDDEN_TAG_PATTERN = /<(a|h2|h3|script)\b[^>]*>[\s\S]*?<\/\1>/gi
+
+/** 正規化時に除去する日本語助詞 */
+const JAPANESE_PARTICLES = ['の', 'を', 'は', 'が', 'に', 'で', 'と', 'も', 'へ']
+
+/** コアネーム抽出時に除去するサフィックス */
+const ANCHOR_SUFFIXES = [
+  '公式サイト',
+  'の詳細を見る',
+  '詳細はこちら',
+  '無料カウンセリング',
+  'オンライン診療',
+]
+
+// ============================================================
+// テキスト正規化ヘルパー
+// ============================================================
+
+/**
+ * テキストを正規化する（助詞除去・空白正規化）
+ * テスト用に公開する
+ *
+ * @internal
+ */
+export function normalizeText(text: string): string {
+  let normalized = text
+
+  // 全角スペースを半角スペースに統一
+  normalized = normalized.replace(/\u3000/g, ' ')
+
+  // 連続する空白を除去（完全に空白を取り除く）
+  normalized = normalized.replace(/\s+/g, '')
+
+  // 日本語助詞を除去
+  for (const particle of JAPANESE_PARTICLES) {
+    normalized = normalized.split(particle).join('')
+  }
+
+  return normalized
+}
+
+/**
+ * アンカーテキストからコアネーム（プログラム固有名）を抽出する
+ * サフィックス（"公式サイト" 等）を除去し、末尾の空白をトリムする
+ *
+ * @internal
+ */
+export function extractCoreName(anchor: string): string {
+  let core = anchor
+  let matched = false
+
+  for (const suffix of ANCHOR_SUFFIXES) {
+    // 「の公式サイト」のように助詞付きサフィックスを先にチェック（より長いパターン優先）
+    for (const particle of JAPANESE_PARTICLES) {
+      const withParticle = particle + suffix
+      if (core.endsWith(withParticle)) {
+        core = core.slice(0, -withParticle.length)
+        matched = true
+        break
+      }
+    }
+    if (matched) break
+
+    if (core.endsWith(suffix)) {
+      core = core.slice(0, -suffix.length)
+      break
+    }
+  }
+
+  return core.trim()
+}
+
+// ============================================================
+// 禁止タグ内チェック
+// ============================================================
+
+/**
+ * 指定されたインデックスが禁止タグ（<a>, <h2>, <h3>, <script>）の内部かどうかを判定する
+ */
+function isInsideForbiddenTag(content: string, index: number, matchLength: number): boolean {
+  // 毎回パターンを新規生成してlastIndexをリセットする
+  const pattern = /<(a|h2|h3|script)\b[^>]*>[\s\S]*?<\/\1>/gi
+  let match: RegExpExecArray | null
+
+  while ((match = pattern.exec(content)) !== null) {
+    const tagStart = match.index
+    const tagEnd = tagStart + match[0].length
+
+    // マッチ位置がタグ範囲内にあるかチェック
+    if (index >= tagStart && index + matchLength <= tagEnd) {
+      return true
+    }
+  }
+
+  return false
+}
 
 // ============================================================
 // リンク注入
@@ -24,12 +130,12 @@ import { selectBestPrograms } from './selector'
  * @param maxLinks     最大リンク数（デフォルト: 3）
  * @returns リンク注入済みHTMLコンテンツ
  */
-export function injectAffiliateLinksByCategory(
+export async function injectAffiliateLinksByCategory(
   htmlContent: string,
   category: ContentCategory,
   maxLinks: number = 3
-): string {
-  const programs = selectBestPrograms(category, { maxResults: maxLinks })
+): Promise<string> {
+  const programs = await selectBestPrograms(category, { maxResults: maxLinks })
 
   if (programs.length === 0) {
     return htmlContent
@@ -55,6 +161,11 @@ export function injectAffiliateLinksByCategory(
  * 単一プログラムのアフィリエイトリンクをコンテンツに注入する
  * recommendedAnchors の中から最初にヒットしたテキストをリンク化する
  *
+ * マッチング優先順位:
+ * 1. 完全一致
+ * 2. 正規化マッチング（助詞除去・空白正規化）
+ * 3. コアネーム マッチング
+ *
  * @returns リンク注入後のコンテンツ。注入できなかった場合は null
  */
 function injectSingleLink(
@@ -74,18 +185,221 @@ function injectSingleLink(
       continue
     }
 
-    // テキスト内で最初の出現箇所のみ置換
-    const index = content.indexOf(anchor)
-    if (index === -1) continue
+    // --- Pass 1: 完全一致 ---
+    const exactResult = tryExactMatch(content, anchor, program)
+    if (exactResult !== null) return exactResult
 
-    const linkHtml = `<a href="${program.affiliateUrl}" rel="sponsored noopener" target="_blank">${anchor}</a>`
-    const before = content.slice(0, index)
-    const after = content.slice(index + anchor.length)
+    // --- Pass 2: 正規化マッチング ---
+    const normalizedResult = tryNormalizedMatch(content, anchor, program)
+    if (normalizedResult !== null) return normalizedResult
+
+    // --- Pass 3: コアネーム マッチング ---
+    const coreResult = tryCoreNameMatch(content, anchor, program)
+    if (coreResult !== null) return coreResult
+  }
+
+  return null
+}
+
+/**
+ * Pass 1: 完全一致でリンクを注入する
+ */
+function tryExactMatch(
+  content: string,
+  anchor: string,
+  program: AspProgram
+): string | null {
+  const index = content.indexOf(anchor)
+  if (index === -1) return null
+
+  // 禁止タグ内チェック
+  if (isInsideForbiddenTag(content, index, anchor.length)) return null
+
+  const linkHtml = `<a href="${program.affiliateUrl}" rel="sponsored noopener" target="_blank">${anchor}</a>`
+  const before = content.slice(0, index)
+  const after = content.slice(index + anchor.length)
+
+  return before + linkHtml + after
+}
+
+/**
+ * Pass 2: 正規化マッチング
+ * 助詞・空白を除去した上でコンテンツ内のテキストと照合する。
+ * マッチした場合は元のコンテンツ上のテキストをそのままリンクテキストとして使用する。
+ */
+function tryNormalizedMatch(
+  content: string,
+  anchor: string,
+  program: AspProgram
+): string | null {
+  const normalizedAnchor = normalizeText(anchor)
+  if (normalizedAnchor.length === 0) return null
+
+  // コンテンツからHTMLタグを除いたテキスト部分をスキャンする
+  // テキストノード（タグ外テキスト）の各部分に対して正規化マッチを試みる
+  const textSegments = extractTextSegments(content)
+
+  for (const segment of textSegments) {
+    const normalizedSegment = normalizeText(segment.text)
+    const normalizedIndex = normalizedSegment.indexOf(normalizedAnchor)
+
+    if (normalizedIndex === -1) continue
+
+    // 正規化前のテキストで対応する範囲を特定する
+    const originalRange = findOriginalRange(segment.text, normalizedAnchor)
+    if (originalRange === null) continue
+
+    const absoluteStart = segment.start + originalRange.start
+    const absoluteEnd = segment.start + originalRange.end
+    const matchedText = content.slice(absoluteStart, absoluteEnd)
+
+    // 禁止タグ内チェック
+    if (isInsideForbiddenTag(content, absoluteStart, matchedText.length)) continue
+
+    const linkHtml = `<a href="${program.affiliateUrl}" rel="sponsored noopener" target="_blank">${matchedText}</a>`
+    const before = content.slice(0, absoluteStart)
+    const after = content.slice(absoluteEnd)
 
     return before + linkHtml + after
   }
 
   return null
+}
+
+/**
+ * Pass 3: コアネーム マッチング
+ * アンカーテキストからコアネーム（例: "AGAスキンクリニック"）を抽出し、
+ * コンテンツ内でそのコアネームを検索する。
+ * 見つかった場合はコアネーム部分のみをリンクテキストとして使用する。
+ */
+function tryCoreNameMatch(
+  content: string,
+  anchor: string,
+  program: AspProgram
+): string | null {
+  const coreName = extractCoreName(anchor)
+
+  // コアネームがアンカーと同一、または空の場合はスキップ
+  // （Pass 1/2 で既にチェック済みのため）
+  if (coreName === anchor || coreName.length === 0) return null
+
+  const index = content.indexOf(coreName)
+  if (index === -1) return null
+
+  // 禁止タグ内チェック
+  if (isInsideForbiddenTag(content, index, coreName.length)) return null
+
+  const linkHtml = `<a href="${program.affiliateUrl}" rel="sponsored noopener" target="_blank">${coreName}</a>`
+  const before = content.slice(0, index)
+  const after = content.slice(index + coreName.length)
+
+  return before + linkHtml + after
+}
+
+// ============================================================
+// HTMLテキストセグメント抽出
+// ============================================================
+
+interface TextSegment {
+  /** セグメントテキスト */
+  text: string
+  /** コンテンツ全体における開始インデックス */
+  start: number
+}
+
+/**
+ * HTMLコンテンツからタグ外のテキストセグメントを抽出する
+ * 禁止タグ（<a>, <h2>, <h3>, <script>）内のテキストは除外する
+ */
+function extractTextSegments(content: string): TextSegment[] {
+  const segments: TextSegment[] = []
+
+  // まず禁止タグの位置範囲を収集
+  const forbiddenRanges: Array<{ start: number; end: number }> = []
+  const forbiddenPattern = /<(a|h2|h3|script)\b[^>]*>[\s\S]*?<\/\1>/gi
+  let forbiddenMatch: RegExpExecArray | null
+  while ((forbiddenMatch = forbiddenPattern.exec(content)) !== null) {
+    forbiddenRanges.push({
+      start: forbiddenMatch.index,
+      end: forbiddenMatch.index + forbiddenMatch[0].length,
+    })
+  }
+
+  // HTMLタグ（任意）を検出してテキストセグメントを分割
+  const tagPattern = /<[^>]+>/g
+  let lastEnd = 0
+  let tagMatch: RegExpExecArray | null
+
+  while ((tagMatch = tagPattern.exec(content)) !== null) {
+    if (tagMatch.index > lastEnd) {
+      const segStart = lastEnd
+      const segText = content.slice(segStart, tagMatch.index)
+
+      // 禁止範囲内でなければ追加
+      const inForbidden = forbiddenRanges.some(
+        (r) => segStart >= r.start && tagMatch!.index <= r.end
+      )
+      if (!inForbidden && segText.length > 0) {
+        segments.push({ text: segText, start: segStart })
+      }
+    }
+    lastEnd = tagMatch.index + tagMatch[0].length
+  }
+
+  // 末尾の残りテキスト
+  if (lastEnd < content.length) {
+    const segText = content.slice(lastEnd)
+    const inForbidden = forbiddenRanges.some(
+      (r) => lastEnd >= r.start && content.length <= r.end
+    )
+    if (!inForbidden && segText.length > 0) {
+      segments.push({ text: segText, start: lastEnd })
+    }
+  }
+
+  return segments
+}
+
+/**
+ * 正規化前のテキストから、正規化後のアンカーに対応する元テキストの範囲を特定する
+ *
+ * 正規化は「助詞除去」+「空白除去」なので、元テキストの各文字を正規化しながら
+ * 正規化後の文字列中のアンカー位置に対応する元テキストの開始/終了インデックスを計算する
+ */
+function findOriginalRange(
+  originalText: string,
+  normalizedAnchor: string
+): { start: number; end: number } | null {
+  // 元テキストの各文字について、正規化後に残るかどうかをマッピング
+  const charMap: Array<{ origIndex: number; normalizedChar: string }> = []
+
+  for (let i = 0; i < originalText.length; i++) {
+    const ch = originalText[i]
+
+    // 空白（半角・全角）チェック
+    if (ch === ' ' || ch === '\u3000' || ch === '\t' || ch === '\n' || ch === '\r') {
+      continue
+    }
+
+    // 助詞チェック
+    if (JAPANESE_PARTICLES.includes(ch)) {
+      continue
+    }
+
+    charMap.push({ origIndex: i, normalizedChar: ch })
+  }
+
+  // charMap から正規化テキストを組み立ててアンカーを検索
+  const normalizedFull = charMap.map((c) => c.normalizedChar).join('')
+  const anchorIdx = normalizedFull.indexOf(normalizedAnchor)
+
+  if (anchorIdx === -1) return null
+
+  const startOrigIdx = charMap[anchorIdx].origIndex
+  const endMapIdx = anchorIdx + normalizedAnchor.length - 1
+  const endOrigIdx = charMap[endMapIdx].origIndex + 1
+
+  return { start: startOrigIdx, end: endOrigIdx }
 }
 
 // ============================================================
@@ -99,11 +413,11 @@ function injectSingleLink(
  * @param maxPrograms  最大プログラム数（デフォルト: 3）
  * @returns HTMLセクション文字列
  */
-export function generateAffiliateSection(
+export async function generateAffiliateSection(
   category: ContentCategory,
   maxPrograms: number = 3
-): string {
-  const programs = selectBestPrograms(category, { maxResults: maxPrograms })
+): Promise<string> {
+  const programs = await selectBestPrograms(category, { maxResults: maxPrograms })
 
   if (programs.length === 0) {
     return ''

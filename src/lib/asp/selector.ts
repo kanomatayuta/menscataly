@@ -5,7 +5,7 @@
 
 import type { AspProgram, AspName, ItpMitigationConfig } from '@/types/asp-config'
 import type { AffiliateLink, ContentCategory } from '@/types/content'
-import { getProgramsByCategory } from './config'
+import { getProgramsByCategoryFromDB } from './repository'
 
 // ============================================================
 // 選定オプション
@@ -40,14 +40,15 @@ function calculateScore(program: AspProgram): number {
 
 /**
  * カテゴリに最適なASPプログラムを選定する (上位3件)
+ * Supabase からプログラムを取得し、失敗時は config.ts にフォールバック
  */
-export function selectBestPrograms(
+export async function selectBestPrograms(
   category: ContentCategory,
   options: SelectionOptions = {}
-): AspProgram[] {
+): Promise<AspProgram[]> {
   const { requireItpSupport = false, maxResults = 3 } = options
 
-  let programs = getProgramsByCategory(category)
+  let programs = await getProgramsByCategoryFromDB(category)
 
   if (requireItpSupport) {
     programs = programs.filter((p) => p.itpSupport)

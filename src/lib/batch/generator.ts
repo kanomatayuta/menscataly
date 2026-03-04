@@ -232,7 +232,7 @@ export class BatchArticleGenerator {
       const generator = new ArticleGenerator()
 
       // カテゴリに最適なアフィリエイトリンクを選定
-      const bestPrograms = selectBestPrograms(keyword.category as ContentCategory)
+      const bestPrograms = await selectBestPrograms(keyword.category as ContentCategory)
       const affiliateLinks = toAffiliateLinks(bestPrograms)
 
       const response = await generator.generate({
@@ -246,7 +246,7 @@ export class BatchArticleGenerator {
       })
 
       // 生成後にアフィリエイトリンクをHTMLとして注入
-      response.article.content = injectAffiliateLinksByCategory(
+      response.article.content = await injectAffiliateLinksByCategory(
         response.article.content,
         keyword.category as ContentCategory
       )

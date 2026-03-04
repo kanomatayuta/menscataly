@@ -52,6 +52,14 @@ vi.mock('@/lib/content/index', () => ({
     credentials: '皮膚科専門医',
     bio: '医師プロフィール',
   })),
+  getContentGuide: vi.fn(() => ({
+    category: 'aga',
+    naturalMentionTemplates: ['テンプレート例'],
+    ctaGuidelines: ['CTAガイドライン例'],
+    complianceSafePhrases: ['安全フレーズ例'],
+    forbiddenPhrases: ['禁止フレーズ例'],
+  })),
+  getCategoryAffiliateGuide: vi.fn(() => 'アフィリエイトリンク配置ガイド'),
 }))
 
 vi.mock('@/lib/content/utils/text-utils', () => ({

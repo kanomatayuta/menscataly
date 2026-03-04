@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import type { AspName, AspProgram } from "@/types/asp-config";
 import type { ContentCategory } from "@/types/content";
 
 // ------------------------------------------------------------------
-// Mock ASP data
+// Constants
 // ------------------------------------------------------------------
 
 const ASP_DISPLAY_NAMES: Record<AspName, string> = {
@@ -26,160 +26,70 @@ const CATEGORY_LABELS: Record<ContentCategory, string> = {
   column: "コラム",
 };
 
-const MOCK_PROGRAMS: AspProgram[] = [
-  {
-    id: "asp-001",
-    aspName: "afb",
-    programName: "AGAクリニック東京 新規カウンセリング",
-    programId: "afb-aga-001",
-    category: "aga",
-    rewardAmount: 15000,
-    rewardType: "fixed",
-    conversionCondition: "無料カウンセリング予約完了",
-    affiliateUrl: "https://track.afb.jp/click/xxxxx",
-    landingPageUrl: "https://aga-clinic-tokyo.example.com",
-    itpSupport: true,
-    cookieDuration: 30,
-    isActive: true,
-    priority: 1,
-    approvalRate: 85,
-    epc: 320,
-    recommendedAnchors: ["AGAクリニック東京の詳細を見る"],
-  },
-  {
-    id: "asp-002",
-    aspName: "a8",
-    programName: "メンズ医療脱毛 リンクス",
-    programId: "a8-hair-001",
-    category: "hair-removal",
-    rewardAmount: 22000,
-    rewardType: "fixed",
-    conversionCondition: "初回来店+カウンセリング",
-    affiliateUrl: "https://px.a8.net/xxxxx",
-    landingPageUrl: "https://links-datsumou.example.com",
-    itpSupport: true,
-    cookieDuration: 60,
-    isActive: true,
-    priority: 1,
-    approvalRate: 72,
-    epc: 450,
-    recommendedAnchors: ["リンクスの詳細を見る"],
-  },
-  {
-    id: "asp-003",
-    aspName: "accesstrade",
-    programName: "ED治療オンライン診療 メンズクリ",
-    programId: "at-ed-001",
-    category: "ed",
-    rewardAmount: 8000,
-    rewardType: "fixed",
-    conversionCondition: "オンライン診療予約完了",
-    affiliateUrl: "https://h.accesstrade.net/xxxxx",
-    landingPageUrl: "https://ed-online.example.com",
-    itpSupport: false,
-    cookieDuration: 30,
-    isActive: true,
-    priority: 2,
-    approvalRate: 90,
-    epc: 180,
-    recommendedAnchors: ["メンズクリの詳細を見る"],
-  },
-  {
-    id: "asp-004",
-    aspName: "valuecommerce",
-    programName: "メンズスキンケア定期購入 BULK HOMME",
-    programId: "vc-skin-001",
-    category: "skincare",
-    rewardAmount: 3500,
-    rewardType: "fixed",
-    conversionCondition: "定期コース初回購入",
-    affiliateUrl: "https://ck.jp.ap.valuecommerce.com/xxxxx",
-    landingPageUrl: "https://bulk-homme.example.com",
-    itpSupport: true,
-    cookieDuration: 60,
-    isActive: true,
-    priority: 1,
-    approvalRate: 65,
-    epc: 95,
-    recommendedAnchors: ["BULK HOMMEの詳細を見る"],
-  },
-  {
-    id: "asp-005",
-    aspName: "felmat",
-    programName: "AGA治療薬 オンライン処方",
-    programId: "fm-aga-001",
-    category: "aga",
-    rewardAmount: 12000,
-    rewardType: "fixed",
-    conversionCondition: "初回処方完了",
-    affiliateUrl: "https://t.felmat.net/xxxxx",
-    landingPageUrl: "https://aga-online-rx.example.com",
-    itpSupport: true,
-    cookieDuration: 30,
-    isActive: true,
-    priority: 2,
-    approvalRate: 78,
-    epc: 280,
-    recommendedAnchors: ["AGA治療薬の詳細を見る"],
-  },
-  {
-    id: "asp-006",
-    aspName: "a8",
-    programName: "ゴリラクリニック ヒゲ脱毛",
-    programId: "a8-hair-002",
-    category: "hair-removal",
-    rewardAmount: 18000,
-    rewardType: "fixed",
-    conversionCondition: "無料カウンセリング予約",
-    affiliateUrl: "https://px.a8.net/yyyyy",
-    landingPageUrl: "https://gorilla-clinic.example.com",
-    itpSupport: true,
-    cookieDuration: 60,
-    isActive: false,
-    priority: 3,
-    approvalRate: 68,
-    epc: 350,
-    recommendedAnchors: ["ゴリラクリニックの詳細を見る"],
-  },
-  {
-    id: "asp-007",
-    aspName: "afb",
-    programName: "メンズリゼ 全身脱毛",
-    programId: "afb-hair-001",
-    category: "hair-removal",
-    rewardAmount: 25000,
-    rewardType: "fixed",
-    conversionCondition: "初回来店カウンセリング",
-    affiliateUrl: "https://track.afb.jp/click/yyyyy",
-    landingPageUrl: "https://mens-rize.example.com",
-    itpSupport: true,
-    cookieDuration: 30,
-    isActive: true,
-    priority: 1,
-    approvalRate: 80,
-    epc: 520,
-    recommendedAnchors: ["メンズリゼの詳細を見る"],
-  },
-  {
-    id: "asp-008",
-    aspName: "accesstrade",
-    programName: "AGAヘアクリニック オンライン診療",
-    programId: "at-aga-001",
-    category: "aga",
-    rewardAmount: 10000,
-    rewardType: "fixed",
-    conversionCondition: "オンライン診療完了",
-    affiliateUrl: "https://h.accesstrade.net/yyyyy",
-    landingPageUrl: "https://agahair-clinic.example.com",
-    itpSupport: true,
-    cookieDuration: 30,
-    isActive: true,
-    priority: 2,
-    approvalRate: 82,
-    epc: 220,
-    recommendedAnchors: ["AGAヘアクリニックの詳細を見る"],
-  },
-];
+// ------------------------------------------------------------------
+// Auth helper
+// ------------------------------------------------------------------
+
+function getApiKey(): string {
+  // 1. sessionStorage (set via /admin/login page)
+  if (typeof window !== "undefined") {
+    const sessionKey = sessionStorage.getItem("adminApiKey");
+    if (sessionKey) return sessionKey;
+  }
+  // 2. NEXT_PUBLIC env var (Vercel public env)
+  if (process.env.NEXT_PUBLIC_ADMIN_API_KEY) {
+    return process.env.NEXT_PUBLIC_ADMIN_API_KEY;
+  }
+  return "";
+}
+
+// ------------------------------------------------------------------
+// API helpers
+// ------------------------------------------------------------------
+
+interface FetchProgramsResponse {
+  programs: AspProgram[];
+  total: number;
+}
+
+async function fetchPrograms(): Promise<FetchProgramsResponse> {
+  const apiKey = getApiKey();
+  const res = await fetch("/api/admin/asp?active=false&limit=200", {
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+    },
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: "Unknown error" }));
+    throw new Error(body.error ?? `HTTP ${res.status}`);
+  }
+
+  return res.json();
+}
+
+async function updateProgram(
+  id: string,
+  updates: Partial<Pick<AspProgram, "itpSupport" | "isActive">>
+): Promise<AspProgram> {
+  const apiKey = getApiKey();
+  const res = await fetch(`/api/admin/asp/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(updates),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: "Unknown error" }));
+    throw new Error(body.error ?? `HTTP ${res.status}`);
+  }
+
+  const data = await res.json();
+  return data.program;
+}
 
 // ------------------------------------------------------------------
 // Page component
@@ -189,8 +99,28 @@ export default function AdminAspPage() {
   const [filterAsp, setFilterAsp] = useState<AspName | "all">("all");
   const [filterCategory, setFilterCategory] = useState<ContentCategory | "all">("all");
   const [filterActive, setFilterActive] = useState<"all" | "active" | "inactive">("all");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [programs, setPrograms] = useState<AspProgram[]>(MOCK_PROGRAMS);
+  const [programs, setPrograms] = useState<AspProgram[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+
+  // Fetch programs on mount
+  const loadPrograms = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await fetchPrograms();
+      setPrograms(data.programs);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "データの取得に失敗しました");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPrograms();
+  }, [loadPrograms]);
 
   const filteredPrograms = programs.filter((p) => {
     if (filterAsp !== "all" && p.aspName !== filterAsp) return false;
@@ -200,27 +130,126 @@ export default function AdminAspPage() {
     return true;
   });
 
-  const handleToggleItp = (id: string) => {
+  const handleToggleItp = async (id: string) => {
+    setUpdateError(null);
+    const program = programs.find((p) => p.id === id);
+    if (!program) return;
+
+    const newValue = !program.itpSupport;
+
+    // Optimistic update
     setPrograms((prev) =>
       prev.map((p) =>
-        p.id === id ? { ...p, itpSupport: !p.itpSupport } : p
+        p.id === id ? { ...p, itpSupport: newValue } : p
       )
     );
+
+    try {
+      await updateProgram(id, { itpSupport: newValue });
+    } catch (err) {
+      // Revert on error
+      setPrograms((prev) =>
+        prev.map((p) =>
+          p.id === id ? { ...p, itpSupport: !newValue } : p
+        )
+      );
+      setUpdateError(
+        `ITP設定の更新に失敗しました: ${err instanceof Error ? err.message : "不明なエラー"}`
+      );
+    }
   };
 
-  const handleToggleActive = (id: string) => {
+  const handleToggleActive = async (id: string) => {
+    setUpdateError(null);
+    const program = programs.find((p) => p.id === id);
+    if (!program) return;
+
+    const newValue = !program.isActive;
+
+    // Optimistic update
     setPrograms((prev) =>
       prev.map((p) =>
-        p.id === id ? { ...p, isActive: !p.isActive } : p
+        p.id === id ? { ...p, isActive: newValue } : p
       )
     );
+
+    try {
+      await updateProgram(id, { isActive: newValue });
+    } catch (err) {
+      // Revert on error
+      setPrograms((prev) =>
+        prev.map((p) =>
+          p.id === id ? { ...p, isActive: !newValue } : p
+        )
+      );
+      setUpdateError(
+        `有効/無効の切り替えに失敗しました: ${err instanceof Error ? err.message : "不明なエラー"}`
+      );
+    }
   };
 
   // Summary stats
   const totalPrograms = programs.length;
   const activePrograms = programs.filter((p) => p.isActive).length;
   const itpSupportCount = programs.filter((p) => p.itpSupport).length;
-  const avgEpc = programs.reduce((sum, p) => sum + (p.epc ?? 0), 0) / programs.length;
+  const avgEpc =
+    programs.length > 0
+      ? programs.reduce((sum, p) => sum + (p.epc ?? 0), 0) / programs.length
+      : 0;
+
+  // ------------------------------------------------------------------
+  // Loading state
+  // ------------------------------------------------------------------
+  if (isLoading) {
+    return (
+      <>
+        <AdminHeader
+          title="ASPリンク管理"
+          breadcrumbs={[{ label: "ASP管理" }]}
+        />
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center">
+            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-neutral-300 border-t-blue-600" />
+            <p className="text-sm text-neutral-500">読み込み中...</p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // ------------------------------------------------------------------
+  // Error state
+  // ------------------------------------------------------------------
+  if (error) {
+    return (
+      <>
+        <AdminHeader
+          title="ASPリンク管理"
+          breadcrumbs={[{ label: "ASP管理" }]}
+        />
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+              <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <p className="mb-2 text-sm font-medium text-neutral-900">
+              データの取得に失敗しました
+            </p>
+            <p className="mb-4 text-xs text-neutral-500">{error}</p>
+            <button
+              type="button"
+              onClick={loadPrograms}
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+            >
+              再試行
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -228,6 +257,20 @@ export default function AdminAspPage() {
         title="ASPリンク管理"
         breadcrumbs={[{ label: "ASP管理" }]}
       />
+
+      {/* Update error toast */}
+      {updateError && (
+        <div className="mb-4 flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+          <p className="text-sm text-red-800">{updateError}</p>
+          <button
+            type="button"
+            onClick={() => setUpdateError(null)}
+            className="ml-4 text-sm font-medium text-red-600 hover:text-red-800"
+          >
+            閉じる
+          </button>
+        </div>
+      )}
 
       {/* PR表記 notice */}
       <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
