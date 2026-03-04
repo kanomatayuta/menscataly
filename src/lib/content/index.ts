@@ -138,8 +138,15 @@ export {
   calculateBatchHealthScores,
   getHealthStatusLabel,
   getHealthScoreDistribution,
+  calculateEEATScore,
 } from "./health-score";
-export type { HealthScoreInput, HealthScore } from "./health-score";
+export type {
+  HealthScoreInput,
+  HealthScore,
+  EEATScoreInput,
+  EEATScoreResult,
+  EEATScoreBreakdown,
+} from "./health-score";
 
 // ============================================================
 // AI記事プランナー
@@ -220,6 +227,56 @@ export type {
   FormattedReference,
   UpdateInfo,
 } from "./templates/supervisor-info";
+
+// ============================================================
+// Phase 3: 免責事項・編集方針テンプレート
+// ============================================================
+
+export {
+  getDisclaimerTemplate,
+  getEditorialPolicyTemplate,
+  getPrivacyPolicyTemplate,
+  getAffiliateDisclosureTemplate,
+  getAllDisclaimerCategories,
+  getAllAffiliateDisclosureDepths,
+} from "./templates/legal-templates";
+export type {
+  DisclaimerCategory,
+  DisclaimerTemplate,
+  EditorialPolicyTemplate,
+  PrivacyPolicyTemplate,
+  AffiliateDisclosureDepth,
+  AffiliateDisclosureTemplate,
+} from "./templates/legal-templates";
+
+// ============================================================
+// Phase 3: FAQ自動生成
+// ============================================================
+
+export {
+  generateFAQsForKeyword,
+  getAvailableFAQCategories,
+  getFAQThemes,
+} from "./faq-generator";
+export type {
+  FAQItem,
+  FAQGenerationResult,
+} from "./faq-generator";
+
+// ============================================================
+// Phase 3: 記事リライト指示テンプレート
+// ============================================================
+
+export {
+  generateRewritePrompt,
+  getRewriteReasonLabel,
+  getAllRewriteReasons,
+} from "./rewrite-prompts";
+export type {
+  RewriteReason,
+  RewritePromptOptions,
+  RewritePromptResult,
+} from "./rewrite-prompts";
 
 // ============================================================
 // Phase 2: 内部リンク戦略

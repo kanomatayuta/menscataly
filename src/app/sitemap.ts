@@ -1,19 +1,36 @@
 // 動的サイトマップ生成
 // /sitemap.xml に自動マッピング (Next.js App Router)
 //
-// microCMS の全記事からサイトマップを生成する
+// microCMS の全記事・カテゴリからサイトマップを生成する
 // 環境変数未設定時はモックデータからフォールバック
+//
+// Phase 3 拡張:
+//   - カテゴリページ (priority: 0.7, changeFrequency: weekly)
+//   - 監修者ページ (priority: 0.6, changeFrequency: monthly)
+//   - aboutページ (priority: 0.5, changeFrequency: monthly)
+//   - 記事ページ (priority: 0.8, changeFrequency: weekly)
 
 import type { MetadataRoute } from 'next'
 import { getArticles, getCategories } from '@/lib/microcms/client'
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://menscataly.com'
 
+// ============================================================
+// 監修者スラッグ定義（カテゴリ別）
+// ============================================================
+
+const SUPERVISOR_SLUGS = [
+  { slug: 'aga-supervisor', name: 'AGA治療 監修医', category: 'aga' },
+  { slug: 'ed-supervisor', name: 'ED治療 監修医', category: 'ed' },
+  { slug: 'hair-removal-supervisor', name: '医療脱毛 監修医', category: 'hair-removal' },
+  { slug: 'skincare-supervisor', name: 'スキンケア 監修医', category: 'skincare' },
+  { slug: 'supplement-supervisor', name: 'サプリメント 監修専門家', category: 'supplement' },
+]
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // ── カテゴリページ & 記事ページ (動的データ取得) ──────────────
+  // ── カテゴリページ (動的データ取得) ─────────────────────────
   let categoryPages: MetadataRoute.Sitemap = []
   let articlePages: MetadataRoute.Sitemap = []
-  let lastModified: Date
 
   try {
     const categoriesResult = await getCategories()
@@ -21,12 +38,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${BASE_URL}/articles?category=${cat.slug}`,
       lastModified: new Date(cat.updatedAt),
       changeFrequency: 'weekly' as const,
-      priority: 0.8,
+      priority: 0.7,
     }))
   } catch (err) {
     console.error('[sitemap] Failed to fetch categories:', err)
   }
 
+  // ── 記事ページ (動的データ取得) ─────────────────────────────
   try {
     // 全記事を取得 (最大200件; 超える場合はページングが必要)
     const firstPage = await getArticles({ limit: 100, offset: 0 })
@@ -48,7 +66,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         url: `${BASE_URL}/articles/${slug}`,
         lastModified: new Date(article.updatedAt),
         changeFrequency: 'weekly' as const,
-        priority: 0.7,
+        priority: 0.8,
       }
     })
   } catch (err) {
@@ -56,7 +74,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // データ取得後は new Date() を使用可能
-  lastModified = new Date()
+  const lastModified = new Date()
 
   // ── 静的ページ ─────────────────────────────────────────────
   const staticPages: MetadataRoute.Sitemap = [
@@ -72,7 +90,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'daily',
       priority: 0.9,
     },
+    {
+      url: `${BASE_URL}/about`,
+      lastModified,
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
   ]
 
-  return [...staticPages, ...categoryPages, ...articlePages]
+  // ── 監修者ページ (E-E-A-T 強化) ──────────────────────────
+  const supervisorPages: MetadataRoute.Sitemap = SUPERVISOR_SLUGS.map(
+    (supervisor) => ({
+      url: `${BASE_URL}/supervisors/${supervisor.slug}`,
+      lastModified,
+      changeFrequency: 'monthly' as const,
+      priority: 0.6,
+    })
+  )
+
+  return [
+    ...staticPages,
+    ...categoryPages,
+    ...supervisorPages,
+    ...articlePages,
+  ]
 }

@@ -5,9 +5,14 @@ import { useState } from "react";
 
 const NAV_ITEMS = [
   { label: "AGA治療", href: "/articles?category=aga" },
-  { label: "医療脱毛", href: "/articles?category=hair-removal" },
-  { label: "メンズスキンケア", href: "/articles?category=skincare" },
   { label: "ED治療", href: "/articles?category=ed" },
+  { label: "医療脱毛", href: "/articles?category=hair-removal" },
+  { label: "スキンケア", href: "/articles?category=skincare" },
+] as const;
+
+const SECONDARY_NAV = [
+  { label: "監修者紹介", href: "/supervisors" },
+  { label: "運営情報", href: "/about" },
 ] as const;
 
 export function Header() {
@@ -48,6 +53,18 @@ export function Header() {
                   <Link
                     href={item.href}
                     className="rounded-md px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-offset-2"
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+              {/* セパレータ */}
+              <li aria-hidden="true" className="mx-1 h-4 w-px bg-neutral-300" />
+              {SECONDARY_NAV.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className="rounded-md px-2 py-2 text-xs font-medium text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-offset-2"
                   >
                     {item.label}
                   </Link>
@@ -99,7 +116,7 @@ export function Header() {
       {isMenuOpen && (
         <div id="mobile-menu" className="border-t border-neutral-200 md:hidden">
           <nav aria-label="モバイルナビゲーション">
-            <ul className="space-y-1 px-4 pb-4 pt-2" role="list">
+            <ul className="space-y-1 px-4 pb-2 pt-2" role="list">
               {NAV_ITEMS.map((item) => (
                 <li key={item.href}>
                   <Link
@@ -112,6 +129,22 @@ export function Header() {
                 </li>
               ))}
             </ul>
+            {/* セカンダリリンク */}
+            <div className="border-t border-neutral-100 px-4 pb-4 pt-2">
+              <ul className="space-y-1" role="list">
+                {SECONDARY_NAV.map((item) => (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      className="block rounded-md px-3 py-2 text-sm font-medium text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-700"
+                      onClick={closeMenu}
+                    >
+                      {item.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </nav>
         </div>
       )}

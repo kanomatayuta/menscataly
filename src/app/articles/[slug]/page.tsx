@@ -6,7 +6,12 @@ import { draftMode } from "next/headers";
 import { Badge } from "@/components/ui/Badge";
 import { PRDisclosure } from "@/components/compliance/PRDisclosure";
 import { AspTrackingScripts } from "@/components/tracking/AspTrackingScripts";
+import { Breadcrumb } from "@/components/navigation/Breadcrumb";
 import { getArticleBySlug, getAllArticleSlugs } from "@/lib/microcms/client";
+import {
+  generateArticleStructuredData,
+  extractFAQsFromContent,
+} from "@/lib/seo/structured-data";
 import type { MicroCMSArticle } from "@/types/microcms";
 import type { ArticleCategory } from "@/components/ui/Badge";
 
@@ -85,100 +90,23 @@ function formatDate(dateString: string): string {
 }
 
 /**
- * Article schema + BreadcrumbList の JSON-LD 構造化データ
+ * 構造化データ (JSON-LD)
+ *
+ * MedicalWebPage / Article + BreadcrumbList + FAQPage (自動検出) を
+ * @graph で統合出力する。AI Overview 引用対策対応。
  */
 function ArticleJsonLd({
   article,
-  slug,
 }: {
   article: MicroCMSArticle;
-  slug: string;
 }) {
-  const baseUrl = "https://menscataly.com";
-  const articleUrl = `${baseUrl}/articles/${slug}`;
-  const categorySlug = article.category?.slug ?? "";
-  const categoryName = article.category?.name ?? "";
+  // 記事 HTML から FAQ を自動抽出
+  const faqs = extractFAQsFromContent(article.content);
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "Article",
-        "@id": articleUrl,
-        headline: article.title,
-        description: article.excerpt ?? "",
-        datePublished: article.publishedAt,
-        dateModified: article.updatedAt,
-        url: articleUrl,
-        author: {
-          "@type": "Organization",
-          name: article.author_name ?? "メンズカタリ編集部",
-          url: baseUrl,
-        },
-        publisher: {
-          "@type": "Organization",
-          name: "メンズカタリ",
-          url: baseUrl,
-          logo: {
-            "@type": "ImageObject",
-            url: `${baseUrl}/logo.png`,
-          },
-        },
-        ...(getImageUrl(article) && {
-          image: {
-            "@type": "ImageObject",
-            url: getImageUrl(article)!,
-            width: article.thumbnail?.width ?? 1200,
-            height: article.thumbnail?.height ?? 630,
-          },
-        }),
-        mainEntityOfPage: {
-          "@type": "WebPage",
-          "@id": articleUrl,
-        },
-      },
-      {
-        "@type": "BreadcrumbList",
-        itemListElement: [
-          {
-            "@type": "ListItem",
-            position: 1,
-            name: "ホーム",
-            item: baseUrl,
-          },
-          {
-            "@type": "ListItem",
-            position: 2,
-            name: "記事一覧",
-            item: `${baseUrl}/articles`,
-          },
-          ...(categorySlug
-            ? [
-                {
-                  "@type": "ListItem",
-                  position: 3,
-                  name: categoryName,
-                  item: `${baseUrl}/articles?category=${categorySlug}`,
-                },
-                {
-                  "@type": "ListItem",
-                  position: 4,
-                  name: article.title,
-                  item: articleUrl,
-                },
-              ]
-            : [
-                {
-                  "@type": "ListItem",
-                  position: 3,
-                  name: article.title,
-                  item: articleUrl,
-                },
-              ]),
-        ],
-      },
-    ],
-  };
+  const jsonLd = generateArticleStructuredData(
+    article,
+    faqs.length > 0 ? faqs : undefined
+  );
 
   return (
     <script
@@ -227,57 +155,29 @@ async function ArticleContent({
     notFound();
   }
 
-  const articleSlug = article.slug ?? article.id;
   const category = (article.category?.slug ?? "aga") as ArticleCategory;
 
   return (
     <>
-      {/* 構造化データ (JSON-LD) */}
-      <ArticleJsonLd article={article} slug={articleSlug} />
+      {/* 構造化データ (JSON-LD) — MedicalWebPage/Article + BreadcrumbList + FAQPage */}
+      <ArticleJsonLd article={article} />
 
       {/* パンくずリスト */}
-      <nav aria-label="パンくずリスト" className="mb-6">
-        <ol
-          className="flex flex-wrap items-center gap-1 text-sm text-neutral-500"
-          role="list"
-        >
-          <li>
-            <Link href="/" className="hover:text-neutral-700 hover:underline">
-              ホーム
-            </Link>
-          </li>
-          <li aria-hidden="true">
-            <span>/</span>
-          </li>
-          <li>
-            <Link
-              href="/articles"
-              className="hover:text-neutral-700 hover:underline"
-            >
-              記事一覧
-            </Link>
-          </li>
-          <li aria-hidden="true">
-            <span>/</span>
-          </li>
-          <li>
-            <Link
-              href={`/articles?category=${category}`}
-              className="hover:text-neutral-700 hover:underline"
-            >
-              <Badge category={category} />
-            </Link>
-          </li>
-          <li aria-hidden="true">
-            <span>/</span>
-          </li>
-          <li>
-            <span className="text-neutral-700" aria-current="page">
-              {article.title}
-            </span>
-          </li>
-        </ol>
-      </nav>
+      <Breadcrumb
+        items={[
+          { label: "ホーム", href: "/" },
+          { label: "記事一覧", href: "/articles" },
+          ...(article.category
+            ? [
+                {
+                  label: article.category.name,
+                  href: `/articles?category=${category}`,
+                },
+              ]
+            : []),
+          { label: article.title },
+        ]}
+      />
 
       {/* 記事ヘッダー */}
       <header className="mb-8">
@@ -303,8 +203,8 @@ async function ArticleContent({
           )}
         </div>
 
-        {/* 監修者情報 (E-E-A-T対応) */}
-        {article.author_name && (
+        {/* 監修者情報 (E-E-A-T対応) — 監修者ページへリンク */}
+        {(article.supervisor_name || article.author_name) && (
           <div className="mt-4 flex items-center gap-3 rounded-lg bg-neutral-50 p-3">
             <div
               className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full"
@@ -329,11 +229,24 @@ async function ArticleContent({
               </svg>
             </div>
             <div>
-              <p className="text-xs text-neutral-500">監修者</p>
-              <p className="text-sm font-medium text-neutral-800">
-                {article.author_name}
+              <p className="text-xs text-neutral-500">
+                {article.supervisor_name ? "監修者" : "執筆"}
               </p>
+              <p className="text-sm font-medium text-neutral-800">
+                {article.supervisor_name ?? article.author_name}
+              </p>
+              {article.supervisor_creds && (
+                <p className="text-xs text-neutral-500">
+                  {article.supervisor_creds}
+                </p>
+              )}
             </div>
+            <Link
+              href={`/supervisors#${category}`}
+              className="ml-auto text-xs text-neutral-500 hover:text-neutral-700 hover:underline"
+            >
+              監修者一覧
+            </Link>
           </div>
         )}
       </header>

@@ -13,6 +13,8 @@ import agaTermsExtended from "./dictionaries/aga-terms";
 import edTermsExtended from "./dictionaries/ed-terms";
 import beautyTermsExtended from "./dictionaries/beauty-terms";
 import priceTermsExtended from "./dictionaries/price-terms";
+// Phase 3 拡張辞書
+import comparisonTermsExtended from "./dictionaries/comparison-terms";
 import { checkPharmaceuticalLawPatterns, checkRequiredElements } from "./rules/pharmaceutical-law";
 import { checkRepresentationLawPatterns } from "./rules/representation-law";
 import { checkStealthMarketingPatterns } from "./rules/stealth-marketing";
@@ -137,7 +139,8 @@ const DICTIONARIES: Record<string, DictionaryFile> = {
   common: mergeDictionaries(
     commonDictionary as DictionaryFile,
     beautyTermsExtended,
-    priceTermsExtended
+    priceTermsExtended,
+    comparisonTermsExtended
   ),
 };
 

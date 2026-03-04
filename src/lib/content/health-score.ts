@@ -394,3 +394,194 @@ export function getHealthScoreDistribution(
     critical: scores.filter((s) => s.status === 'critical').length,
   }
 }
+
+// ============================================================
+// E-E-A-T スコアリング拡張 (Phase 3)
+// ============================================================
+
+/** E-E-A-T スコア入力データ */
+export interface EEATScoreInput {
+  /** 監修者情報が設定されているか */
+  hasSupervisor: boolean
+  /** 参考文献リスト */
+  references: Array<{
+    url: string
+    source?: string
+  }>
+  /** 最終更新日（ISO 8601形式） */
+  updatedAt: string
+  /** FAQセクションが含まれているか */
+  hasFAQSection: boolean
+  /** 内部リンク数 */
+  internalLinkCount: number
+  /** 比較テーブルが含まれているか（比較記事用） */
+  hasComparisonTable: boolean
+}
+
+/** E-E-A-T スコア結果 */
+export interface EEATScoreResult {
+  /** 総合スコア (0-50) */
+  total: number
+  /** スコア明細 */
+  breakdown: EEATScoreBreakdown
+  /** 改善推奨事項 */
+  recommendations: string[]
+}
+
+/** E-E-A-T スコア明細 */
+export interface EEATScoreBreakdown {
+  /** 監修者情報スコア (+10) */
+  supervisorScore: number
+  /** 参考文献スコア (+15) */
+  referenceScore: number
+  /** 更新日スコア (+10) */
+  updateDateScore: number
+  /** FAQセクションスコア (+5) */
+  faqScore: number
+  /** 内部リンクスコア (+5) */
+  internalLinkScore: number
+  /** 比較テーブルスコア (+5) */
+  comparisonTableScore: number
+}
+
+/**
+ * 参考文献の信頼度レベルを判定する
+ */
+function isHighTrustReference(ref: { url: string; source?: string }): boolean {
+  const url = ref.url.toLowerCase()
+  const source = (ref.source ?? '').toLowerCase()
+
+  // 学術系
+  if (
+    url.includes('pubmed') ||
+    url.includes('ncbi.nlm.nih') ||
+    url.includes('doi.org')
+  ) {
+    return true
+  }
+
+  // 政府機関
+  if (
+    url.includes('.go.jp') ||
+    url.includes('.gov') ||
+    source.includes('厚生労働省') ||
+    source.includes('消費者庁') ||
+    source.includes('pmda') ||
+    source.includes('環境省')
+  ) {
+    return true
+  }
+
+  return false
+}
+
+/**
+ * 記事の E-E-A-T スコアを計算する
+ *
+ * 以下の観点でスコアリングを行う（最大50点）:
+ * - 監修者情報あり: +10
+ * - 信頼度の高い参考文献（academic/government）あり: +15
+ * - 更新日が6ヶ月以内: +10
+ * - FAQセクションあり: +5
+ * - 内部リンク3本以上: +5
+ * - 比較テーブルあり（比較記事用）: +5
+ *
+ * @param input E-E-A-T スコア入力データ
+ * @returns E-E-A-T スコア結果
+ *
+ * @example
+ * ```ts
+ * const score = calculateEEATScore({
+ *   hasSupervisor: true,
+ *   references: [
+ *     { url: 'https://pubmed.ncbi.nlm.nih.gov/12345/', source: 'PubMed' },
+ *     { url: 'https://www.mhlw.go.jp/', source: '厚生労働省' },
+ *   ],
+ *   updatedAt: '2026-02-01T00:00:00Z',
+ *   hasFAQSection: true,
+ *   internalLinkCount: 5,
+ *   hasComparisonTable: false,
+ * });
+ * console.log(score.total); // 45
+ * ```
+ */
+export function calculateEEATScore(input: EEATScoreInput): EEATScoreResult {
+  const breakdown: EEATScoreBreakdown = {
+    supervisorScore: 0,
+    referenceScore: 0,
+    updateDateScore: 0,
+    faqScore: 0,
+    internalLinkScore: 0,
+    comparisonTableScore: 0,
+  }
+  const recommendations: string[] = []
+
+  // 1. 監修者情報 (+10)
+  if (input.hasSupervisor) {
+    breakdown.supervisorScore = 10
+  } else {
+    recommendations.push('監修者情報（専門医・薬剤師等）を追加してください。E-E-A-TのExpertise向上に寄与します。')
+  }
+
+  // 2. 参考文献の信頼度 (+15)
+  const highTrustRefs = input.references.filter(isHighTrustReference)
+  if (highTrustRefs.length >= 2) {
+    breakdown.referenceScore = 15
+  } else if (highTrustRefs.length === 1) {
+    breakdown.referenceScore = 8
+    recommendations.push('信頼度の高い参考文献（学術論文・政府機関）をもう1件以上追加してください。')
+  } else {
+    breakdown.referenceScore = 0
+    recommendations.push('PubMed論文や厚生労働省のガイドラインなど、信頼度の高い参考文献を追加してください。')
+  }
+
+  // 3. 更新日が6ヶ月以内 (+10)
+  const now = new Date()
+  const updatedDate = new Date(input.updatedAt)
+  const daysSinceUpdate = Math.floor(
+    (now.getTime() - updatedDate.getTime()) / (1000 * 60 * 60 * 24)
+  )
+  if (daysSinceUpdate <= 180) {
+    breakdown.updateDateScore = 10
+  } else if (daysSinceUpdate <= 365) {
+    breakdown.updateDateScore = 5
+    recommendations.push('記事の最終更新日が6ヶ月以上前です。情報を最新の状態に更新してください。')
+  } else {
+    breakdown.updateDateScore = 0
+    recommendations.push('記事の最終更新日が1年以上前です。早急に情報を更新してください。')
+  }
+
+  // 4. FAQセクション (+5)
+  if (input.hasFAQSection) {
+    breakdown.faqScore = 5
+  } else {
+    recommendations.push('FAQセクションを追加してください。People Also Ask対策にもなります。')
+  }
+
+  // 5. 内部リンク3本以上 (+5)
+  if (input.internalLinkCount >= 3) {
+    breakdown.internalLinkScore = 5
+  } else {
+    recommendations.push(`内部リンクが${input.internalLinkCount}本です。3本以上の内部リンクを追加してください。`)
+  }
+
+  // 6. 比較テーブル (+5)
+  if (input.hasComparisonTable) {
+    breakdown.comparisonTableScore = 5
+  }
+
+  // 合計計算
+  const total =
+    breakdown.supervisorScore +
+    breakdown.referenceScore +
+    breakdown.updateDateScore +
+    breakdown.faqScore +
+    breakdown.internalLinkScore +
+    breakdown.comparisonTableScore
+
+  return {
+    total,
+    breakdown,
+    recommendations,
+  }
+}
