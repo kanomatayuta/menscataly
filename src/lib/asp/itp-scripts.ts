@@ -25,11 +25,10 @@ export const ITP_TRACKING_SCRIPTS: Record<AspName, ItpMitigationConfig> = {
     aspName: 'a8',
     scriptUrl: 'https://statics.a8.net/a8sales/a8sales.js',
     scriptAttributes: {
-      'data-a8-id': 'a8-tracking',
-      'data-a8-itp': 'true',
+      'data-a8': process.env.A8_MEDIA_ID ?? '',
       async: 'true',
     },
-    lazyLoad: true,
+    lazyLoad: false,
     sameSiteCookie: 'None',
   },
   accesstrade: {

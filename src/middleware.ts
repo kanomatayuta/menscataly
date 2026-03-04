@@ -44,7 +44,7 @@ const ITP_SCRIPT_MAP: Record<string, { url: string; attributes: Record<string, s
   },
   a8: {
     url: 'https://statics.a8.net/a8sales/a8sales.js',
-    attributes: { 'data-a8-id': 'a8-tracking', 'data-a8-itp': 'true' },
+    attributes: { 'data-a8': process.env.A8_MEDIA_ID ?? '' },
   },
   accesstrade: {
     url: 'https://h.accesstrade.net/js/nct/nct.js',

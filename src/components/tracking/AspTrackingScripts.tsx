@@ -8,15 +8,57 @@ interface AspTrackingScriptsProps {
 }
 
 /**
- * ASP tracking script URL mappings (placeholders).
- * In production, these would be loaded from ASP config / environment variables.
+ * ASP ITP対応トラッキングスクリプト
+ *
+ * 各ASPの公式ITPトラッキングスクリプトを記事ページに挿入する。
+ * Safari/Firefox のITP制限下でもCookie計測を維持するため、
+ * サードパーティCookieの代替としてファーストパーティ計測を行う。
+ *
+ * メディアIDは環境変数から取得:
+ *   NEXT_PUBLIC_A8_MEDIA_ID — A8.net メディアID
  */
-const ASP_SCRIPT_URLS: Record<string, string> = {
-  afb: "https://track.affiliate-b.com/js/tracking.js",
-  a8: "https://px.a8.net/a8/tracking.js",
-  accesstrade: "https://h.accesstrade.net/js/nct/n.js",
-  valuecommerce: "https://aml.valuecommerce.com/vcdal.js",
-  felmat: "https://t.felmat.net/js/tracking.js",
+
+/** A8メディアID (ビルド時にインライン化) */
+const A8_MEDIA_ID = process.env.NEXT_PUBLIC_A8_MEDIA_ID ?? "";
+
+interface AspScriptConfig {
+  url: string;
+  attributes: Record<string, string>;
+  strategy: "lazyOnload" | "afterInteractive";
+}
+
+/** ASP別 ITPトラッキングスクリプト設定 */
+const ASP_ITP_SCRIPTS: Record<string, AspScriptConfig> = {
+  a8: {
+    url: "https://statics.a8.net/a8sales/a8sales.js",
+    attributes: A8_MEDIA_ID ? { "data-a8": A8_MEDIA_ID } : {},
+    strategy: "afterInteractive",
+  },
+  afb: {
+    url: "https://t.afi-b.com/ta.js",
+    attributes: { "data-afb-mode": "itp" },
+    strategy: "lazyOnload",
+  },
+  accesstrade: {
+    url: "https://h.accesstrade.net/js/nct/nct.js",
+    attributes: {},
+    strategy: "afterInteractive",
+  },
+  valuecommerce: {
+    url: "https://amd.c.yimg.jp/amd/vcsc/vc_bridge.js",
+    attributes: {},
+    strategy: "lazyOnload",
+  },
+  felmat: {
+    url: "https://www.felmat.net/fmimg/fm.js",
+    attributes: {},
+    strategy: "afterInteractive",
+  },
+  moshimo: {
+    url: "https://af.moshimo.com/af/r/result.js",
+    attributes: {},
+    strategy: "lazyOnload",
+  },
 };
 
 export function AspTrackingScripts({
@@ -26,16 +68,17 @@ export function AspTrackingScripts({
   return (
     <>
       {aspNames.map((aspName) => {
-        const scriptUrl = ASP_SCRIPT_URLS[aspName];
-        if (!scriptUrl) return null;
+        const config = ASP_ITP_SCRIPTS[aspName];
+        if (!config) return null;
 
         return (
           <Script
             key={aspName}
-            src={scriptUrl}
-            strategy="lazyOnload"
+            src={config.url}
+            strategy={config.strategy}
             data-asp={aspName}
             data-category={category}
+            {...config.attributes}
           />
         );
       })}

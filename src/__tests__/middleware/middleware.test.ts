@@ -406,8 +406,7 @@ describe('generateItpScriptTags', () => {
   it('a8 の ITPスクリプトタグを生成すること', () => {
     const html = generateItpScriptTags(['a8'])
     expect(html).toContain('src="https://statics.a8.net/a8sales/a8sales.js"')
-    expect(html).toContain('data-a8-id="a8-tracking"')
-    expect(html).toContain('data-a8-itp="true"')
+    expect(html).toContain('data-a8=')
   })
 
   it('accesstrade の ITPスクリプトタグを生成すること', () => {

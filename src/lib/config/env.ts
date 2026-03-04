@@ -104,6 +104,13 @@ const ENV_VARS: EnvVarDef[] = [
     description: 'Ideogram APIキー',
     required: false,
   },
+
+  // ASP
+  {
+    name: 'A8_MEDIA_ID',
+    description: 'A8.net メディアID',
+    required: false,
+  },
 ]
 
 // ============================================================

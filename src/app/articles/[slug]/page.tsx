@@ -16,6 +16,7 @@ import type { MicroCMSArticle } from "@/types/microcms";
 import type { ArticleCategory } from "@/components/ui/Badge";
 import { ArticleBody } from "@/components/article/ArticleBody";
 import { TableOfContents } from "@/components/article/TableOfContents";
+import { RelatedArticles } from "@/components/article/RelatedArticles";
 
 /** thumbnail_url (Cloudinary) → thumbnail (microCMS画像) → null のフォールバック */
 function getImageUrl(article: MicroCMSArticle): string | null {
@@ -295,6 +296,14 @@ async function ArticleContent({
         </div>
       )}
 
+      {/* 関連記事 (同カテゴリ) */}
+      <Suspense fallback={null}>
+        <RelatedArticles
+          currentSlug={article.slug ?? article.id}
+          category={category}
+        />
+      </Suspense>
+
       {/* 免責事項 (YMYL対応) */}
       <aside
         className="mt-10 rounded-lg border border-neutral-200 bg-neutral-50 p-4"
@@ -359,7 +368,7 @@ async function ArticleContent({
 
       {/* ASP Tracking Scripts (ITP対応) */}
       <Suspense fallback={null}>
-        <AspTrackingScripts aspNames={["afb", "a8"]} category={category} />
+        <AspTrackingScripts aspNames={["a8"]} category={category} />
       </Suspense>
     </>
   );
