@@ -279,6 +279,18 @@ export class BatchArticleGenerator {
       kwProgress.completedAt = new Date().toISOString()
       progress.completed++
 
+      // onArticleGenerated コールバック呼び出し
+      if (request.onArticleGenerated) {
+        try {
+          await request.onArticleGenerated(response.article, keyword.keyword)
+        } catch (callbackErr) {
+          console.error(
+            `[BatchGenerator] onArticleGenerated callback failed for "${keyword.keyword}":`,
+            callbackErr
+          )
+        }
+      }
+
       // 進捗率と残り時間推定を更新
       const keywords = request.keywords ?? []
       progress.progressPercent = Math.round(

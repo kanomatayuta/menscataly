@@ -3,7 +3,7 @@
  * 30キーワード一括生成用
  */
 
-import type { ContentCategory, ContentTone } from "@/types/content";
+import type { Article, ContentCategory, ContentTone } from "@/types/content";
 
 export type KeywordPriority = "high" | "medium" | "low";
 
@@ -35,6 +35,8 @@ export interface BatchGenerationRequest {
   dryRun?: boolean;
   continueOnError?: boolean;
   requestedBy?: string;
+  /** Callback invoked after each successful article generation */
+  onArticleGenerated?: (article: Article, keyword: string) => Promise<void>;
 }
 
 export interface BatchGenerationProgress {
