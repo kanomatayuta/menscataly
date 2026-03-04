@@ -61,7 +61,13 @@ export function TableOfContents() {
     e.preventDefault();
     const element = document.getElementById(id);
     if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
+      // sticky header (h-16 = 64px) + 余白 16px = 80px のオフセット
+      const headerOffset = 80;
+      const elementPosition = element.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo({
+        top: elementPosition - headerOffset,
+        behavior: "smooth",
+      });
       // URLハッシュを更新
       window.history.pushState(null, "", `#${id}`);
     }
