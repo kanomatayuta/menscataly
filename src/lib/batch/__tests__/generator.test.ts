@@ -228,13 +228,14 @@ describe('バッチ記事生成', () => {
 
   describe('onArticleGenerated コールバック', () => {
     it('should call onArticleGenerated callback after each article', async () => {
-      const mockCallback = vi.fn()
+      const mockCallback = vi.fn().mockResolvedValue(undefined)
 
       mockRunBatch.mockImplementation(async (request: BatchGenerationRequest) => {
         // コールバックが設定されていればシミュレート
         if (request.onArticleGenerated) {
           for (const kw of request.keywords ?? []) {
-            request.onArticleGenerated(kw.keyword, `article-${kw.id}`, 95)
+            const mockArticle = { id: `article-${kw.id}`, title: `記事: ${kw.keyword}`, content: '', category: kw.category } as any
+            await request.onArticleGenerated(mockArticle, kw.keyword)
           }
         }
 
@@ -265,22 +266,30 @@ describe('バッチ記事生成', () => {
       await mockRunBatch(request)
 
       expect(mockCallback).toHaveBeenCalledTimes(3)
-      expect(mockCallback).toHaveBeenCalledWith('AGA治療 おすすめ', 'article-kw-001', 95)
-      expect(mockCallback).toHaveBeenCalledWith('AGA クリニック 比較', 'article-kw-002', 95)
-      expect(mockCallback).toHaveBeenCalledWith('ED治療 費用', 'article-kw-003', 95)
+      expect(mockCallback).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'article-kw-001' }),
+        'AGA治療 おすすめ'
+      )
+      expect(mockCallback).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'article-kw-002' }),
+        'AGA クリニック 比較'
+      )
+      expect(mockCallback).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'article-kw-003' }),
+        'ED治療 費用'
+      )
     })
 
     it('should continue batch even if callback throws', async () => {
-      const throwingCallback = vi.fn().mockImplementation(() => {
-        throw new Error('Callback error')
-      })
+      const throwingCallback = vi.fn().mockRejectedValue(new Error('Callback error'))
 
       mockRunBatch.mockImplementation(async (request: BatchGenerationRequest) => {
         // コールバックがエラーを投げてもバッチ処理は続行される
         for (const kw of request.keywords ?? []) {
           if (request.onArticleGenerated) {
             try {
-              request.onArticleGenerated(kw.keyword, `article-${kw.id}`, 95)
+              const mockArticle = { id: `article-${kw.id}`, title: `記事: ${kw.keyword}`, content: '', category: kw.category } as any
+              await request.onArticleGenerated(mockArticle, kw.keyword)
             } catch {
               // コールバックエラーは無視してバッチを続行
             }

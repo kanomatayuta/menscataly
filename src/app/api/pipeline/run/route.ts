@@ -157,7 +157,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   // クエリパラメータから type を取得
-  const typeParam = request.nextUrl.searchParams.get('type')
+  const url = new URL(request.url)
+  const typeParam = url.searchParams.get('type')
   const pipelineType: PipelineType = typeParam === 'pdca' ? 'pdca' : 'daily'
 
   return executePipeline(pipelineType, false)

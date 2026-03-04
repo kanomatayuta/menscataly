@@ -14,6 +14,7 @@ vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', '')
 // Pipeline 認証のモック
 vi.mock('@/lib/admin/auth', () => ({
   validatePipelineAuth: vi.fn(() => ({ authorized: true })),
+  validateCronAuth: vi.fn(() => true),
   getAuthErrorStatus: vi.fn((error: { code: string }) =>
     error.code === 'FORBIDDEN' ? 403 : 401
   ),
@@ -51,7 +52,7 @@ vi.mock('@/lib/pipeline/scheduler', () => ({
   })),
 }))
 
-import { validatePipelineAuth } from '@/lib/admin/auth'
+import { validatePipelineAuth, validateCronAuth } from '@/lib/admin/auth'
 
 describe('GET /api/pipeline/run', () => {
   let GET: typeof import('@/app/api/pipeline/run/route').GET
@@ -161,6 +162,7 @@ describe('CRON_SECRET authentication', () => {
         message: 'Unauthorized: Invalid API key',
       },
     })
+    ;(validateCronAuth as ReturnType<typeof vi.fn>).mockReturnValue(false)
 
     const req = new Request('http://localhost/api/pipeline/run', {
       method: 'GET',
