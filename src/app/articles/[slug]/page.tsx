@@ -15,6 +15,66 @@ import {
 import type { MicroCMSArticle } from "@/types/microcms";
 import type { ArticleCategory } from "@/components/ui/Badge";
 
+/**
+ * 目次 (Table of Contents)
+ * HTML内のh2/h3タグからアンカーリンク付き目次を自動生成
+ */
+function TableOfContents({ html }: { html: string }) {
+  // h2/h3 を正規表現で抽出
+  const headingRegex = /<(h[23])[^>]*(?:\s+id="([^"]*)")?[^>]*>([\s\S]*?)<\/\1>/gi;
+  const headings: { level: number; text: string; id: string }[] = [];
+  let match: RegExpExecArray | null;
+
+  while ((match = headingRegex.exec(html)) !== null) {
+    const level = parseInt(match[1].charAt(1), 10);
+    // HTMLタグを除去してプレーンテキスト化
+    const text = match[3].replace(/<[^>]*>/g, "").trim();
+    // id が既にある場合はそのまま使い、なければテキストからスラッグ生成
+    const id = match[2] || text.replace(/\s+/g, "-").toLowerCase();
+    if (text) {
+      headings.push({ level, text, id });
+    }
+  }
+
+  // h2 が 2 つ未満なら目次不要
+  const h2Count = headings.filter((h) => h.level === 2).length;
+  if (h2Count < 2) return null;
+
+  return (
+    <nav className="article-toc" aria-label="目次">
+      <div className="article-toc-title">目次</div>
+      <ol>
+        {headings.map((heading, i) => {
+          if (heading.level === 2) {
+            // 次のh2までのh3を集める
+            const subHeadings: typeof headings = [];
+            for (let j = i + 1; j < headings.length; j++) {
+              if (headings[j].level === 2) break;
+              if (headings[j].level === 3) subHeadings.push(headings[j]);
+            }
+            return (
+              <li key={`toc-${i}`}>
+                <a href={`#${heading.id}`}>{heading.text}</a>
+                {subHeadings.length > 0 && (
+                  <ol>
+                    {subHeadings.map((sub, si) => (
+                      <li key={`toc-${i}-${si}`}>
+                        <a href={`#${sub.id}`}>{sub.text}</a>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </li>
+            );
+          }
+          // h3はh2の子として描画済みなのでスキップ
+          return null;
+        })}
+      </ol>
+    </nav>
+  );
+}
+
 /** thumbnail_url (Cloudinary) → thumbnail (microCMS画像) → null のフォールバック */
 function getImageUrl(article: MicroCMSArticle): string | null {
   return article.thumbnail_url || article.thumbnail?.url || null;
@@ -269,12 +329,12 @@ async function ArticleContent({
         </div>
       )}
 
+      {/* 目次 (TOC) — h2 が存在する場合のみ表示 */}
+      <TableOfContents html={article.content} />
+
       {/* 記事本文 */}
-      <article className="prose prose-neutral max-w-none">
-        <div
-          dangerouslySetInnerHTML={{ __html: article.content }}
-          className="leading-relaxed"
-        />
+      <article className="article-body max-w-none">
+        <div dangerouslySetInnerHTML={{ __html: article.content }} />
       </article>
 
       {/* タグ */}
