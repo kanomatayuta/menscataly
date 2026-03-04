@@ -76,6 +76,13 @@ const ENV_VARS: EnvVarDef[] = [
     requiredInDev: false,
   },
 
+  // Cron (Vercel Cron Jobs)
+  {
+    name: 'CRON_SECRET',
+    description: 'Vercel Cron Jobs 認証シークレット',
+    required: false,
+  },
+
   // Image
   {
     name: 'CLOUDINARY_CLOUD_NAME',

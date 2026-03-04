@@ -2,12 +2,16 @@
  * POST /api/pipeline/run
  * パイプライン手動実行トリガー
  * Authorization: Bearer <key> or X-Pipeline-Api-Key ヘッダーによる認証
+ *
+ * GET /api/pipeline/run?type=daily|pdca
+ * Vercel Cron Jobs 自動実行用エンドポイント
+ * Authorization: Bearer <CRON_SECRET> ヘッダーによる認証
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { PipelineExecutor, getDailyPipelineSteps, getPDCAPipelineSteps } from '@/lib/pipeline/executor'
 import { getPipelineConfig } from '@/lib/pipeline/scheduler'
-import { validatePipelineAuth, getAuthErrorStatus } from '@/lib/admin/auth'
+import { validatePipelineAuth, validateCronAuth, getAuthErrorStatus } from '@/lib/admin/auth'
 import type { PipelineType, PipelineRunResponse } from '@/lib/pipeline/types'
 
 // ============================================================
@@ -20,36 +24,13 @@ interface RunPipelineRequest {
 }
 
 // ============================================================
-// Route Handler
+// 共通パイプライン実行ロジック
 // ============================================================
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
-  // 認証チェック
-  const auth = validatePipelineAuth(request)
-  if (!auth.authorized) {
-    return NextResponse.json(
-      { error: auth.error },
-      { status: getAuthErrorStatus(auth.error!) }
-    )
-  }
-
-  // リクエストボディのパース
-  let body: RunPipelineRequest = {}
-  try {
-    const text = await request.text()
-    if (text) {
-      body = JSON.parse(text) as RunPipelineRequest
-    }
-  } catch {
-    return NextResponse.json(
-      { error: 'Invalid JSON body' },
-      { status: 400 }
-    )
-  }
-
-  const pipelineType: PipelineType = body.type ?? 'manual'
-  const dryRun = body.dryRun ?? false
-
+async function executePipeline(
+  pipelineType: PipelineType,
+  dryRun: boolean
+): Promise<NextResponse> {
   // パイプライン設定を取得
   const config = getPipelineConfig(pipelineType)
   if (dryRun) {
@@ -126,8 +107,58 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 }
 
+// ============================================================
+// Route Handlers
+// ============================================================
+
+export async function POST(request: NextRequest): Promise<NextResponse> {
+  // 認証チェック
+  const auth = validatePipelineAuth(request)
+  if (!auth.authorized) {
+    return NextResponse.json(
+      { error: auth.error },
+      { status: getAuthErrorStatus(auth.error!) }
+    )
+  }
+
+  // リクエストボディのパース
+  let body: RunPipelineRequest = {}
+  try {
+    const text = await request.text()
+    if (text) {
+      body = JSON.parse(text) as RunPipelineRequest
+    }
+  } catch {
+    return NextResponse.json(
+      { error: 'Invalid JSON body' },
+      { status: 400 }
+    )
+  }
+
+  const pipelineType: PipelineType = body.type ?? 'manual'
+  const dryRun = body.dryRun ?? false
+
+  return executePipeline(pipelineType, dryRun)
+}
+
 // Vercel Cron Jobs サポート (GET リクエスト)
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  // Vercel Cron は GET で呼び出されることがある
-  return POST(request)
+  // Cron認証チェック (Authorization: Bearer <CRON_SECRET>)
+  // validatePipelineAuth も CRON_SECRET を受け付けるため、こちらを使用
+  const auth = validatePipelineAuth(request)
+  if (!auth.authorized) {
+    // フォールバック: validateCronAuth でも試行
+    if (!validateCronAuth(request)) {
+      return NextResponse.json(
+        { error: auth.error ?? { code: 'UNAUTHORIZED', message: 'Unauthorized' } },
+        { status: getAuthErrorStatus(auth.error ?? { code: 'UNAUTHORIZED', message: 'Unauthorized' }) }
+      )
+    }
+  }
+
+  // クエリパラメータから type を取得
+  const typeParam = request.nextUrl.searchParams.get('type')
+  const pipelineType: PipelineType = typeParam === 'pdca' ? 'pdca' : 'daily'
+
+  return executePipeline(pipelineType, false)
 }
