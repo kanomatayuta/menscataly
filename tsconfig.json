@@ -36,6 +36,7 @@
     "src/**/__tests__",
     "src/lib/supabase",
     "e2e",
+    "scripts",
     "vitest.config.ts",
     "playwright.config.ts"
   ]

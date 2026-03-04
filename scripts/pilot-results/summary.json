@@ -1,0 +1,986 @@
+{
+  "executedAt": "2026-03-04T10:05:55.767Z",
+  "isDryRun": true,
+  "totalArticles": 5,
+  "successCount": 5,
+  "failedCount": 0,
+  "totalProcessingTimeMs": 6,
+  "results": [
+    {
+      "target": {
+        "id": "pilot-aga-001",
+        "category": "aga",
+        "keyword": "AGA治療 オンラインクリニック 比較",
+        "subKeywords": [
+          "AGA オンライン 安い",
+          "AGA クリニック おすすめ",
+          "フィナステリド オンライン"
+        ],
+        "targetAudience": "AGA治療を検討中の20〜40代男性",
+        "targetLength": 4000,
+        "tone": "comparison"
+      },
+      "success": true,
+      "isDryRun": true,
+      "article": {
+        "title": "【ダミー】AGA治療 オンラインクリニック 比較の完全ガイド",
+        "slug": "dummy-aga-treatment-online-clinic-comparison",
+        "lead": "※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。AGA治療 オンラインクリニック 比較について、AGA治療を検討中の20〜40代男性向けに詳しく解説します。",
+        "contentLength": 365,
+        "sectionCount": 3,
+        "subsectionCount": 3,
+        "readingTime": 1,
+        "tags": [
+          "AGA治療 オンラインクリニック 比較",
+          "aga"
+        ],
+        "hasSupervisor": true,
+        "referenceCount": 3
+      },
+      "compliance": {
+        "isCompliant": false,
+        "score": 35,
+        "violationCount": 1,
+        "hasPRDisclosure": false,
+        "missingItems": [
+          "監修者情報が未記載です（E-E-A-T対応必須）",
+          "参考文献・出典が未記載です（E-E-A-T対応必須）",
+          "更新日・公開日が未記載です（E-E-A-T対応必須）"
+        ],
+        "violationsByType": {
+          "missing_pr_disclosure": 1
+        },
+        "violationsBySeverity": {
+          "high": 1,
+          "medium": 0,
+          "low": 0
+        },
+        "topViolations": [
+          {
+            "ngText": "(PR表記なし)",
+            "suggestedText": "※本記事はアフィリエイト広告を含みます",
+            "severity": "high",
+            "reason": "ステマ規制：アフィリエイト広告記事にはPR表記が必須"
+          }
+        ]
+      },
+      "eeat": {
+        "total": 48,
+        "experience": 3,
+        "expertise": 14,
+        "authoritativeness": 22,
+        "trustworthiness": 9,
+        "details": [
+          "Experience: 体験・実績への言及がありません (0)",
+          "Experience: 具体的なデータ・数値の引用がありません (0)",
+          "Experience: セクション数は3件です (+3)",
+          "Expertise: 監修者の資格情報が記載されています (+10)",
+          "Expertise: 専門用語の使用が不足しています (0)",
+          "Expertise: 著者プロフィールが充実しています (+4)",
+          "Authoritativeness: 参考文献が3件あります (+7)",
+          "Authoritativeness: 権威性の高い参考文献が3件あります (+10)",
+          "Authoritativeness: 監修者に高い権威性があります (+5)",
+          "Trustworthiness: 公開日が記載されています (+3)",
+          "Trustworthiness: 更新日が記載されています (+3)",
+          "Trustworthiness: PR表記がありません (0)",
+          "Trustworthiness: コンプライアンスチェック未合格です (0)",
+          "Trustworthiness: 注意書き・免責事項が2件あります (+3)",
+          "Trustworthiness: 情報鮮度に関する注記がありません (0)"
+        ]
+      },
+      "model": "dry-run (no API key)",
+      "generatedAt": "2026-03-04T10:05:55.761Z",
+      "processingTimeMs": 2,
+      "fullArticle": {
+        "title": "【ダミー】AGA治療 オンラインクリニック 比較の完全ガイド",
+        "slug": "dummy-aga-treatment-online-clinic-comparison",
+        "lead": "※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。AGA治療 オンラインクリニック 比較について、AGA治療を検討中の20〜40代男性向けに詳しく解説します。",
+        "content": "## AGA治療 オンラインクリニック 比較とは？基本的な知識を解説\n\nAGA治療 オンラインクリニック 比較について、基本的な情報をわかりやすく解説します。\n\n※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。\n\n### AGA治療 オンラインクリニック 比較の原因と仕組み\n\n原因についての詳細解説がここに入ります。\n\n### セルフチェックの方法\n\nセルフチェック方法の詳細がここに入ります。\n\n## 治療・対処法の選び方\n\n治療方法の比較と選び方の解説がここに入ります。\n\n### 専門クリニックへの相談\n\n専門医への相談を推奨します。\n\n## まとめ\n\n- AGA治療 オンラインクリニック 比較についての要点1\n- 要点2\n- 要点3\n\n詳細は専門医にご相談ください。",
+        "sections": [
+          {
+            "heading": "AGA治療 オンラインクリニック 比較とは？基本的な知識を解説",
+            "level": "h2",
+            "content": "AGA治療 オンラインクリニック 比較について、基本的な情報をわかりやすく解説します。\n\n※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。",
+            "subsections": [
+              {
+                "heading": "AGA治療 オンラインクリニック 比較の原因と仕組み",
+                "level": "h3",
+                "content": "原因についての詳細解説がここに入ります。"
+              },
+              {
+                "heading": "セルフチェックの方法",
+                "level": "h3",
+                "content": "セルフチェック方法の詳細がここに入ります。"
+              }
+            ]
+          },
+          {
+            "heading": "治療・対処法の選び方",
+            "level": "h2",
+            "content": "治療方法の比較と選び方の解説がここに入ります。",
+            "subsections": [
+              {
+                "heading": "専門クリニックへの相談",
+                "level": "h3",
+                "content": "専門医への相談を推奨します。"
+              }
+            ]
+          },
+          {
+            "heading": "まとめ",
+            "level": "h2",
+            "content": "- AGA治療 オンラインクリニック 比較についての要点1\n- 要点2\n- 要点3\n\n詳細は専門医にご相談ください。"
+          }
+        ],
+        "category": "aga",
+        "seo": {
+          "title": "【ダミー】AGA治療 オンラインクリニック 比較の完全ガイド",
+          "description": "AGA治療 オンラインクリニック 比較とは？基本的な知識を解説 AGA治療 オンラインクリニック 比較について、基本的な情報をわかりやすく解説します。 ※ これはダミー記事です。",
+          "keywords": [
+            "AGA治療 オンラインクリニック 比較",
+            "AGA オンライン 安い",
+            "AGA クリニック おすすめ",
+            "フィナステリド オンライン"
+          ]
+        },
+        "author": {
+          "name": "MENS CATALY 編集部",
+          "credentials": "メンズ医療・美容メディア編集スタッフ",
+          "bio": "男性向け医療・美容情報を専門に扱うメディア編集部。医師・薬剤師監修のもと、信頼性の高い情報を提供しています。"
+        },
+        "supervisor": {
+          "name": "監修医師（皮膚科専門医）",
+          "credentials": "日本皮膚科学会認定 皮膚科専門医",
+          "bio": "皮膚科専門医として〇〇年以上の診療経験を持ち、AGA・スキンケア領域を専門とする。〇〇大学医学部卒業。"
+        },
+        "references": [
+          {
+            "title": "男性型および女性型脱毛症診療ガイドライン 2017年版",
+            "url": "https://www.dermatol.or.jp/uploads/uploads/files/guideline/AGA_GL2017.pdf",
+            "source": "日本皮膚科学会",
+            "year": 2017
+          },
+          {
+            "title": "Finasteride in the treatment of men with androgenetic alopecia",
+            "url": "https://pubmed.ncbi.nlm.nih.gov/9777765/",
+            "author": "Kaufman KD, et al.",
+            "source": "Journal of the American Academy of Dermatology",
+            "year": 1998
+          },
+          {
+            "title": "プロペシア錠1mg 添付文書",
+            "url": "https://www.pmda.go.jp/PmdaSearch/iyakuDetail/ResultDataSetPDF/780046_4240006F1022_1_11",
+            "source": "独立行政法人 医薬品医療機器総合機構（PMDA）"
+          }
+        ],
+        "publishedAt": "2026-03-04T10:05:55.761Z",
+        "updatedAt": "2026-03-04T10:05:55.761Z",
+        "readingTime": 1,
+        "tags": [
+          "AGA治療 オンラインクリニック 比較",
+          "aga"
+        ],
+        "hasPRDisclosure": false,
+        "isCompliant": false,
+        "complianceScore": 35
+      },
+      "fullCompliance": {
+        "isCompliant": false,
+        "violations": [
+          {
+            "id": "stealth_missing_pr",
+            "type": "missing_pr_disclosure",
+            "severity": "high",
+            "ngText": "(PR表記なし)",
+            "suggestedText": "※本記事はアフィリエイト広告を含みます",
+            "reason": "ステマ規制：アフィリエイト広告記事にはPR表記が必須",
+            "position": {
+              "start": 0,
+              "end": 0
+            }
+          }
+        ],
+        "fixedText": "## AGA治療 オンラインクリニック 比較とは？基本的な知識を解説\n\nAGA治療 オンラインクリニック 比較について、基本的な情報をわかりやすく解説します。\n\n※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。\n\n### AGA治療 オンラインクリニック 比較の原因と仕組み\n\n原因についての詳細解説がここに入ります。\n\n### セルフチェックの方法\n\nセルフチェック方法の詳細がここに入ります。\n\n## 治療・対処法の選び方\n\n治療方法の比較と選び方の解説がここに入ります。\n\n### 専門クリニックへの相談\n\n専門医への相談を推奨します。\n\n## まとめ\n\n- AGA治療 オンラインクリニック 比較についての要点1\n- 要点2\n- 要点3\n\n詳細は専門医にご相談ください。",
+        "hasPRDisclosure": false,
+        "missingItems": [
+          "監修者情報が未記載です（E-E-A-T対応必須）",
+          "参考文献・出典が未記載です（E-E-A-T対応必須）",
+          "更新日・公開日が未記載です（E-E-A-T対応必須）"
+        ],
+        "score": 35
+      }
+    },
+    {
+      "target": {
+        "id": "pilot-ed-001",
+        "category": "ed",
+        "keyword": "ED治療 オンライン診療 おすすめ",
+        "subKeywords": [
+          "ED薬 オンライン処方",
+          "バイアグラ オンライン",
+          "ED治療 安い"
+        ],
+        "targetAudience": "ED治療をオンラインで受けたい30〜50代男性",
+        "targetLength": 4000,
+        "tone": "comparison"
+      },
+      "success": true,
+      "isDryRun": true,
+      "article": {
+        "title": "【ダミー】ED治療 オンライン診療 おすすめの完全ガイド",
+        "slug": "dummy-ed-treatment-online-medical-recommended",
+        "lead": "※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。ED治療 オンライン診療 おすすめについて、ED治療をオンラインで受けたい30〜50代男性向けに詳しく解説します。",
+        "contentLength": 357,
+        "sectionCount": 3,
+        "subsectionCount": 3,
+        "readingTime": 1,
+        "tags": [
+          "ED治療 オンライン診療 おすすめ",
+          "ed"
+        ],
+        "hasSupervisor": true,
+        "referenceCount": 2
+      },
+      "compliance": {
+        "isCompliant": false,
+        "score": 35,
+        "violationCount": 1,
+        "hasPRDisclosure": false,
+        "missingItems": [
+          "監修者情報が未記載です（E-E-A-T対応必須）",
+          "参考文献・出典が未記載です（E-E-A-T対応必須）",
+          "更新日・公開日が未記載です（E-E-A-T対応必須）"
+        ],
+        "violationsByType": {
+          "missing_pr_disclosure": 1
+        },
+        "violationsBySeverity": {
+          "high": 1,
+          "medium": 0,
+          "low": 0
+        },
+        "topViolations": [
+          {
+            "ngText": "(PR表記なし)",
+            "suggestedText": "※本記事はアフィリエイト広告を含みます",
+            "severity": "high",
+            "reason": "ステマ規制：アフィリエイト広告記事にはPR表記が必須"
+          }
+        ]
+      },
+      "eeat": {
+        "total": 39,
+        "experience": 3,
+        "expertise": 14,
+        "authoritativeness": 13,
+        "trustworthiness": 9,
+        "details": [
+          "Experience: 体験・実績への言及がありません (0)",
+          "Experience: 具体的なデータ・数値の引用がありません (0)",
+          "Experience: セクション数は3件です (+3)",
+          "Expertise: 監修者の資格情報が記載されています (+10)",
+          "Expertise: 専門用語の使用が不足しています (0)",
+          "Expertise: 著者プロフィールが充実しています (+4)",
+          "Authoritativeness: 参考文献が2件あります (+3)",
+          "Authoritativeness: 権威性の高い参考文献が2件あります (+5)",
+          "Authoritativeness: 監修者に高い権威性があります (+5)",
+          "Trustworthiness: 公開日が記載されています (+3)",
+          "Trustworthiness: 更新日が記載されています (+3)",
+          "Trustworthiness: PR表記がありません (0)",
+          "Trustworthiness: コンプライアンスチェック未合格です (0)",
+          "Trustworthiness: 注意書き・免責事項が2件あります (+3)",
+          "Trustworthiness: 情報鮮度に関する注記がありません (0)"
+        ]
+      },
+      "model": "dry-run (no API key)",
+      "generatedAt": "2026-03-04T10:05:55.765Z",
+      "processingTimeMs": 0,
+      "fullArticle": {
+        "title": "【ダミー】ED治療 オンライン診療 おすすめの完全ガイド",
+        "slug": "dummy-ed-treatment-online-medical-recommended",
+        "lead": "※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。ED治療 オンライン診療 おすすめについて、ED治療をオンラインで受けたい30〜50代男性向けに詳しく解説します。",
+        "content": "## ED治療 オンライン診療 おすすめとは？基本的な知識を解説\n\nED治療 オンライン診療 おすすめについて、基本的な情報をわかりやすく解説します。\n\n※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。\n\n### ED治療 オンライン診療 おすすめの原因と仕組み\n\n原因についての詳細解説がここに入ります。\n\n### セルフチェックの方法\n\nセルフチェック方法の詳細がここに入ります。\n\n## 治療・対処法の選び方\n\n治療方法の比較と選び方の解説がここに入ります。\n\n### 専門クリニックへの相談\n\n専門医への相談を推奨します。\n\n## まとめ\n\n- ED治療 オンライン診療 おすすめについての要点1\n- 要点2\n- 要点3\n\n詳細は専門医にご相談ください。",
+        "sections": [
+          {
+            "heading": "ED治療 オンライン診療 おすすめとは？基本的な知識を解説",
+            "level": "h2",
+            "content": "ED治療 オンライン診療 おすすめについて、基本的な情報をわかりやすく解説します。\n\n※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。",
+            "subsections": [
+              {
+                "heading": "ED治療 オンライン診療 おすすめの原因と仕組み",
+                "level": "h3",
+                "content": "原因についての詳細解説がここに入ります。"
+              },
+              {
+                "heading": "セルフチェックの方法",
+                "level": "h3",
+                "content": "セルフチェック方法の詳細がここに入ります。"
+              }
+            ]
+          },
+          {
+            "heading": "治療・対処法の選び方",
+            "level": "h2",
+            "content": "治療方法の比較と選び方の解説がここに入ります。",
+            "subsections": [
+              {
+                "heading": "専門クリニックへの相談",
+                "level": "h3",
+                "content": "専門医への相談を推奨します。"
+              }
+            ]
+          },
+          {
+            "heading": "まとめ",
+            "level": "h2",
+            "content": "- ED治療 オンライン診療 おすすめについての要点1\n- 要点2\n- 要点3\n\n詳細は専門医にご相談ください。"
+          }
+        ],
+        "category": "ed",
+        "seo": {
+          "title": "【ダミー】ED治療 オンライン診療 おすすめの完全ガイド",
+          "description": "ED治療 オンライン診療 おすすめとは？基本的な知識を解説 ED治療 オンライン診療 おすすめについて、基本的な情報をわかりやすく解説します。 ※ これはダミー記事です。ANTHROPICAPIKEY を設定すると実際の記事が生成されます。",
+          "keywords": [
+            "ED治療 オンライン診療 おすすめ",
+            "ED薬 オンライン処方",
+            "バイアグラ オンライン",
+            "ED治療 安い"
+          ]
+        },
+        "author": {
+          "name": "MENS CATALY 編集部",
+          "credentials": "メンズ医療・美容メディア編集スタッフ",
+          "bio": "男性向け医療・美容情報を専門に扱うメディア編集部。医師・薬剤師監修のもと、信頼性の高い情報を提供しています。"
+        },
+        "supervisor": {
+          "name": "監修医師（泌尿器科専門医）",
+          "credentials": "日本泌尿器科学会認定 泌尿器科専門医",
+          "bio": "泌尿器科専門医として〇〇年以上の診療経験を持ち、ED・メンズヘルス領域を専門とする。〇〇大学医学部卒業。"
+        },
+        "references": [
+          {
+            "title": "勃起障害診療ガイドライン",
+            "url": "https://www.urol.or.jp/lib/files/other/guideline/36_ed.pdf",
+            "source": "日本泌尿器科学会",
+            "year": 2018
+          },
+          {
+            "title": "バイアグラ錠25mg・50mg 添付文書",
+            "url": "https://www.pmda.go.jp/",
+            "source": "独立行政法人 医薬品医療機器総合機構（PMDA）"
+          }
+        ],
+        "publishedAt": "2026-03-04T10:05:55.765Z",
+        "updatedAt": "2026-03-04T10:05:55.765Z",
+        "readingTime": 1,
+        "tags": [
+          "ED治療 オンライン診療 おすすめ",
+          "ed"
+        ],
+        "hasPRDisclosure": false,
+        "isCompliant": false,
+        "complianceScore": 35
+      },
+      "fullCompliance": {
+        "isCompliant": false,
+        "violations": [
+          {
+            "id": "stealth_missing_pr",
+            "type": "missing_pr_disclosure",
+            "severity": "high",
+            "ngText": "(PR表記なし)",
+            "suggestedText": "※本記事はアフィリエイト広告を含みます",
+            "reason": "ステマ規制：アフィリエイト広告記事にはPR表記が必須",
+            "position": {
+              "start": 0,
+              "end": 0
+            }
+          }
+        ],
+        "fixedText": "## ED治療 オンライン診療 おすすめとは？基本的な知識を解説\n\nED治療 オンライン診療 おすすめについて、基本的な情報をわかりやすく解説します。\n\n※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。\n\n### ED治療 オンライン診療 おすすめの原因と仕組み\n\n原因についての詳細解説がここに入ります。\n\n### セルフチェックの方法\n\nセルフチェック方法の詳細がここに入ります。\n\n## 治療・対処法の選び方\n\n治療方法の比較と選び方の解説がここに入ります。\n\n### 専門クリニックへの相談\n\n専門医への相談を推奨します。\n\n## まとめ\n\n- ED治療 オンライン診療 おすすめについての要点1\n- 要点2\n- 要点3\n\n詳細は専門医にご相談ください。",
+        "hasPRDisclosure": false,
+        "missingItems": [
+          "監修者情報が未記載です（E-E-A-T対応必須）",
+          "参考文献・出典が未記載です（E-E-A-T対応必須）",
+          "更新日・公開日が未記載です（E-E-A-T対応必須）"
+        ],
+        "score": 35
+      }
+    },
+    {
+      "target": {
+        "id": "pilot-hr-001",
+        "category": "hair-removal",
+        "keyword": "メンズ脱毛 医療脱毛 比較",
+        "subKeywords": [
+          "メンズ脱毛 おすすめ",
+          "医療脱毛 メンズ 料金",
+          "ヒゲ脱毛 比較"
+        ],
+        "targetAudience": "医療脱毛を検討中の20〜30代男性",
+        "targetLength": 4500,
+        "tone": "comparison"
+      },
+      "success": true,
+      "isDryRun": true,
+      "article": {
+        "title": "【ダミー】メンズ脱毛 医療脱毛 比較の完全ガイド",
+        "slug": "dummy-mens-hair-removal-medical-hair-removal-comparison",
+        "lead": "※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。メンズ脱毛 医療脱毛 比較について、医療脱毛を検討中の20〜30代男性向けに詳しく解説します。",
+        "contentLength": 341,
+        "sectionCount": 3,
+        "subsectionCount": 3,
+        "readingTime": 1,
+        "tags": [
+          "メンズ脱毛 医療脱毛 比較",
+          "hair-removal"
+        ],
+        "hasSupervisor": true,
+        "referenceCount": 2
+      },
+      "compliance": {
+        "isCompliant": false,
+        "score": 35,
+        "violationCount": 1,
+        "hasPRDisclosure": false,
+        "missingItems": [
+          "監修者情報が未記載です（E-E-A-T対応必須）",
+          "参考文献・出典が未記載です（E-E-A-T対応必須）",
+          "更新日・公開日が未記載です（E-E-A-T対応必須）"
+        ],
+        "violationsByType": {
+          "missing_pr_disclosure": 1
+        },
+        "violationsBySeverity": {
+          "high": 1,
+          "medium": 0,
+          "low": 0
+        },
+        "topViolations": [
+          {
+            "ngText": "(PR表記なし)",
+            "suggestedText": "※本記事はアフィリエイト広告を含みます",
+            "severity": "high",
+            "reason": "ステマ規制：アフィリエイト広告記事にはPR表記が必須"
+          }
+        ]
+      },
+      "eeat": {
+        "total": 39,
+        "experience": 3,
+        "expertise": 14,
+        "authoritativeness": 13,
+        "trustworthiness": 9,
+        "details": [
+          "Experience: 体験・実績への言及がありません (0)",
+          "Experience: 具体的なデータ・数値の引用がありません (0)",
+          "Experience: セクション数は3件です (+3)",
+          "Expertise: 監修者の資格情報が記載されています (+10)",
+          "Expertise: 専門用語の使用が不足しています (0)",
+          "Expertise: 著者プロフィールが充実しています (+4)",
+          "Authoritativeness: 参考文献が2件あります (+3)",
+          "Authoritativeness: 権威性の高い参考文献が2件あります (+5)",
+          "Authoritativeness: 監修者に高い権威性があります (+5)",
+          "Trustworthiness: 公開日が記載されています (+3)",
+          "Trustworthiness: 更新日が記載されています (+3)",
+          "Trustworthiness: PR表記がありません (0)",
+          "Trustworthiness: コンプライアンスチェック未合格です (0)",
+          "Trustworthiness: 注意書き・免責事項が2件あります (+3)",
+          "Trustworthiness: 情報鮮度に関する注記がありません (0)"
+        ]
+      },
+      "model": "dry-run (no API key)",
+      "generatedAt": "2026-03-04T10:05:55.766Z",
+      "processingTimeMs": 0,
+      "fullArticle": {
+        "title": "【ダミー】メンズ脱毛 医療脱毛 比較の完全ガイド",
+        "slug": "dummy-mens-hair-removal-medical-hair-removal-comparison",
+        "lead": "※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。メンズ脱毛 医療脱毛 比較について、医療脱毛を検討中の20〜30代男性向けに詳しく解説します。",
+        "content": "## メンズ脱毛 医療脱毛 比較とは？基本的な知識を解説\n\nメンズ脱毛 医療脱毛 比較について、基本的な情報をわかりやすく解説します。\n\n※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。\n\n### メンズ脱毛 医療脱毛 比較の原因と仕組み\n\n原因についての詳細解説がここに入ります。\n\n### セルフチェックの方法\n\nセルフチェック方法の詳細がここに入ります。\n\n## 治療・対処法の選び方\n\n治療方法の比較と選び方の解説がここに入ります。\n\n### 専門クリニックへの相談\n\n専門医への相談を推奨します。\n\n## まとめ\n\n- メンズ脱毛 医療脱毛 比較についての要点1\n- 要点2\n- 要点3\n\n詳細は専門医にご相談ください。",
+        "sections": [
+          {
+            "heading": "メンズ脱毛 医療脱毛 比較とは？基本的な知識を解説",
+            "level": "h2",
+            "content": "メンズ脱毛 医療脱毛 比較について、基本的な情報をわかりやすく解説します。\n\n※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。",
+            "subsections": [
+              {
+                "heading": "メンズ脱毛 医療脱毛 比較の原因と仕組み",
+                "level": "h3",
+                "content": "原因についての詳細解説がここに入ります。"
+              },
+              {
+                "heading": "セルフチェックの方法",
+                "level": "h3",
+                "content": "セルフチェック方法の詳細がここに入ります。"
+              }
+            ]
+          },
+          {
+            "heading": "治療・対処法の選び方",
+            "level": "h2",
+            "content": "治療方法の比較と選び方の解説がここに入ります。",
+            "subsections": [
+              {
+                "heading": "専門クリニックへの相談",
+                "level": "h3",
+                "content": "専門医への相談を推奨します。"
+              }
+            ]
+          },
+          {
+            "heading": "まとめ",
+            "level": "h2",
+            "content": "- メンズ脱毛 医療脱毛 比較についての要点1\n- 要点2\n- 要点3\n\n詳細は専門医にご相談ください。"
+          }
+        ],
+        "category": "hair-removal",
+        "seo": {
+          "title": "【ダミー】メンズ脱毛 医療脱毛 比較の完全ガイド",
+          "description": "メンズ脱毛 医療脱毛 比較とは？基本的な知識を解説 メンズ脱毛 医療脱毛 比較について、基本的な情報をわかりやすく解説します。 ※ これはダミー記事です。ANTHROPICAPIKEY を設定すると実際の記事が生成されます。",
+          "keywords": [
+            "メンズ脱毛 医療脱毛 比較",
+            "メンズ脱毛 おすすめ",
+            "医療脱毛 メンズ 料金",
+            "ヒゲ脱毛 比較"
+          ]
+        },
+        "author": {
+          "name": "MENS CATALY 編集部",
+          "credentials": "メンズ医療・美容メディア編集スタッフ",
+          "bio": "男性向け医療・美容情報を専門に扱うメディア編集部。医師・薬剤師監修のもと、信頼性の高い情報を提供しています。"
+        },
+        "supervisor": {
+          "name": "監修医師（皮膚科専門医）",
+          "credentials": "日本皮膚科学会認定 皮膚科専門医",
+          "bio": "皮膚科専門医として〇〇年以上の診療経験を持ち、AGA・スキンケア領域を専門とする。〇〇大学医学部卒業。"
+        },
+        "references": [
+          {
+            "title": "レーザー脱毛に関するガイドライン",
+            "url": "https://www.jslsm.gr.jp/",
+            "source": "日本レーザー医学会"
+          },
+          {
+            "title": "脱毛サービスに関する消費者庁の注意喚起",
+            "url": "https://www.caa.go.jp/policies/policy/consumer_safety/release/2016/pdf/consumer_safety_cms204_160330_01.pdf",
+            "source": "消費者庁",
+            "year": 2016
+          }
+        ],
+        "publishedAt": "2026-03-04T10:05:55.766Z",
+        "updatedAt": "2026-03-04T10:05:55.766Z",
+        "readingTime": 1,
+        "tags": [
+          "メンズ脱毛 医療脱毛 比較",
+          "hair-removal"
+        ],
+        "hasPRDisclosure": false,
+        "isCompliant": false,
+        "complianceScore": 35
+      },
+      "fullCompliance": {
+        "isCompliant": false,
+        "violations": [
+          {
+            "id": "stealth_missing_pr",
+            "type": "missing_pr_disclosure",
+            "severity": "high",
+            "ngText": "(PR表記なし)",
+            "suggestedText": "※本記事はアフィリエイト広告を含みます",
+            "reason": "ステマ規制：アフィリエイト広告記事にはPR表記が必須",
+            "position": {
+              "start": 0,
+              "end": 0
+            }
+          }
+        ],
+        "fixedText": "## メンズ脱毛 医療脱毛 比較とは？基本的な知識を解説\n\nメンズ脱毛 医療脱毛 比較について、基本的な情報をわかりやすく解説します。\n\n※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。\n\n### メンズ脱毛 医療脱毛 比較の原因と仕組み\n\n原因についての詳細解説がここに入ります。\n\n### セルフチェックの方法\n\nセルフチェック方法の詳細がここに入ります。\n\n## 治療・対処法の選び方\n\n治療方法の比較と選び方の解説がここに入ります。\n\n### 専門クリニックへの相談\n\n専門医への相談を推奨します。\n\n## まとめ\n\n- メンズ脱毛 医療脱毛 比較についての要点1\n- 要点2\n- 要点3\n\n詳細は専門医にご相談ください。",
+        "hasPRDisclosure": false,
+        "missingItems": [
+          "監修者情報が未記載です（E-E-A-T対応必須）",
+          "参考文献・出典が未記載です（E-E-A-T対応必須）",
+          "更新日・公開日が未記載です（E-E-A-T対応必須）"
+        ],
+        "score": 35
+      }
+    },
+    {
+      "target": {
+        "id": "pilot-sc-001",
+        "category": "skincare",
+        "keyword": "メンズ スキンケア 30代 おすすめ",
+        "subKeywords": [
+          "30代 メンズ 化粧水",
+          "男性 スキンケア 始め方",
+          "メンズ 保湿 おすすめ"
+        ],
+        "targetAudience": "スキンケアを始めたい30代男性",
+        "targetLength": 3500,
+        "tone": "informative"
+      },
+      "success": true,
+      "isDryRun": true,
+      "article": {
+        "title": "【ダミー】メンズ スキンケア 30代 おすすめの完全ガイド",
+        "slug": "dummy-mens-skincare-30-recommended",
+        "lead": "※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。メンズ スキンケア 30代 おすすめについて、スキンケアを始めたい30代男性向けに詳しく解説します。",
+        "contentLength": 361,
+        "sectionCount": 3,
+        "subsectionCount": 3,
+        "readingTime": 1,
+        "tags": [
+          "メンズ スキンケア 30代 おすすめ",
+          "skincare"
+        ],
+        "hasSupervisor": true,
+        "referenceCount": 2
+      },
+      "compliance": {
+        "isCompliant": false,
+        "score": 35,
+        "violationCount": 1,
+        "hasPRDisclosure": false,
+        "missingItems": [
+          "監修者情報が未記載です（E-E-A-T対応必須）",
+          "参考文献・出典が未記載です（E-E-A-T対応必須）",
+          "更新日・公開日が未記載です（E-E-A-T対応必須）"
+        ],
+        "violationsByType": {
+          "missing_pr_disclosure": 1
+        },
+        "violationsBySeverity": {
+          "high": 1,
+          "medium": 0,
+          "low": 0
+        },
+        "topViolations": [
+          {
+            "ngText": "(PR表記なし)",
+            "suggestedText": "※本記事はアフィリエイト広告を含みます",
+            "severity": "high",
+            "reason": "ステマ規制：アフィリエイト広告記事にはPR表記が必須"
+          }
+        ]
+      },
+      "eeat": {
+        "total": 39,
+        "experience": 3,
+        "expertise": 14,
+        "authoritativeness": 13,
+        "trustworthiness": 9,
+        "details": [
+          "Experience: 体験・実績への言及がありません (0)",
+          "Experience: 具体的なデータ・数値の引用がありません (0)",
+          "Experience: セクション数は3件です (+3)",
+          "Expertise: 監修者の資格情報が記載されています (+10)",
+          "Expertise: 専門用語の使用が不足しています (0)",
+          "Expertise: 著者プロフィールが充実しています (+4)",
+          "Authoritativeness: 参考文献が2件あります (+3)",
+          "Authoritativeness: 権威性の高い参考文献が2件あります (+5)",
+          "Authoritativeness: 監修者に高い権威性があります (+5)",
+          "Trustworthiness: 公開日が記載されています (+3)",
+          "Trustworthiness: 更新日が記載されています (+3)",
+          "Trustworthiness: PR表記がありません (0)",
+          "Trustworthiness: コンプライアンスチェック未合格です (0)",
+          "Trustworthiness: 注意書き・免責事項が2件あります (+3)",
+          "Trustworthiness: 情報鮮度に関する注記がありません (0)"
+        ]
+      },
+      "model": "dry-run (no API key)",
+      "generatedAt": "2026-03-04T10:05:55.766Z",
+      "processingTimeMs": 0,
+      "fullArticle": {
+        "title": "【ダミー】メンズ スキンケア 30代 おすすめの完全ガイド",
+        "slug": "dummy-mens-skincare-30-recommended",
+        "lead": "※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。メンズ スキンケア 30代 おすすめについて、スキンケアを始めたい30代男性向けに詳しく解説します。",
+        "content": "## メンズ スキンケア 30代 おすすめとは？基本的な知識を解説\n\nメンズ スキンケア 30代 おすすめについて、基本的な情報をわかりやすく解説します。\n\n※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。\n\n### メンズ スキンケア 30代 おすすめの原因と仕組み\n\n原因についての詳細解説がここに入ります。\n\n### セルフチェックの方法\n\nセルフチェック方法の詳細がここに入ります。\n\n## 治療・対処法の選び方\n\n治療方法の比較と選び方の解説がここに入ります。\n\n### 専門クリニックへの相談\n\n専門医への相談を推奨します。\n\n## まとめ\n\n- メンズ スキンケア 30代 おすすめについての要点1\n- 要点2\n- 要点3\n\n詳細は専門医にご相談ください。",
+        "sections": [
+          {
+            "heading": "メンズ スキンケア 30代 おすすめとは？基本的な知識を解説",
+            "level": "h2",
+            "content": "メンズ スキンケア 30代 おすすめについて、基本的な情報をわかりやすく解説します。\n\n※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。",
+            "subsections": [
+              {
+                "heading": "メンズ スキンケア 30代 おすすめの原因と仕組み",
+                "level": "h3",
+                "content": "原因についての詳細解説がここに入ります。"
+              },
+              {
+                "heading": "セルフチェックの方法",
+                "level": "h3",
+                "content": "セルフチェック方法の詳細がここに入ります。"
+              }
+            ]
+          },
+          {
+            "heading": "治療・対処法の選び方",
+            "level": "h2",
+            "content": "治療方法の比較と選び方の解説がここに入ります。",
+            "subsections": [
+              {
+                "heading": "専門クリニックへの相談",
+                "level": "h3",
+                "content": "専門医への相談を推奨します。"
+              }
+            ]
+          },
+          {
+            "heading": "まとめ",
+            "level": "h2",
+            "content": "- メンズ スキンケア 30代 おすすめについての要点1\n- 要点2\n- 要点3\n\n詳細は専門医にご相談ください。"
+          }
+        ],
+        "category": "skincare",
+        "seo": {
+          "title": "【ダミー】メンズ スキンケア 30代 おすすめの完全ガイド",
+          "description": "メンズ スキンケア 30代 おすすめとは？基本的な知識を解説 メンズ スキンケア 30代 おすすめについて、基本的な情報をわかりやすく解説します。 ※ これはダミー記事です。",
+          "keywords": [
+            "メンズ スキンケア 30代 おすすめ",
+            "30代 メンズ 化粧水",
+            "男性 スキンケア 始め方",
+            "メンズ 保湿 おすすめ"
+          ]
+        },
+        "author": {
+          "name": "MENS CATALY 編集部",
+          "credentials": "メンズ医療・美容メディア編集スタッフ",
+          "bio": "男性向け医療・美容情報を専門に扱うメディア編集部。医師・薬剤師監修のもと、信頼性の高い情報を提供しています。"
+        },
+        "supervisor": {
+          "name": "監修医師（皮膚科専門医）",
+          "credentials": "日本皮膚科学会認定 皮膚科専門医",
+          "bio": "皮膚科専門医として〇〇年以上の診療経験を持ち、AGA・スキンケア領域を専門とする。〇〇大学医学部卒業。"
+        },
+        "references": [
+          {
+            "title": "ニキビ（尋常性痤瘡）治療ガイドライン",
+            "url": "https://www.dermatol.or.jp/uploads/uploads/files/guideline/1533175225_1.pdf",
+            "source": "日本皮膚科学会",
+            "year": 2017
+          },
+          {
+            "title": "化粧品の効能の範囲について",
+            "url": "https://www.mhlw.go.jp/file/06-Seisakujouhou-11120000-Iyakushokuhinkyoku/0000196937.pdf",
+            "source": "厚生労働省"
+          }
+        ],
+        "publishedAt": "2026-03-04T10:05:55.766Z",
+        "updatedAt": "2026-03-04T10:05:55.766Z",
+        "readingTime": 1,
+        "tags": [
+          "メンズ スキンケア 30代 おすすめ",
+          "skincare"
+        ],
+        "hasPRDisclosure": false,
+        "isCompliant": false,
+        "complianceScore": 35
+      },
+      "fullCompliance": {
+        "isCompliant": false,
+        "violations": [
+          {
+            "id": "stealth_missing_pr",
+            "type": "missing_pr_disclosure",
+            "severity": "high",
+            "ngText": "(PR表記なし)",
+            "suggestedText": "※本記事はアフィリエイト広告を含みます",
+            "reason": "ステマ規制：アフィリエイト広告記事にはPR表記が必須",
+            "position": {
+              "start": 0,
+              "end": 0
+            }
+          }
+        ],
+        "fixedText": "## メンズ スキンケア 30代 おすすめとは？基本的な知識を解説\n\nメンズ スキンケア 30代 おすすめについて、基本的な情報をわかりやすく解説します。\n\n※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。\n\n### メンズ スキンケア 30代 おすすめの原因と仕組み\n\n原因についての詳細解説がここに入ります。\n\n### セルフチェックの方法\n\nセルフチェック方法の詳細がここに入ります。\n\n## 治療・対処法の選び方\n\n治療方法の比較と選び方の解説がここに入ります。\n\n### 専門クリニックへの相談\n\n専門医への相談を推奨します。\n\n## まとめ\n\n- メンズ スキンケア 30代 おすすめについての要点1\n- 要点2\n- 要点3\n\n詳細は専門医にご相談ください。",
+        "hasPRDisclosure": false,
+        "missingItems": [
+          "監修者情報が未記載です（E-E-A-T対応必須）",
+          "参考文献・出典が未記載です（E-E-A-T対応必須）",
+          "更新日・公開日が未記載です（E-E-A-T対応必須）"
+        ],
+        "score": 35
+      }
+    },
+    {
+      "target": {
+        "id": "pilot-sp-001",
+        "category": "supplement",
+        "keyword": "男性 サプリメント 疲労回復 おすすめ",
+        "subKeywords": [
+          "疲労回復 サプリ メンズ",
+          "男性 活力 サプリ",
+          "ビタミンB サプリ おすすめ"
+        ],
+        "targetAudience": "疲労を感じやすい30〜50代の働く男性",
+        "targetLength": 3500,
+        "tone": "informative"
+      },
+      "success": true,
+      "isDryRun": true,
+      "article": {
+        "title": "【ダミー】男性 サプリメント 疲労回復 おすすめの完全ガイド",
+        "slug": "dummy-mens-recommended",
+        "lead": "※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。男性 サプリメント 疲労回復 おすすめについて、疲労を感じやすい30〜50代の働く男性向けに詳しく解説します。",
+        "contentLength": 365,
+        "sectionCount": 3,
+        "subsectionCount": 3,
+        "readingTime": 1,
+        "tags": [
+          "男性 サプリメント 疲労回復 おすすめ",
+          "column"
+        ],
+        "hasSupervisor": true,
+        "referenceCount": 0
+      },
+      "compliance": {
+        "isCompliant": false,
+        "score": 35,
+        "violationCount": 1,
+        "hasPRDisclosure": false,
+        "missingItems": [
+          "監修者情報が未記載です（E-E-A-T対応必須）",
+          "参考文献・出典が未記載です（E-E-A-T対応必須）",
+          "更新日・公開日が未記載です（E-E-A-T対応必須）"
+        ],
+        "violationsByType": {
+          "missing_pr_disclosure": 1
+        },
+        "violationsBySeverity": {
+          "high": 1,
+          "medium": 0,
+          "low": 0
+        },
+        "topViolations": [
+          {
+            "ngText": "(PR表記なし)",
+            "suggestedText": "※本記事はアフィリエイト広告を含みます",
+            "severity": "high",
+            "reason": "ステマ規制：アフィリエイト広告記事にはPR表記が必須"
+          }
+        ]
+      },
+      "eeat": {
+        "total": 21,
+        "experience": 3,
+        "expertise": 9,
+        "authoritativeness": 0,
+        "trustworthiness": 9,
+        "details": [
+          "Experience: 体験・実績への言及がありません (0)",
+          "Experience: 具体的なデータ・数値の引用がありません (0)",
+          "Experience: セクション数は3件です (+3)",
+          "Expertise: 監修者情報がありますが、資格情報が不足しています (+5)",
+          "Expertise: 専門用語の使用が不足しています (0)",
+          "Expertise: 著者プロフィールが充実しています (+4)",
+          "Authoritativeness: 参考文献がありません (0)",
+          "Authoritativeness: 権威性の高い参考文献（政府機関・学会・PubMed）がありません (0)",
+          "Authoritativeness: 監修者の権威性を評価できません (0)",
+          "Trustworthiness: 公開日が記載されています (+3)",
+          "Trustworthiness: 更新日が記載されています (+3)",
+          "Trustworthiness: PR表記がありません (0)",
+          "Trustworthiness: コンプライアンスチェック未合格です (0)",
+          "Trustworthiness: 注意書き・免責事項が2件あります (+3)",
+          "Trustworthiness: 情報鮮度に関する注記がありません (0)"
+        ]
+      },
+      "model": "dry-run (no API key)",
+      "generatedAt": "2026-03-04T10:05:55.767Z",
+      "processingTimeMs": 0,
+      "fullArticle": {
+        "title": "【ダミー】男性 サプリメント 疲労回復 おすすめの完全ガイド",
+        "slug": "dummy-mens-recommended",
+        "lead": "※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。男性 サプリメント 疲労回復 おすすめについて、疲労を感じやすい30〜50代の働く男性向けに詳しく解説します。",
+        "content": "## 男性 サプリメント 疲労回復 おすすめとは？基本的な知識を解説\n\n男性 サプリメント 疲労回復 おすすめについて、基本的な情報をわかりやすく解説します。\n\n※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。\n\n### 男性 サプリメント 疲労回復 おすすめの原因と仕組み\n\n原因についての詳細解説がここに入ります。\n\n### セルフチェックの方法\n\nセルフチェック方法の詳細がここに入ります。\n\n## 治療・対処法の選び方\n\n治療方法の比較と選び方の解説がここに入ります。\n\n### 専門クリニックへの相談\n\n専門医への相談を推奨します。\n\n## まとめ\n\n- 男性 サプリメント 疲労回復 おすすめについての要点1\n- 要点2\n- 要点3\n\n詳細は専門医にご相談ください。",
+        "sections": [
+          {
+            "heading": "男性 サプリメント 疲労回復 おすすめとは？基本的な知識を解説",
+            "level": "h2",
+            "content": "男性 サプリメント 疲労回復 おすすめについて、基本的な情報をわかりやすく解説します。\n\n※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。",
+            "subsections": [
+              {
+                "heading": "男性 サプリメント 疲労回復 おすすめの原因と仕組み",
+                "level": "h3",
+                "content": "原因についての詳細解説がここに入ります。"
+              },
+              {
+                "heading": "セルフチェックの方法",
+                "level": "h3",
+                "content": "セルフチェック方法の詳細がここに入ります。"
+              }
+            ]
+          },
+          {
+            "heading": "治療・対処法の選び方",
+            "level": "h2",
+            "content": "治療方法の比較と選び方の解説がここに入ります。",
+            "subsections": [
+              {
+                "heading": "専門クリニックへの相談",
+                "level": "h3",
+                "content": "専門医への相談を推奨します。"
+              }
+            ]
+          },
+          {
+            "heading": "まとめ",
+            "level": "h2",
+            "content": "- 男性 サプリメント 疲労回復 おすすめについての要点1\n- 要点2\n- 要点3\n\n詳細は専門医にご相談ください。"
+          }
+        ],
+        "category": "column",
+        "seo": {
+          "title": "【ダミー】男性 サプリメント 疲労回復 おすすめの完全ガイド",
+          "description": "男性 サプリメント 疲労回復 おすすめとは？基本的な知識を解説 男性 サプリメント 疲労回復 おすすめについて、基本的な情報をわかりやすく解説します。 ※ これはダミー記事です。",
+          "keywords": [
+            "男性 サプリメント 疲労回復 おすすめ",
+            "疲労回復 サプリ メンズ",
+            "男性 活力 サプリ",
+            "ビタミンB サプリ おすすめ"
+          ]
+        },
+        "author": {
+          "name": "MENS CATALY 編集部",
+          "credentials": "メンズ医療・美容メディア編集スタッフ",
+          "bio": "男性向け医療・美容情報を専門に扱うメディア編集部。医師・薬剤師監修のもと、信頼性の高い情報を提供しています。"
+        },
+        "supervisor": {},
+        "references": [],
+        "publishedAt": "2026-03-04T10:05:55.767Z",
+        "updatedAt": "2026-03-04T10:05:55.767Z",
+        "readingTime": 1,
+        "tags": [
+          "男性 サプリメント 疲労回復 おすすめ",
+          "column"
+        ],
+        "hasPRDisclosure": false,
+        "isCompliant": false,
+        "complianceScore": 35
+      },
+      "fullCompliance": {
+        "isCompliant": false,
+        "violations": [
+          {
+            "id": "stealth_missing_pr",
+            "type": "missing_pr_disclosure",
+            "severity": "high",
+            "ngText": "(PR表記なし)",
+            "suggestedText": "※本記事はアフィリエイト広告を含みます",
+            "reason": "ステマ規制：アフィリエイト広告記事にはPR表記が必須",
+            "position": {
+              "start": 0,
+              "end": 0
+            }
+          }
+        ],
+        "fixedText": "## 男性 サプリメント 疲労回復 おすすめとは？基本的な知識を解説\n\n男性 サプリメント 疲労回復 おすすめについて、基本的な情報をわかりやすく解説します。\n\n※ これはダミー記事です。ANTHROPIC_API_KEY を設定すると実際の記事が生成されます。\n\n### 男性 サプリメント 疲労回復 おすすめの原因と仕組み\n\n原因についての詳細解説がここに入ります。\n\n### セルフチェックの方法\n\nセルフチェック方法の詳細がここに入ります。\n\n## 治療・対処法の選び方\n\n治療方法の比較と選び方の解説がここに入ります。\n\n### 専門クリニックへの相談\n\n専門医への相談を推奨します。\n\n## まとめ\n\n- 男性 サプリメント 疲労回復 おすすめについての要点1\n- 要点2\n- 要点3\n\n詳細は専門医にご相談ください。",
+        "hasPRDisclosure": false,
+        "missingItems": [
+          "監修者情報が未記載です（E-E-A-T対応必須）",
+          "参考文献・出典が未記載です（E-E-A-T対応必須）",
+          "更新日・公開日が未記載です（E-E-A-T対応必須）"
+        ],
+        "score": 35
+      }
+    }
+  ]
+}
