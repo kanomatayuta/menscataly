@@ -12,6 +12,7 @@ vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', '')
 // 認証をバイパスする
 vi.mock('@/lib/admin/auth', () => ({
   validateAdminAuth: vi.fn(() => ({ authorized: true })),
+  getAuthErrorStatus: vi.fn((error: { code: string }) => error.code === 'FORBIDDEN' ? 403 : 401),
 }))
 
 import { validateAdminAuth } from '@/lib/admin/auth'

@@ -1,32 +1,14 @@
 /**
  * POST /api/pipeline/run
  * パイプライン手動実行トリガー
- * X-Pipeline-Api-Key ヘッダーによる認証
+ * Authorization: Bearer <key> or X-Pipeline-Api-Key ヘッダーによる認証
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { PipelineExecutor, getDailyPipelineSteps, getPDCAPipelineSteps } from '@/lib/pipeline/executor'
 import { getPipelineConfig } from '@/lib/pipeline/scheduler'
+import { validatePipelineAuth, getAuthErrorStatus } from '@/lib/admin/auth'
 import type { PipelineType, PipelineRunResponse } from '@/lib/pipeline/types'
-
-// ============================================================
-// 認証ヘルパー
-// ============================================================
-
-function authenticateRequest(request: NextRequest): boolean {
-  const apiKey = process.env.PIPELINE_API_KEY
-  if (!apiKey) {
-    // 環境変数未設定時は開発環境として認証スキップ
-    if (process.env.NODE_ENV === 'development') {
-      return true
-    }
-    console.error('[pipeline/run] PIPELINE_API_KEY is not configured')
-    return false
-  }
-
-  const providedKey = request.headers.get('X-Pipeline-Api-Key')
-  return providedKey === apiKey
-}
 
 // ============================================================
 // リクエスト型
@@ -43,10 +25,11 @@ interface RunPipelineRequest {
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   // 認証チェック
-  if (!authenticateRequest(request)) {
+  const auth = validatePipelineAuth(request)
+  if (!auth.authorized) {
     return NextResponse.json(
-      { error: 'Unauthorized: Invalid or missing X-Pipeline-Api-Key' },
-      { status: 401 }
+      { error: auth.error },
+      { status: getAuthErrorStatus(auth.error!) }
     )
   }
 

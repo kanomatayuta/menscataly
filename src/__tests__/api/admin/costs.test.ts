@@ -12,6 +12,7 @@ vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', '')
 // 認証モック
 vi.mock('@/lib/admin/auth', () => ({
   validateAdminAuth: vi.fn(() => ({ authorized: true })),
+  getAuthErrorStatus: vi.fn((error: { code: string }) => error.code === 'FORBIDDEN' ? 403 : 401),
 }))
 
 // CostTracker モック — class構文で定義

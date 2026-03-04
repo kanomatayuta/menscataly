@@ -5,8 +5,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { validateAdminAuth } from '@/lib/admin/auth'
+import { validateAdminAuth, getAuthErrorStatus } from '@/lib/admin/auth'
 import { ASP_SEED_DATA, type AspProgramSeed } from '@/lib/asp/seed'
+import { mapRowToProgram } from '@/lib/asp/helpers'
+import type { AspProgramRow } from '@/types/database'
 
 // ============================================================
 // インメモリストア (Supabase未設定時のフォールバック)
@@ -31,7 +33,10 @@ export function resetInMemoryPrograms(): void {
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const auth = validateAdminAuth(request)
   if (!auth.authorized) {
-    return NextResponse.json({ error: auth.error }, { status: 401 })
+    return NextResponse.json(
+      { error: auth.error },
+      { status: getAuthErrorStatus(auth.error!) }
+    )
   }
 
   const { searchParams } = new URL(request.url)
@@ -61,6 +66,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const { createServerSupabaseClient } = await import('@/lib/supabase/client')
     const supabase = createServerSupabaseClient()
 
+    // Note: supabase-js 型推論の制約により、asp_programs クエリには型アサーションを使用
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let query = (supabase as any)
       .from('asp_programs')
@@ -72,7 +78,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (category) query = query.eq('category', category)
     if (activeOnly) query = query.eq('is_active', true)
 
-    const { data, error, count } = await query
+    const { data, error, count } = await query as {
+      data: AspProgramRow[] | null
+      error: { message: string } | null
+      count: number | null
+    }
 
     if (error) {
       console.error('[admin/asp] Query error:', error.message)
@@ -121,7 +131,10 @@ interface CreateAspProgramRequest {
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const auth = validateAdminAuth(request)
   if (!auth.authorized) {
-    return NextResponse.json({ error: auth.error }, { status: 401 })
+    return NextResponse.json(
+      { error: auth.error },
+      { status: getAuthErrorStatus(auth.error!) }
+    )
   }
 
   let body: CreateAspProgramRequest
@@ -204,7 +217,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         updated_at: now,
       })
       .select()
-      .single()
+      .single() as { data: AspProgramRow | null; error: { message: string } | null }
 
     if (error) {
       console.error('[admin/asp] Insert error:', error.message)
@@ -215,7 +228,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     return NextResponse.json(
-      { success: true, program: mapRowToProgram(data) },
+      { success: true, program: mapRowToProgram(data!) },
       { status: 201 }
     )
   } catch (err) {
@@ -255,28 +268,4 @@ function validateCreateRequest(body: CreateAspProgramRequest): string | null {
   }
 
   return null
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapRowToProgram(row: any): AspProgramSeed {
-  return {
-    id: row.id,
-    aspName: row.asp_name ?? row.aspName,
-    programName: row.program_name ?? row.programName,
-    programId: row.program_id ?? row.programId,
-    category: row.category,
-    affiliateUrl: row.affiliate_url ?? row.affiliateUrl,
-    rewardAmount: parseFloat(String(row.reward_amount ?? row.rewardAmount ?? '0')),
-    rewardType: row.reward_type ?? row.rewardType,
-    conversionCondition: row.conversion_condition ?? row.conversionCondition ?? '',
-    approvalRate: parseFloat(String(row.approval_rate ?? row.approvalRate ?? '0')),
-    epc: parseFloat(String(row.epc ?? '0')),
-    itpSupport: Boolean(row.itp_support ?? row.itpSupport),
-    cookieDuration: parseInt(String(row.cookie_duration ?? row.cookieDuration ?? '30'), 10),
-    isActive: Boolean(row.is_active ?? row.isActive),
-    priority: parseInt(String(row.priority ?? '3'), 10),
-    recommendedAnchors: row.recommended_anchors ?? row.recommendedAnchors ?? [],
-    landingPageUrl: row.landing_page_url ?? row.landingPageUrl ?? '',
-    notes: row.notes ?? undefined,
-  }
 }

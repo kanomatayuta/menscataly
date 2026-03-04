@@ -109,7 +109,7 @@ export function getCloudSchedulerJobs(
         httpMethod: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Pipeline-Api-Key': apiKey,
+          'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({ type: 'daily' }),
       },
@@ -124,7 +124,7 @@ export function getCloudSchedulerJobs(
         httpMethod: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Pipeline-Api-Key': apiKey,
+          'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({ type: 'pdca' }),
       },

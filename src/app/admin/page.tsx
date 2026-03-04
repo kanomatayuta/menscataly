@@ -22,7 +22,7 @@ async function fetchDashboardData(): Promise<AdminDashboardData> {
   const res = await fetch(`${protocol}://${host}/api/admin/dashboard`, {
     cache: "no-store",
     headers: {
-      "X-Admin-Api-Key": process.env.ADMIN_API_KEY ?? "",
+      Authorization: `Bearer ${process.env.ADMIN_API_KEY ?? ""}`,
     },
   });
 
