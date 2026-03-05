@@ -163,6 +163,24 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: validationError }, { status: 400 })
   }
 
+  // カテゴリバリデーション（microCMSから動的取得）
+  {
+    let validCategories: string[]
+    try {
+      const { getCategories } = await import('@/lib/microcms/client')
+      const cats = await getCategories({ limit: 100 })
+      validCategories = cats.contents.map((c) => c.slug ?? c.id)
+    } catch {
+      validCategories = ['aga', 'hair-removal', 'skincare', 'ed', 'column']
+    }
+    if (!validCategories.includes(body.category)) {
+      return NextResponse.json(
+        { error: `category must be one of: ${validCategories.join(', ')}` },
+        { status: 400 }
+      )
+    }
+  }
+
   const now = new Date().toISOString()
   const newId = crypto.randomUUID()
 
@@ -285,10 +303,7 @@ function validateCreateRequest(body: CreateAspProgramRequest): string | null {
     return `aspName must be one of: ${validAsps.join(', ')}`
   }
 
-  const validCategories = ['aga', 'hair-removal', 'skincare', 'ed', 'column']
-  if (!validCategories.includes(body.category)) {
-    return `category must be one of: ${validCategories.join(', ')}`
-  }
+  // カテゴリバリデーションはPOSTハンドラ側で実施（async必要のため）
 
   // adCreatives バリデーション
   if (body.adCreatives !== undefined) {

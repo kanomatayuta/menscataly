@@ -172,9 +172,16 @@ export async function PUT(
     }
   }
 
-  // category バリデーション
+  // category バリデーション（microCMSから動的取得）
   if (body.category !== undefined) {
-    const validCategories = ['aga', 'hair-removal', 'skincare', 'ed', 'column']
+    let validCategories: string[]
+    try {
+      const { getCategories } = await import('@/lib/microcms/client')
+      const cats = await getCategories({ limit: 100 })
+      validCategories = cats.contents.map((c) => c.slug ?? c.id)
+    } catch {
+      validCategories = ['aga', 'hair-removal', 'skincare', 'ed', 'column']
+    }
     if (!validCategories.includes(body.category)) {
       return NextResponse.json(
         { error: `category must be one of: ${validCategories.join(', ')}` },
