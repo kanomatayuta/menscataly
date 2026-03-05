@@ -7,6 +7,7 @@ import type { AspProgram, ItpMitigationConfig } from '@/types/asp-config'
 import type { ArticleReviewItem, BatchGenerationJob, MonitoringAlert, RevenueSummary } from '@/types/admin'
 import type { BatchGenerationProgress, GenerationCostRecord, KeywordTarget } from '@/types/batch-generation'
 import type { PipelineContext, PipelineStep, PipelineConfig } from '@/lib/pipeline/types'
+import type { AnalyticsDailyRow } from '@/types/database'
 
 // =============================================================================
 // microCMS モックファクトリ
@@ -368,6 +369,49 @@ export function createMockHealthScore(
     ],
     timestamp: '2026-03-01T00:00:00Z',
     version: '0.1.0',
+    ...overrides,
+  }
+}
+
+// =============================================================================
+// Phase 6: Analytics / Revenue モックファクトリ
+// =============================================================================
+
+/**
+ * analytics_daily upsert テスト用モック
+ */
+export function createMockAnalyticsDailyUpsert(overrides?: Partial<AnalyticsDailyRow>): AnalyticsDailyRow {
+  return {
+    id: 'analytics-001',
+    article_id: 'article-001',
+    date: '2026-03-05',
+    pageviews: 500,
+    unique_users: 350,
+    avg_time: 120,
+    bounce_rate: 0.45,
+    ctr: 0.03,
+    conversions: 2,
+    created_at: '2026-03-05T06:00:00Z',
+    ...overrides,
+  }
+}
+
+/**
+ * revenue_daily upsert テスト用モック (新テーブル)
+ */
+export function createMockRevenueDailyUpsert(overrides?: Record<string, unknown>) {
+  return {
+    id: 'rev-001',
+    date: '2026-03-05',
+    asp_name: 'a8',
+    program_id: 'a8-aga-001',
+    clicks: 50,
+    conversions: 1,
+    confirmed_conversions: 0,
+    revenue_jpy: 15000,
+    status: 'pending',
+    imported_at: '2026-03-06T00:00:00Z',
+    created_at: '2026-03-06T00:00:00Z',
     ...overrides,
   }
 }

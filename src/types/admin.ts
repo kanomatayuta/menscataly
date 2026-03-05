@@ -108,6 +108,43 @@ export interface BatchGenerationResult {
 }
 
 // ============================================================
+// トレンド・ランキング
+// ============================================================
+
+/** トレンドチャート用データポイント */
+export interface TrendDataPoint {
+  date: string;
+  pageviews: number;
+  clicks: number;
+  conversions: number;
+}
+
+/** ランキングタブ種別 */
+export type RankingTab = "pageviews" | "ctr" | "revenue";
+
+/** ランキングアイテム */
+export interface RankingItem {
+  rank: number;
+  articleId: string;
+  title: string;
+  slug: string;
+  value: number;
+  formattedValue: string;
+  previousRank?: number;
+}
+
+/** ランキングデータ（全タブ分） */
+export type RankingData = Record<RankingTab, RankingItem[]>;
+
+/** サマリーカードデータ */
+export interface ArticlesSummary {
+  totalPageviews: number;
+  totalClicks: number;
+  totalConversions: number;
+  totalRevenue: number;
+}
+
+// ============================================================
 // 収益サマリ
 // ============================================================
 

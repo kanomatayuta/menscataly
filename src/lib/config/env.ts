@@ -111,6 +111,38 @@ const ENV_VARS: EnvVarDef[] = [
     description: 'A8.net メディアID',
     required: false,
   },
+
+  // GA4 / GCP
+  {
+    name: 'GA4_PROPERTY_ID',
+    description: 'GA4 プロパティID',
+    required: false,
+  },
+  {
+    name: 'GOOGLE_SERVICE_ACCOUNT_EMAIL',
+    description: 'GCP サービスアカウントメール',
+    required: false,
+  },
+  {
+    name: 'GOOGLE_PRIVATE_KEY',
+    description: 'GCP サービスアカウント秘密鍵 (PEM)',
+    required: false,
+  },
+  {
+    name: 'GOOGLE_PROJECT_ID',
+    description: 'GCP プロジェクトID',
+    required: false,
+  },
+  {
+    name: 'GSC_SITE_URL',
+    description: 'Google Search Console サイトURL',
+    required: false,
+  },
+  {
+    name: 'BQ_DATASET_ID',
+    description: 'BigQuery データセットID (GA4 Export)',
+    required: false,
+  },
 ]
 
 // ============================================================

@@ -1164,5 +1164,50 @@ ORDER BY avg_epc DESC;
 COMMENT ON VIEW v_revenue_by_asp IS 'ASP別収益集計';
 
 -- ============================================================
--- Done — v2.8 (Migration 012: reward_tiers JSONB配列化)
+-- 23. Migration 013: revenue_daily テーブル (ASP収益日次データ)
+-- ============================================================
+
+INSERT INTO schema_migrations (version, description) VALUES
+  ('013', 'revenue_daily: ASP収益日次データテーブル')
+ON CONFLICT (version) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS revenue_daily (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  date DATE NOT NULL,
+  asp_name TEXT NOT NULL,
+  program_id TEXT NOT NULL,
+  article_slug TEXT,
+  impressions INTEGER DEFAULT 0,
+  clicks INTEGER DEFAULT 0,
+  conversions_pending INTEGER DEFAULT 0,
+  conversions_confirmed INTEGER DEFAULT 0,
+  conversions_cancelled INTEGER DEFAULT 0,
+  revenue_pending NUMERIC(12,2) DEFAULT 0,
+  revenue_confirmed NUMERIC(12,2) DEFAULT 0,
+  revenue_cancelled NUMERIC(12,2) DEFAULT 0,
+  source TEXT DEFAULT 'manual',
+  raw_data JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (date, asp_name, program_id, article_slug)
+);
+
+COMMENT ON TABLE revenue_daily IS 'ASP収益日次データ (クリック/成果/報酬)';
+
+CREATE INDEX IF NOT EXISTS idx_revenue_daily_date ON revenue_daily(date);
+CREATE INDEX IF NOT EXISTS idx_revenue_daily_asp ON revenue_daily(asp_name);
+CREATE INDEX IF NOT EXISTS idx_revenue_daily_article ON revenue_daily(article_slug);
+
+ALTER TABLE revenue_daily ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'authenticated_select_revenue_daily' AND tablename = 'revenue_daily'
+  ) THEN
+    CREATE POLICY "authenticated_select_revenue_daily" ON revenue_daily FOR SELECT TO authenticated USING (true);
+  END IF;
+END $$;
+
+-- ============================================================
+-- Done — v2.9 (Migration 013: revenue_daily)
 -- ============================================================

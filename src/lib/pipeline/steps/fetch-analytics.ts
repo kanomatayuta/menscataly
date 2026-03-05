@@ -1,13 +1,16 @@
 /**
  * アナリティクスデータ取得ステップ
  * GA4 Data API / Google Search Console からパフォーマンスデータを取得する
- * モック実装 + インターフェース定義
+ * GA4環境変数未設定時はモックデータにフォールバック
  */
 
 import type { AnalyticsData, PipelineContext, PipelineStep } from '../types'
+import { fetchGA4DailyMetrics, extractSlugFromPath } from '../../analytics/ga4-client'
+import { fetchGSCData, extractSlugFromGSCPage } from '../../analytics/gsc-client'
+import type { GSCRow } from '../../analytics/types'
 
 // ============================================================
-// GA4 Data API インターフェース
+// GA4 Data API インターフェース (互換性維持)
 // ============================================================
 
 export interface GA4Config {
@@ -26,12 +29,6 @@ export interface GA4Report {
 }
 
 export interface GA4Client {
-  /**
-   * ページ別セッション・ページビューを取得する
-   * @param propertyId GA4プロパティID
-   * @param startDate 開始日 (YYYY-MM-DD)
-   * @param endDate 終了日 (YYYY-MM-DD)
-   */
   runReport(
     propertyId: string,
     startDate: string,
@@ -40,28 +37,20 @@ export interface GA4Client {
 }
 
 // ============================================================
-// Search Console (GSC) インターフェース
+// Search Console (GSC) インターフェース (互換性維持)
 // ============================================================
 
-export interface GSCRow {
-  keys: string[]    // [page, query]
-  clicks: number
-  impressions: number
-  ctr: number
-  position: number
-}
-
 export interface GSCResponse {
-  rows: GSCRow[]
+  rows: Array<{
+    keys: string[]
+    clicks: number
+    impressions: number
+    ctr: number
+    position: number
+  }>
 }
 
 export interface GSCClient {
-  /**
-   * Search Console のパフォーマンスデータを取得する
-   * @param siteUrl サイトURL (e.g. 'https://menscataly.com')
-   * @param startDate 開始日 (YYYY-MM-DD)
-   * @param endDate 終了日 (YYYY-MM-DD)
-   */
   query(
     siteUrl: string,
     startDate: string,
@@ -73,9 +62,6 @@ export interface GSCClient {
 // モック実装
 // ============================================================
 
-/**
- * 過去N日の日付リストを生成する
- */
 function getDateRange(days: number): string[] {
   const dates: string[] = []
   for (let i = 0; i < days; i++) {
@@ -86,10 +72,6 @@ function getDateRange(days: number): string[] {
   return dates
 }
 
-/**
- * モックのアナリティクスデータを生成する
- * 将来的には GA4 Data API / GSC API に置き換える
- */
 function generateMockAnalyticsData(): AnalyticsData[] {
   const mockArticleIds = [
     'art-aga-001',
@@ -99,7 +81,7 @@ function generateMockAnalyticsData(): AnalyticsData[] {
     'art-ed-001',
   ]
 
-  const dates = getDateRange(7) // 直近7日
+  const dates = getDateRange(7)
   const data: AnalyticsData[] = []
 
   for (const articleId of mockArticleIds) {
@@ -108,9 +90,9 @@ function generateMockAnalyticsData(): AnalyticsData[] {
         articleId,
         pageviews: Math.floor(Math.random() * 500) + 50,
         uniqueUsers: Math.floor(Math.random() * 400) + 40,
-        avgTime: Math.floor(Math.random() * 300) + 60,   // 60〜360秒
-        bounceRate: Math.random() * 0.4 + 0.3,           // 30〜70%
-        ctr: Math.random() * 0.05 + 0.01,                // 1〜6%
+        avgTime: Math.floor(Math.random() * 300) + 60,
+        bounceRate: Math.random() * 0.4 + 0.3,
+        ctr: Math.random() * 0.05 + 0.01,
         date,
       })
     }
@@ -120,67 +102,26 @@ function generateMockAnalyticsData(): AnalyticsData[] {
 }
 
 // ============================================================
-// GA4 API 呼び出し実装 (将来実装)
+// CTR 検索ヘルパー
 // ============================================================
 
-/**
- * GA4 Data API からデータを取得する
- * @internal 将来実装 - Google Analytics Data API v1beta
- */
-async function fetchFromGA4(): Promise<AnalyticsData[]> {
-  const propertyId = process.env.GA4_PROPERTY_ID
-  const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS
+function findCTR(gscData: GSCRow[], pagePath: string): number {
+  const slug = extractSlugFromPath(pagePath)
+  if (!slug) return 0
 
-  if (!propertyId || !credentialsPath) {
-    throw new Error('GA4_PROPERTY_ID or GOOGLE_APPLICATION_CREDENTIALS not set')
+  for (const row of gscData) {
+    const gscSlug = extractSlugFromGSCPage(row.page)
+    if (gscSlug === slug) {
+      return row.ctr
+    }
   }
-
-  // 将来実装: @google-analytics/data を使用
-  // const { BetaAnalyticsDataClient } = await import('@google-analytics/data')
-  // const client = new BetaAnalyticsDataClient()
-  //
-  // const [response] = await client.runReport({
-  //   property: `properties/${propertyId}`,
-  //   dimensions: [{ name: 'pagePath' }],
-  //   metrics: [
-  //     { name: 'sessions' },
-  //     { name: 'screenPageViews' },
-  //     { name: 'averageSessionDuration' },
-  //     { name: 'bounceRate' },
-  //   ],
-  //   dateRanges: [{ startDate: '7daysAgo', endDate: 'today' }],
-  // })
-
-  throw new Error('GA4 API integration not yet implemented')
-}
-
-/**
- * Google Search Console からデータを取得する
- * @internal 将来実装 - Search Console API v1
- */
-async function fetchFromSearchConsole(): Promise<AnalyticsData[]> {
-  const siteUrl = process.env.GSC_SITE_URL
-  const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
-
-  if (!siteUrl || !serviceAccountEmail) {
-    throw new Error('GSC_SITE_URL or GOOGLE_SERVICE_ACCOUNT_EMAIL not set')
-  }
-
-  // 将来実装: googleapis を使用
-  // const { google } = await import('googleapis')
-  // const auth = new google.auth.GoogleAuth({ ... })
-  // const searchconsole = google.searchconsole({ version: 'v1', auth })
-
-  throw new Error('GSC API integration not yet implemented')
+  return 0
 }
 
 // ============================================================
 // ステップ実装
 // ============================================================
 
-/**
- * アナリティクスデータ取得ステップ
- */
 export const fetchAnalyticsStep: PipelineStep<unknown, AnalyticsData[]> = {
   name: 'fetch-analytics',
   description: 'GA4 / Search Console からアナリティクスデータを取得する',
@@ -190,36 +131,44 @@ export const fetchAnalyticsStep: PipelineStep<unknown, AnalyticsData[]> = {
     console.log(`[fetch-analytics] Starting analytics fetch (run: ${context.runId})`)
 
     const hasGA4Config =
-      process.env.GA4_PROPERTY_ID !== undefined &&
-      process.env.GOOGLE_APPLICATION_CREDENTIALS !== undefined
+      process.env.GA4_PROPERTY_ID &&
+      process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL &&
+      process.env.GOOGLE_PRIVATE_KEY
 
     let analyticsData: AnalyticsData[]
 
     if (hasGA4Config) {
       try {
-        const [ga4Data, gscData] = await Promise.allSettled([
-          fetchFromGA4(),
-          fetchFromSearchConsole(),
-        ])
+        // 1. GA4 Data API から前日分データ取得
+        const ga4Data = await fetchGA4DailyMetrics('yesterday')
 
-        const data: AnalyticsData[] = []
-
-        if (ga4Data.status === 'fulfilled') {
-          data.push(...ga4Data.value)
-        } else {
-          console.warn('[fetch-analytics] GA4 fetch failed:', ga4Data.reason)
+        // 2. GSC からCTRデータ取得 (失敗してもGA4データは使う)
+        let gscData: GSCRow[] = []
+        try {
+          const yesterday = new Date(Date.now() - 86400000)
+            .toISOString()
+            .split('T')[0]
+          gscData = await fetchGSCData(yesterday)
+        } catch (err) {
+          console.warn('[fetch-analytics] GSC fetch failed:', err)
         }
 
-        if (gscData.status === 'fulfilled') {
-          // GSCデータをマージ（CTRのみ）
-          console.log('[fetch-analytics] GSC data merged')
-        } else {
-          console.warn('[fetch-analytics] GSC fetch failed:', gscData.reason)
-        }
+        console.log(
+          `[fetch-analytics] GA4: ${ga4Data.length} rows, GSC: ${gscData.length} rows`
+        )
 
-        analyticsData = data
+        // 3. PipelineContext 用に AnalyticsData[] 形式で返す
+        analyticsData = ga4Data.map((row) => ({
+          articleId: extractSlugFromPath(row.pagePath) ?? row.pagePath,
+          pageviews: row.pageviews,
+          uniqueUsers: row.uniqueUsers,
+          avgTime: row.avgTime,
+          bounceRate: row.bounceRate,
+          ctr: findCTR(gscData, row.pagePath),
+          date: row.date,
+        }))
       } catch (err) {
-        console.warn('[fetch-analytics] Analytics API error, falling back to mock:', err)
+        console.warn('[fetch-analytics] GA4 API error, falling back to mock:', err)
         analyticsData = generateMockAnalyticsData()
       }
     } else {
@@ -229,7 +178,6 @@ export const fetchAnalyticsStep: PipelineStep<unknown, AnalyticsData[]> = {
 
     console.log(`[fetch-analytics] Fetched ${analyticsData.length} analytics records`)
 
-    // コンテキストの共有データに保存
     context.sharedData['analytics'] = analyticsData
 
     return analyticsData

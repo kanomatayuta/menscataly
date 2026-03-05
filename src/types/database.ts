@@ -104,6 +104,50 @@ export interface ComplianceLogRow {
 }
 
 // ============================================================
+// Revenue Daily テーブル (ASP収益日次データ)
+// ============================================================
+
+export interface RevenueDailyRow {
+  id: string
+  date: string
+  asp_name: string
+  program_id: string
+  article_slug: string | null
+  impressions: number
+  clicks: number
+  conversions_pending: number
+  conversions_confirmed: number
+  conversions_cancelled: number
+  revenue_pending: number
+  revenue_confirmed: number
+  revenue_cancelled: number
+  source: string
+  raw_data: Json | null
+  created_at: string
+  updated_at: string
+}
+
+export type RevenueDailyInsert = {
+  id?: string
+  date: string
+  asp_name: string
+  program_id: string
+  article_slug?: string | null
+  impressions?: number
+  clicks?: number
+  conversions_pending?: number
+  conversions_confirmed?: number
+  conversions_cancelled?: number
+  revenue_pending?: number
+  revenue_confirmed?: number
+  revenue_cancelled?: number
+  source?: string
+  raw_data?: Json | null
+}
+
+export type RevenueDailyUpdate = Partial<Omit<RevenueDailyRow, 'id' | 'created_at'>>
+
+// ============================================================
 // ASP Programs テーブル
 // ============================================================
 
@@ -553,6 +597,12 @@ export interface Database {
         Row: GenerationCostRow
         Insert: GenerationCostInsert
         Update: GenerationCostUpdate
+        Relationships: []
+      }
+      revenue_daily: {
+        Row: RevenueDailyRow
+        Insert: RevenueDailyInsert
+        Update: RevenueDailyUpdate
         Relationships: []
       }
     }
