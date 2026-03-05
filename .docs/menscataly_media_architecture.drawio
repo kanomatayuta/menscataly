@@ -154,54 +154,92 @@
 
         <!-- Layer 5 Background: 分析・PDCA層 -->
         <mxCell id="layer5_bg" value="" style="rounded=1;whiteSpace=wrap;fillColor=#ECEFF1;strokeColor=#455A64;strokeWidth=2;opacity=50;" vertex="1" parent="1">
-          <mxGeometry x="30" y="840" width="1860" height="160" as="geometry"/>
+          <mxGeometry x="30" y="840" width="1860" height="280" as="geometry"/>
         </mxCell>
-        <mxCell id="layer5_label" value="&lt;b style='font-size:14px'&gt;分析・PDCA層&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:11px;color:#37474F'&gt;23:00 自動集計&lt;/span&gt;" style="text;html=1;align=left;fontSize=11;fontColor=#37474F;verticalAlign=top;" vertex="1" parent="1">
-          <mxGeometry x="45" y="848" width="180" height="40" as="geometry"/>
+        <mxCell id="layer5_label" value="&lt;b style='font-size:14px'&gt;分析・PDCA層&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:11px;color:#37474F'&gt;23:00 自動集計 / Vercel Cron&lt;/span&gt;" style="text;html=1;align=left;fontSize=11;fontColor=#37474F;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="45" y="848" width="220" height="40" as="geometry"/>
         </mxCell>
 
-        <mxCell id="ga4" value="&lt;b style='font-size:11px'&gt;GA4&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:10px'&gt;PV・滞在時間&lt;br&gt;直帰率・CTR&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#CFD8DC;strokeColor=#455A64;strokeWidth=2;html=1;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="50" y="875" width="180" height="90" as="geometry"/>
+        <!-- Row 1: Data Sources -->
+        <mxCell id="ga4" value="&lt;b style='font-size:11px'&gt;GA4 Data API v1&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:10px'&gt;PV・セッション・滞在時間&lt;br&gt;直帰率・affiliate_link_click&lt;br&gt;@google-analytics/data&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#CFD8DC;strokeColor=#455A64;strokeWidth=3;html=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="50" y="875" width="220" height="100" as="geometry"/>
         </mxCell>
-        <mxCell id="bigquery" value="&lt;b style='font-size:11px'&gt;BigQuery&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:10px'&gt;データウェアハウス&lt;br&gt;記事×収益集計&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#CFD8DC;strokeColor=#455A64;strokeWidth=2;html=1;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="260" y="875" width="180" height="90" as="geometry"/>
+        <mxCell id="bigquery" value="&lt;b style='font-size:11px'&gt;BigQuery (DWH)&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:10px'&gt;GA4 Daily Export&lt;br&gt;長期トレンド分析 (30/90日)&lt;br&gt;流入元・デバイス分析&lt;br&gt;asia-northeast1 / $0&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#CFD8DC;strokeColor=#455A64;strokeWidth=3;html=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="290" y="875" width="220" height="100" as="geometry"/>
         </mxCell>
-        <mxCell id="looker" value="&lt;b style='font-size:11px'&gt;Looker Studio&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:10px'&gt;リアルタイムダッシュボード&lt;br&gt;カテゴリ別KPI&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#CFD8DC;strokeColor=#455A64;strokeWidth=3;html=1;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="470" y="875" width="220" height="90" as="geometry"/>
+        <mxCell id="gsc_api" value="&lt;b style='font-size:11px'&gt;Search Console API&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:10px'&gt;検索順位・CTR&lt;br&gt;インプレッション&lt;br&gt;googleapis&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#CFD8DC;strokeColor=#455A64;strokeWidth=2;html=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="530" y="875" width="190" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="asp_sync" value="&lt;b style='font-size:11px'&gt;ASP Report Sync&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:10px'&gt;IASPReportProvider&lt;br&gt;A8: CSV→API (Phase B)&lt;br&gt;afb/AT: API (Phase B)&lt;br&gt;ReportSyncOrchestrator&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#E1BEE7;strokeColor=#7B1FA2;strokeWidth=2;html=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="740" y="875" width="210" height="100" as="geometry"/>
         </mxCell>
         <mxCell id="score" value="&lt;b style='font-size:11px'&gt;健全性スコア&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:10px'&gt;順位変動 / UX品質&lt;br&gt;ASP CTR・CV率&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#CFD8DC;strokeColor=#455A64;strokeWidth=2;html=1;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="720" y="875" width="190" height="90" as="geometry"/>
+          <mxGeometry x="970" y="875" width="170" height="100" as="geometry"/>
         </mxCell>
         <mxCell id="alert" value="&lt;b style='font-size:11px'&gt;自動アラート&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:10px'&gt;順位±5位&lt;br&gt;CTR 50%以下&lt;br&gt;薬機法フラグ→自動非公開&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#FFCDD2;strokeColor=#D32F2F;strokeWidth=2;html=1;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="940" y="870" width="200" height="100" as="geometry"/>
+          <mxGeometry x="1160" y="875" width="190" height="100" as="geometry"/>
         </mxCell>
-        <mxCell id="report_weekly" value="&lt;b style='font-size:11px'&gt;週次レポート&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:10px'&gt;毎月曜 08:00&lt;br&gt;Slack + メール自動配信&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#CFD8DC;strokeColor=#455A64;strokeWidth=2;html=1;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="1170" y="875" width="200" height="90" as="geometry"/>
+        <mxCell id="report_weekly" value="&lt;b style='font-size:11px'&gt;週次レポート&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:10px'&gt;毎月曜 08:00&lt;br&gt;Slack + メール&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#CFD8DC;strokeColor=#455A64;strokeWidth=2;html=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1370" y="875" width="160" height="100" as="geometry"/>
         </mxCell>
-        <mxCell id="report_monthly" value="&lt;b style='font-size:11px'&gt;月次レポート&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:10px'&gt;毎月1日 09:00&lt;br&gt;PDF自動保存&lt;br&gt;事業計画書自動更新&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#CFD8DC;strokeColor=#455A64;strokeWidth=2;html=1;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="1400" y="870" width="200" height="100" as="geometry"/>
+        <mxCell id="report_monthly" value="&lt;b style='font-size:11px'&gt;月次レポート&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:10px'&gt;毎月1日 09:00&lt;br&gt;PDF自動保存&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#CFD8DC;strokeColor=#455A64;strokeWidth=2;html=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1550" y="875" width="160" height="100" as="geometry"/>
+        </mxCell>
+
+        <!-- Row 2: Data Storage & Dashboard -->
+        <mxCell id="supabase_analytics" value="&lt;b style='font-size:11px'&gt;Supabase (運用DB)&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:10px'&gt;analytics_daily: 日次PV/CTR&lt;br&gt;affiliate_links: クリック/CV&lt;br&gt;revenue_daily: ASP収益日次&lt;br&gt;upsert (article_id, date)&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#FFE0B2;strokeColor=#F57C00;strokeWidth=3;html=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="50" y="995" width="270" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="admin_dashboard" value="&lt;b style='font-size:11px'&gt;管理画面ダッシュボード&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:10px'&gt;/admin/articles&lt;br&gt;PV・クリック・CV推移チャート&lt;br&gt;記事ランキング (PV/CTR/収益)&lt;br&gt;サマリーカード + ソートテーブル&lt;br&gt;recharts LineChart&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#C8E6C9;strokeColor=#2E7D32;strokeWidth=3;html=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="340" y="995" width="280" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="looker" value="&lt;b style='font-size:11px'&gt;Looker Studio&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:10px'&gt;BIダッシュボード&lt;br&gt;BigQuery接続&lt;br&gt;データ蓄積後に構築&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;fillColor=#CFD8DC;strokeColor=#455A64;strokeWidth=2;dashed=1;html=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="640" y="995" width="200" height="110" as="geometry"/>
+        </mxCell>
+
+        <!-- Data flow arrows in Layer 5 -->
+        <mxCell id="a_ga4_sb" value="&lt;span style='font-size:9px'&gt;日次同期&lt;/span&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#455A64;strokeWidth=2;html=1;fontSize=9;exitX=0.5;exitY=1;entryX=0.2;entryY=0;" edge="1" parent="1" source="ga4" target="supabase_analytics">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="a_gsc_sb" value="&lt;span style='font-size:9px'&gt;CTRマージ&lt;/span&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#455A64;strokeWidth=2;html=1;fontSize=9;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="gsc_api" target="supabase_analytics">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="a_asp_sb" value="&lt;span style='font-size:9px'&gt;収益同期&lt;/span&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7B1FA2;strokeWidth=2;html=1;fontSize=9;exitX=0.5;exitY=1;entryX=0.8;entryY=0;" edge="1" parent="1" source="asp_sync" target="supabase_analytics">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="a_sb_dash" value="&lt;span style='font-size:9px'&gt;KPIデータ&lt;/span&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#2E7D32;strokeWidth=2;html=1;fontSize=9;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="supabase_analytics" target="admin_dashboard">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="a_ga4_bq" value="&lt;span style='font-size:9px'&gt;Daily Export&lt;/span&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#455A64;strokeWidth=2;dashed=1;html=1;fontSize=9;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="ga4" target="bigquery">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="a_bq_looker" value="&lt;span style='font-size:9px'&gt;クエリ&lt;/span&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#455A64;strokeWidth=2;dashed=1;html=1;fontSize=9;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="bigquery" target="looker">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="a_bq_dash" value="&lt;span style='font-size:9px'&gt;トレンド分析&lt;/span&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#455A64;strokeWidth=2;html=1;fontSize=9;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="bigquery" target="admin_dashboard">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
 
         <!-- PDCA Loop Bracket -->
         <mxCell id="pdca_arrow" value="&lt;b style='font-size:10px;color:#D32F2F'&gt;AI自律PDCAループ&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:9px;color:#D32F2F'&gt;分析→計画→実行→検証&lt;/span&gt;" style="shape=curlyBracket;whiteSpace=wrap;rounded=1;flipH=1;size=0.5;fillColor=none;strokeColor=#D32F2F;strokeWidth=3;html=1;fontSize=10;fontColor=#D32F2F;verticalAlign=middle;" vertex="1" parent="1">
-          <mxGeometry x="1830" y="280" width="40" height="720" as="geometry"/>
+          <mxGeometry x="1830" y="280" width="40" height="840" as="geometry"/>
         </mxCell>
 
         <!-- Annotation Boxes -->
-        <mxCell id="cost_box" value="&lt;b style='font-size:11px'&gt;月間コスト: 約3,000〜4,000円&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:10px'&gt;Claude API: 1,500円 / Ideogram: 500円&lt;br&gt;Cloud Run: 300円 / ドメイン: 100円&lt;br&gt;他: 無料枠で運用&lt;/span&gt;&lt;br&gt;&lt;b style='font-size:11px'&gt;目標ROI: 7,400%&lt;/b&gt;" style="shape=note;whiteSpace=wrap;fillColor=#FFF9C4;strokeColor=#F9A825;strokeWidth=2;size=14;html=1;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="30" y="1030" width="280" height="110" as="geometry"/>
+        <mxCell id="cost_box" value="&lt;b style='font-size:11px'&gt;月間コスト: 約3,000〜4,000円&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:10px'&gt;Claude API: 1,500円 / Ideogram: 500円&lt;br&gt;Cloud Run: 300円 / ドメイン: 100円&lt;br&gt;GA4/BQ/GSC: 無料枠内&lt;/span&gt;&lt;br&gt;&lt;b style='font-size:11px'&gt;目標ROI: 7,400%&lt;/b&gt;" style="shape=note;whiteSpace=wrap;fillColor=#FFF9C4;strokeColor=#F9A825;strokeWidth=2;size=14;html=1;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="30" y="1150" width="280" height="110" as="geometry"/>
         </mxCell>
         <mxCell id="kgi_box" value="&lt;b style='font-size:11px'&gt;KGI: 12ヶ月で月収30万円&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:10px'&gt;360記事 / 100,000 PV/月&lt;br&gt;AF収益: 250,000円 + AdSense: 50,000円&lt;br&gt;累計収益見込み: 約168万円&lt;/span&gt;" style="shape=note;whiteSpace=wrap;fillColor=#FFCDD2;strokeColor=#D32F2F;strokeWidth=2;size=14;html=1;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="340" y="1030" width="300" height="110" as="geometry"/>
+          <mxGeometry x="340" y="1150" width="300" height="110" as="geometry"/>
         </mxCell>
         <mxCell id="compliance_box" value="&lt;b style='font-size:11px'&gt;コンプライアンス&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:10px'&gt;薬機法第66条・第67条 準拠&lt;br&gt;景表法 準拠&lt;br&gt;NGワード自動検出→OK表現置換&lt;br&gt;月1回 人によるコンテンツ監査&lt;/span&gt;" style="shape=note;whiteSpace=wrap;fillColor=#E8EAF6;strokeColor=#3F51B5;strokeWidth=2;size=14;html=1;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="670" y="1030" width="300" height="110" as="geometry"/>
+          <mxGeometry x="670" y="1150" width="300" height="110" as="geometry"/>
         </mxCell>
         <mxCell id="eeat_box" value="&lt;b style='font-size:11px'&gt;E-E-A-T対策（YMYL領域）&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:10px'&gt;Experience: 使用者視点の記事構成&lt;br&gt;Expertise: 医師監修表記&lt;br&gt;Authoritativeness: 厚労省・学術論文引用&lt;br&gt;Trustworthiness: 運営者情報・更新日明示&lt;/span&gt;" style="shape=note;whiteSpace=wrap;fillColor=#E8EAF6;strokeColor=#3F51B5;strokeWidth=2;size=14;html=1;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="1000" y="1030" width="320" height="110" as="geometry"/>
+          <mxGeometry x="1000" y="1150" width="320" height="110" as="geometry"/>
         </mxCell>
-        <mxCell id="tech_box" value="&lt;b style='font-size:11px'&gt;テックスタック&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:10px'&gt;Next.js 16 / microCMS / Vercel&lt;br&gt;Supabase / Cloudinary / BigQuery&lt;br&gt;Claude Sonnet 4.6 / Haiku 4.5&lt;br&gt;Ideogram API / Cloud Run&lt;/span&gt;" style="shape=note;whiteSpace=wrap;fillColor=#FFF3E0;strokeColor=#F57C00;strokeWidth=2;size=14;html=1;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="1350" y="1030" width="300" height="110" as="geometry"/>
+        <mxCell id="tech_box" value="&lt;b style='font-size:11px'&gt;テックスタック&lt;/b&gt;&lt;br&gt;&lt;span style='font-size:10px'&gt;Next.js 16 / microCMS / Vercel&lt;br&gt;Supabase / Cloudinary / BigQuery&lt;br&gt;Claude Sonnet 4.6 / Haiku 4.5&lt;br&gt;GA4 Data API / GSC API&lt;br&gt;recharts / @google-cloud/bigquery&lt;/span&gt;" style="shape=note;whiteSpace=wrap;fillColor=#FFF3E0;strokeColor=#F57C00;strokeWidth=2;size=14;html=1;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="1150" width="300" height="110" as="geometry"/>
         </mxCell>
       </root>
     </mxGraphModel>
