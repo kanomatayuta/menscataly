@@ -60,7 +60,8 @@ export default async function SupervisorDetailPage({ params }: Props) {
     supervisor.name,
     supervisor.credentials,
     supervisor.bio,
-    supervisor.affiliations
+    supervisor.affiliations,
+    supervisor.imageUrl
   );
 
   return (
@@ -85,26 +86,36 @@ export default async function SupervisorDetailPage({ params }: Props) {
         {/* プロフィールヘッダー */}
         <header className="mb-10">
           <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center">
-            {/* プロフィール画像プレースホルダー */}
-            <div
-              className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-full"
-              style={{ backgroundColor: `${color}15` }}
-            >
-              <svg
-                className="h-12 w-12"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                style={{ color }}
+            {/* プロフィール画像 */}
+            {supervisor.imageUrl ? (
+              <img
+                src={supervisor.imageUrl}
+                alt={`${supervisor.name}のプロフィール画像`}
+                width={96}
+                height={96}
+                className="h-24 w-24 flex-shrink-0 rounded-full object-cover"
+              />
+            ) : (
+              <div
+                className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-full"
+                style={{ backgroundColor: `${color}15` }}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
-                />
-              </svg>
-            </div>
+                <svg
+                  className="h-12 w-12"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  style={{ color }}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
+                  />
+                </svg>
+              </div>
+            )}
 
             <div>
               <div className="mb-1 flex items-center gap-2">

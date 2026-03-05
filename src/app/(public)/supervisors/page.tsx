@@ -101,17 +101,18 @@ export default function SupervisorsPage() {
                   className="group block rounded-lg border border-neutral-200 p-5 transition-shadow hover:shadow-md"
                 >
                   <div className="flex items-start gap-4">
-                    {/* プロフィール画像プレースホルダー */}
-                    <div
-                      className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full"
-                      style={{
-                        backgroundColor:
-                          CATEGORY_COLORS[category] ?? "#6B7280",
-                        opacity: 0.15,
-                      }}
-                    >
+                    {/* プロフィール画像 */}
+                    {supervisor.imageUrl ? (
+                      <img
+                        src={supervisor.imageUrl}
+                        alt={`${supervisor.name}のプロフィール画像`}
+                        width={64}
+                        height={64}
+                        className="h-16 w-16 flex-shrink-0 rounded-full object-cover"
+                      />
+                    ) : (
                       <div
-                        className="flex h-16 w-16 items-center justify-center rounded-full"
+                        className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full"
                         style={{
                           backgroundColor: `${CATEGORY_COLORS[category] ?? "#6B7280"}20`,
                         }}
@@ -133,7 +134,7 @@ export default function SupervisorsPage() {
                           />
                         </svg>
                       </div>
-                    </div>
+                    )}
 
                     {/* 監修者情報 */}
                     <div className="min-w-0 flex-1">

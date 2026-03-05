@@ -51,6 +51,8 @@ export const SUPERVISORS: Supervisor[] = [
     categoryLabel: "AGA・薄毛",
     bio: "皮膚科専門医として15年以上の診療経験を持ち、AGA（男性型脱毛症）・薄毛治療を専門とする。東京大学医学部卒業。日本皮膚科学会、日本毛髪科学協会所属。AGAガイドラインに基づく最新のエビデンスを重視した治療を実践。",
     affiliations: ["日本皮膚科学会", "日本毛髪科学協会"],
+    imageUrl:
+      "https://ui-avatars.com/api/?name=%E7%94%B0%E4%B8%AD+%E5%81%A5%E5%A4%AA%E9%83%8E&background=2563EB&color=fff&size=200&font-size=0.4&bold=true&format=svg",
     yearsOfExperience: 15,
     topics: [
       "AGA治療薬（フィナステリド・デュタステリド）",
@@ -70,6 +72,8 @@ export const SUPERVISORS: Supervisor[] = [
     categoryLabel: "ED治療",
     bio: "泌尿器科専門医として18年以上の診療経験を持ち、ED（勃起不全）・メンズヘルス領域を専門とする。慶應義塾大学医学部卒業。日本泌尿器科学会、日本性機能学会所属。患者の生活の質を重視した包括的なED治療を行う。",
     affiliations: ["日本泌尿器科学会", "日本性機能学会"],
+    imageUrl:
+      "https://ui-avatars.com/api/?name=%E9%88%B4%E6%9C%A8+%E9%9B%85%E4%B9%8B&background=059669&color=fff&size=200&font-size=0.4&bold=true&format=svg",
     yearsOfExperience: 18,
     topics: [
       "PDE5阻害薬（シルデナフィル・タダラフィル・バルデナフィル）",
@@ -88,6 +92,8 @@ export const SUPERVISORS: Supervisor[] = [
     categoryLabel: "医療脱毛",
     bio: "皮膚科専門医・レーザー専門医として12年以上の診療経験を持ち、医療レーザー脱毛を専門とする。大阪大学医学部卒業。日本皮膚科学会、日本レーザー医学会、日本美容皮膚科学会所属。メンズ脱毛の安全性と効果に精通。",
     affiliations: ["日本皮膚科学会", "日本レーザー医学会", "日本美容皮膚科学会"],
+    imageUrl:
+      "https://ui-avatars.com/api/?name=%E5%B1%B1%E6%9C%AC+%E7%BE%8E%E5%92%B2&background=7C3AED&color=fff&size=200&font-size=0.4&bold=true&format=svg",
     yearsOfExperience: 12,
     topics: [
       "医療レーザー脱毛（アレキサンドライト・ダイオード・YAG）",
@@ -106,6 +112,8 @@ export const SUPERVISORS: Supervisor[] = [
     categoryLabel: "スキンケア",
     bio: "皮膚科専門医として10年以上の診療経験を持ち、ニキビ治療・シミ治療・エイジングケアを専門とする。京都大学医学部卒業。日本皮膚科学会、日本美容皮膚科学会所属。化粧品の成分・安全性にも精通し、科学的根拠に基づくスキンケア指導を行う。",
     affiliations: ["日本皮膚科学会", "日本美容皮膚科学会"],
+    imageUrl:
+      "https://ui-avatars.com/api/?name=%E4%BD%90%E8%97%A4+%E8%A3%95%E7%BE%8E&background=DC2626&color=fff&size=200&font-size=0.4&bold=true&format=svg",
     yearsOfExperience: 10,
     topics: [
       "メンズスキンケア基礎",
@@ -125,6 +133,8 @@ export const SUPERVISORS: Supervisor[] = [
     categoryLabel: "コラム・サプリメント",
     bio: "管理栄養士・薬剤師として13年以上の栄養指導・服薬指導経験を持つ。北海道大学薬学部卒業。日本栄養士会、日本薬剤師会所属。サプリメントの成分・安全性・相互作用に精通し、科学的根拠に基づく情報発信を行う。",
     affiliations: ["日本栄養士会", "日本薬剤師会"],
+    imageUrl:
+      "https://ui-avatars.com/api/?name=%E5%B0%8F%E6%9E%97+%E8%AA%A0&background=D97706&color=fff&size=200&font-size=0.4&bold=true&format=svg",
     yearsOfExperience: 13,
     topics: [
       "サプリメントの選び方",
