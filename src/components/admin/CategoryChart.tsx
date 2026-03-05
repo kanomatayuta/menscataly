@@ -18,11 +18,11 @@ interface CategoryChartProps {
 }
 
 const CATEGORY_CONFIG = [
-  { key: "aga",         label: "AGA治療",      color: "#6366f1" },
+  { key: "aga",         label: "AGA・薄毛",    color: "#6366f1" },
   { key: "ed",          label: "ED治療",       color: "#0ea5e9" },
-  { key: "hairRemoval", label: "医療脱毛",     color: "#14b8a6" },
+  { key: "hairRemoval", label: "メンズ脱毛",   color: "#14b8a6" },
   { key: "skincare",    label: "スキンケア",   color: "#f97316" },
-  { key: "supplement",  label: "サプリメント", color: "#ec4899" },
+  { key: "column",      label: "コラム",       color: "#ec4899" },
 ];
 
 function formatYAxis(value: number): string {

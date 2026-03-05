@@ -14,11 +14,11 @@ type SortColumn = "pageviews" | "searchClicks" | "affiliateClicks" | "conversion
 type SortDirection = "asc" | "desc";
 
 const CATEGORY_LABELS: Record<string, string> = {
-  aga: "AGA治療",
+  aga: "AGA・薄毛",
   ed: "ED治療",
-  "hair-removal": "医療脱毛",
+  "hair-removal": "メンズ脱毛",
   skincare: "スキンケア",
-  column: "サプリメント",
+  column: "コラム",
 };
 
 const STATUS_STYLES: Record<ReviewStatus, { bg: string; text: string; label: string }> = {

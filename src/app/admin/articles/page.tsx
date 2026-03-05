@@ -224,7 +224,7 @@ async function fetchCategoryTrendData(days: number): Promise<CategoryTrendDataPo
       "ed": "ed",
       "hair-removal": "hairRemoval",
       "skincare": "skincare",
-      "column": "supplement",  // column category maps to supplement
+      "column": "column",
     };
 
     const { fetchGA4DailyMetrics } = await import("@/lib/analytics/ga4-client");
@@ -251,7 +251,7 @@ async function fetchCategoryTrendData(days: number): Promise<CategoryTrendDataPo
           ed: 0,
           hairRemoval: 0,
           skincare: 0,
-          supplement: 0,
+          column: 0,
         };
         byDate.set(row.date, point);
       }
@@ -512,7 +512,7 @@ async function CategoryChartSection() {
     "ed": "ed",
     "hair-removal": "hairRemoval",
     "skincare": "skincare",
-    "column": "supplement",
+    "column": "column",
   };
 
   for (const article of articles) {

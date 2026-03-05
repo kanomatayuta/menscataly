@@ -128,7 +128,7 @@ export interface CategoryTrendDataPoint {
   ed: number;
   hairRemoval: number;
   skincare: number;
-  supplement: number;
+  column: number;
 }
 
 /** ランキングタブ種別 */
