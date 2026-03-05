@@ -30,6 +30,18 @@ export interface GSCRow {
 }
 
 // ============================================================
+// GA4 Affiliate Click
+// ============================================================
+
+export interface GA4AffiliateClickRow {
+  pagePath: string
+  date: string
+  aspName: string
+  programId: string
+  clickCount: number
+}
+
+// ============================================================
 // BigQuery
 // ============================================================
 

@@ -1,4 +1,4 @@
-type StatCardVariant = "default" | "success" | "warning" | "danger";
+type StatCardVariant = "default" | "success" | "warning" | "danger" | "purple";
 
 interface StatCardProps {
   title: string;
@@ -12,6 +12,7 @@ const VARIANT_STYLES: Record<StatCardVariant, string> = {
   success: "border-green-300 bg-green-50/50",
   warning: "border-amber-300 bg-amber-50/50",
   danger: "border-red-300 bg-red-50/50",
+  purple: "border-purple-300 bg-purple-50/50",
 };
 
 const VARIANT_VALUE_COLORS: Record<StatCardVariant, string> = {
@@ -19,6 +20,7 @@ const VARIANT_VALUE_COLORS: Record<StatCardVariant, string> = {
   success: "text-green-700",
   warning: "text-amber-700",
   danger: "text-red-700",
+  purple: "text-purple-600",
 };
 
 export function StatCard({

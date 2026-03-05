@@ -88,7 +88,8 @@ export function TrendChart({ data }: TrendChartProps) {
               formatter={(value: number, name: string) => {
                 const labels: Record<string, string> = {
                   pageviews: "PV",
-                  clicks: "クリック",
+                  searchClicks: "検索CL",
+                  affiliateClicks: "広告CL",
                   conversions: "CV",
                 };
                 return [value.toLocaleString("ja-JP"), labels[name] ?? name];
@@ -98,7 +99,8 @@ export function TrendChart({ data }: TrendChartProps) {
               formatter={(value: string) => {
                 const labels: Record<string, string> = {
                   pageviews: "PV",
-                  clicks: "クリック",
+                  searchClicks: "検索CL",
+                  affiliateClicks: "広告CL",
                   conversions: "CV",
                 };
                 return labels[value] ?? value;
@@ -116,8 +118,17 @@ export function TrendChart({ data }: TrendChartProps) {
             <Line
               yAxisId="left"
               type="monotone"
-              dataKey="clicks"
+              dataKey="searchClicks"
               stroke="#10b981"
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4 }}
+            />
+            <Line
+              yAxisId="left"
+              type="monotone"
+              dataKey="affiliateClicks"
+              stroke="#8b5cf6"
               strokeWidth={2}
               dot={false}
               activeDot={{ r: 4 }}

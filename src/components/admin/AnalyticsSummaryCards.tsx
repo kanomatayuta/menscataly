@@ -1,23 +1,34 @@
 import { StatCard } from "./StatCard";
-import type { ArticlesSummary } from "@/types/admin";
 
-interface AnalyticsSummaryCardsProps extends ArticlesSummary {}
+interface AnalyticsSummaryCardsProps {
+  totalPageviews: number;
+  totalSearchClicks: number;
+  totalAffiliateClicks: number;
+  totalConversions: number;
+  totalRevenue: number;
+}
 
 export function AnalyticsSummaryCards({
   totalPageviews,
-  totalClicks,
+  totalSearchClicks,
+  totalAffiliateClicks,
   totalConversions,
   totalRevenue,
 }: AnalyticsSummaryCardsProps) {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
       <StatCard
         title="総PV"
         value={totalPageviews.toLocaleString("ja-JP")}
       />
       <StatCard
-        title="総クリック"
-        value={totalClicks.toLocaleString("ja-JP")}
+        title="検索CL"
+        value={totalSearchClicks.toLocaleString("ja-JP")}
+      />
+      <StatCard
+        title="広告CL"
+        value={totalAffiliateClicks.toLocaleString("ja-JP")}
+        variant="purple"
       />
       <StatCard
         title="総CV"

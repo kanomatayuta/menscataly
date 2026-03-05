@@ -4,7 +4,7 @@
  */
 
 import type { AspProgram, ItpMitigationConfig } from '@/types/asp-config'
-import type { ArticleReviewItem, BatchGenerationJob, MonitoringAlert, RevenueSummary } from '@/types/admin'
+import type { ArticleAnalytics, ArticleReviewItem, BatchGenerationJob, MonitoringAlert, RevenueSummary } from '@/types/admin'
 import type { BatchGenerationProgress, GenerationCostRecord, KeywordTarget } from '@/types/batch-generation'
 import type { PipelineContext, PipelineStep, PipelineConfig } from '@/lib/pipeline/types'
 import type { AnalyticsDailyRow } from '@/types/database'
@@ -412,6 +412,45 @@ export function createMockRevenueDailyUpsert(overrides?: Record<string, unknown>
     status: 'pending',
     imported_at: '2026-03-06T00:00:00Z',
     created_at: '2026-03-06T00:00:00Z',
+    ...overrides,
+  }
+}
+
+// =============================================================================
+// Phase 6: ArticleAnalytics モックファクトリ (GA4 アフィリエイトクリック対応)
+// =============================================================================
+
+/**
+ * 記事アナリティクスモックの拡張型
+ *
+ * 別エージェントが ArticleAnalytics に searchClicks / affiliateClicks を
+ * 追加予定。型の変更が反映されるまではこの拡張型を使う。
+ * 変更反映後は ArticleAnalytics をそのまま使用可能。
+ */
+export interface MockArticleAnalytics extends ArticleAnalytics {
+  /** GSC 検索クリック数 (旧 clicks フィールドに相当) */
+  searchClicks: number
+  /** GA4 アフィリエイトリンクのクリック数 */
+  affiliateClicks: number
+}
+
+/**
+ * 記事アナリティクスモックを生成する
+ *
+ * searchClicks (旧 clicks) と affiliateClicks を含む。
+ * 別エージェントの型変更後も後方互換で動作する。
+ */
+export function createMockArticleAnalytics(
+  overrides?: Partial<MockArticleAnalytics>
+): MockArticleAnalytics {
+  return {
+    articleId: 'article-001',
+    pageviews: 500,
+    clicks: 50,
+    searchClicks: 50,
+    affiliateClicks: 12,
+    conversions: 2,
+    revenue: 30000,
     ...overrides,
   }
 }

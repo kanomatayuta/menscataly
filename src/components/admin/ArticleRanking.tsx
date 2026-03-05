@@ -10,7 +10,7 @@ interface ArticleRankingProps {
 
 const TABS: { value: RankingTab; label: string }[] = [
   { value: "pageviews", label: "PV" },
-  { value: "ctr", label: "クリック率" },
+  { value: "affiliateCtr", label: "広告CTR" },
   { value: "revenue", label: "収益" },
 ];
 

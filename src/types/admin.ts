@@ -73,7 +73,8 @@ export interface ArticleReviewDetail extends ArticleReviewItem {
 export interface ArticleAnalytics {
   articleId: string;
   pageviews: number;
-  clicks: number;
+  searchClicks: number;      // GSC検索クリック (旧 clicks)
+  affiliateClicks: number;   // GA4 affiliate_link_click (新規)
   conversions: number;
   revenue: number;
 }
@@ -115,12 +116,13 @@ export interface BatchGenerationResult {
 export interface TrendDataPoint {
   date: string;
   pageviews: number;
-  clicks: number;
+  searchClicks: number;      // 旧 clicks
+  affiliateClicks: number;   // 新規
   conversions: number;
 }
 
 /** ランキングタブ種別 */
-export type RankingTab = "pageviews" | "ctr" | "revenue";
+export type RankingTab = "pageviews" | "affiliateCtr" | "revenue";
 
 /** ランキングアイテム */
 export interface RankingItem {

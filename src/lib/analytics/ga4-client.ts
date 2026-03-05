@@ -6,7 +6,7 @@
 
 import * as crypto from 'crypto'
 import { connection } from 'next/server'
-import type { GA4AnalyticsRow, SlugToIdMap } from './types'
+import type { GA4AffiliateClickRow, GA4AnalyticsRow, SlugToIdMap } from './types'
 
 // ============================================================
 // ヘルパー
@@ -159,7 +159,7 @@ interface GA4RunReportResponse {
 /**
  * GA4 Data API (REST) でレポートを実行
  */
-async function runGA4Report(
+export async function runGA4Report(
   propertyId: string,
   request: Record<string, unknown>
 ): Promise<GA4RunReportResponse> {
@@ -288,6 +288,82 @@ export async function fetchGA4DailyMetrics(
   })
   } catch (err) {
     console.warn('[ga4-client] fetchGA4DailyMetrics failed:', err instanceof Error ? err.message : err)
+    return []
+  }
+}
+
+/**
+ * GA4 affiliate_link_click イベントからアフィリエイトクリックデータを取得
+ * @param startDate 開始日 ('yesterday' | '30daysAgo' | '90daysAgo' | 'YYYY-MM-DD')
+ * @param endDate 終了日 (デフォルト: 'yesterday')
+ */
+export async function fetchAffiliateClicks(
+  startDate: string = '30daysAgo',
+  endDate: string = 'yesterday'
+): Promise<GA4AffiliateClickRow[]> {
+  try { await connection() } catch { /* non-server-component context */ }
+
+  const propertyId = process.env.GA4_PROPERTY_ID
+  if (!propertyId) {
+    console.log('[ga4-client] GA4_PROPERTY_ID not set')
+    return []
+  }
+
+  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
+  const privateKey = process.env.GOOGLE_PRIVATE_KEY
+  if (!email || !privateKey) {
+    console.log('[ga4-client] Service account credentials not set')
+    return []
+  }
+
+  try {
+    return await withRetry(async () => {
+      const response = await runGA4Report(propertyId, {
+        dimensions: [
+          { name: 'pagePath' },
+          { name: 'date' },
+          { name: 'customEvent:asp_name' },
+          { name: 'customEvent:program_id' },
+        ],
+        metrics: [
+          { name: 'eventCount' },
+        ],
+        dateRanges: [
+          { startDate, endDate },
+        ],
+        dimensionFilter: {
+          filter: {
+            fieldName: 'eventName',
+            stringFilter: {
+              matchType: 'EXACT',
+              value: 'affiliate_link_click',
+            },
+          },
+        },
+        orderBys: [
+          { metric: { metricName: 'eventCount' }, desc: true },
+        ],
+        limit: 1000,
+      })
+
+      if (!response.rows) {
+        return []
+      }
+
+      return response.rows.map((row) => {
+        const dims = row.dimensionValues
+        const mets = row.metricValues
+        return {
+          pagePath: dims[0]?.value ?? '',
+          date: formatGA4Date(dims[1]?.value ?? ''),
+          aspName: dims[2]?.value ?? '',
+          programId: dims[3]?.value ?? '',
+          clickCount: parseInt(mets[0]?.value ?? '0', 10),
+        }
+      })
+    })
+  } catch (err) {
+    console.warn('[ga4-client] fetchAffiliateClicks failed:', err instanceof Error ? err.message : err)
     return []
   }
 }

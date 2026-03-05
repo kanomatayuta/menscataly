@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     const ensure = (articleId: string): ArticleAnalytics => {
       let entry = map.get(articleId)
       if (!entry) {
-        entry = { articleId, pageviews: 0, clicks: 0, conversions: 0, revenue: 0 }
+        entry = { articleId, pageviews: 0, searchClicks: 0, affiliateClicks: 0, conversions: 0, revenue: 0 }
         map.set(articleId, entry)
       }
       return entry
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
       for (const row of affiliateData) {
         if (!row.article_id) continue
         const entry = ensure(row.article_id)
-        entry.clicks += row.click_count ?? 0
+        entry.affiliateClicks += row.click_count ?? 0
         entry.conversions += row.conversion_count ?? 0
         entry.revenue += row.revenue ?? 0
       }

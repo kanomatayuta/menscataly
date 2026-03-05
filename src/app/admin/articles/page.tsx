@@ -66,7 +66,7 @@ async function fetchAnalyticsFromGA4(
   const ensure = (articleId: string): ArticleAnalytics => {
     let entry = map.get(articleId);
     if (!entry) {
-      entry = { articleId, pageviews: 0, clicks: 0, conversions: 0, revenue: 0 };
+      entry = { articleId, pageviews: 0, searchClicks: 0, affiliateClicks: 0, conversions: 0, revenue: 0 };
       map.set(articleId, entry);
     }
     return entry;
@@ -75,9 +75,12 @@ async function fetchAnalyticsFromGA4(
   try {
     await connection(); // PPR: Date.now() 使用前に必須
 
-    // 1. GA4 PVデータ取得
-    const { fetchGA4DailyMetrics, extractSlugFromPath } = await import("@/lib/analytics/ga4-client");
-    const ga4Data = await fetchGA4DailyMetrics("30daysAgo", "today");
+    // 1. GA4 PVデータ + アフィリエイトクリックデータを並列取得
+    const { fetchGA4DailyMetrics, extractSlugFromPath, fetchAffiliateClicks } = await import("@/lib/analytics/ga4-client");
+    const [ga4Data, affiliateData] = await Promise.all([
+      fetchGA4DailyMetrics("30daysAgo", "today"),
+      fetchAffiliateClicks("30daysAgo", "today"),
+    ]);
 
     for (const row of ga4Data) {
       const slug = extractSlugFromPath(row.pagePath);
@@ -88,7 +91,17 @@ async function fetchAnalyticsFromGA4(
       entry.pageviews += row.pageviews;
     }
 
-    // 2. GSC クリック・CTRデータ取得
+    // アフィリエイトクリックデータをマッピング
+    for (const row of affiliateData) {
+      const slug = extractSlugFromPath(row.pagePath);
+      if (!slug) continue;
+      const article = slugToArticle.get(slug);
+      if (!article) continue;
+      const entry = ensure(article.id);
+      entry.affiliateClicks += row.clickCount;
+    }
+
+    // 2. GSC 検索クリック・CTRデータ取得
     const { fetchGSCData, extractSlugFromGSCPage } = await import("@/lib/analytics/gsc-client");
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -103,7 +116,7 @@ async function fetchAnalyticsFromGA4(
       const article = slugToArticle.get(slug);
       if (!article) continue;
       const entry = ensure(article.id);
-      entry.clicks += row.clicks;
+      entry.searchClicks += row.clicks;
     }
   } catch (err) {
     console.error("[admin/articles] GA4/GSC fetch error:", err);
@@ -133,7 +146,7 @@ async function fetchAnalyticsData(
     const ensure = (articleId: string): ArticleAnalytics => {
       let entry = map.get(articleId);
       if (!entry) {
-        entry = { articleId, pageviews: 0, clicks: 0, conversions: 0, revenue: 0 };
+        entry = { articleId, pageviews: 0, searchClicks: 0, affiliateClicks: 0, conversions: 0, revenue: 0 };
         map.set(articleId, entry);
       }
       return entry;
@@ -148,7 +161,7 @@ async function fetchAnalyticsData(
       for (const row of affData) {
         if (!row.article_id) continue;
         const entry = ensure(row.article_id);
-        entry.clicks += row.click_count ?? 0;
+        entry.affiliateClicks += row.click_count ?? 0;
         entry.conversions += row.conversion_count ?? 0;
         entry.revenue += row.revenue ?? 0;
       }
@@ -196,7 +209,8 @@ async function fetchTrendData(days: number): Promise<TrendDataPoint[]> {
         point = {
           date: `${dateObj.getMonth() + 1}/${dateObj.getDate()}`,
           pageviews: 0,
-          clicks: 0,
+          searchClicks: 0,
+          affiliateClicks: 0,
           conversions: 0,
         };
         byDate.set(dateStr, point);
@@ -204,25 +218,36 @@ async function fetchTrendData(days: number): Promise<TrendDataPoint[]> {
       return point;
     };
 
-    // 1. GA4 PVデータ
-    const { fetchGA4DailyMetrics } = await import("@/lib/analytics/ga4-client");
-    const ga4Data = await fetchGA4DailyMetrics(`${days}daysAgo`, "today");
+    // 1. GA4 PVデータ + アフィリエイトクリックデータを並列取得
+    const { fetchGA4DailyMetrics, fetchAffiliateClicks } = await import("@/lib/analytics/ga4-client");
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+    const sinceStr = since.toISOString().split("T")[0];
+    const todayStr = new Date().toISOString().split("T")[0];
+
+    const [ga4Data, affiliateData] = await Promise.all([
+      fetchGA4DailyMetrics(`${days}daysAgo`, "today"),
+      fetchAffiliateClicks(sinceStr, todayStr),
+    ]);
+
     for (const row of ga4Data) {
       const point = ensurePoint(row.date);
       point.pageviews += row.pageviews;
     }
 
-    // 2. GSC クリックデータ (日別)
+    // アフィリエイトクリック日別データをマッピング
+    for (const row of affiliateData) {
+      const point = ensurePoint(row.date);
+      point.affiliateClicks += row.clickCount;
+    }
+
+    // 2. GSC 検索クリックデータ (日別)
     const { fetchGSCData } = await import("@/lib/analytics/gsc-client");
-    const since = new Date();
-    since.setDate(since.getDate() - days);
-    const sinceStr = since.toISOString().split("T")[0];
-    const todayStr = new Date().toISOString().split("T")[0];
     const gscData = await fetchGSCData(sinceStr, todayStr, ["page", "date"]);
     for (const row of gscData) {
       if (!row.date) continue;
       const point = ensurePoint(row.date);
-      point.clicks += row.clicks;
+      point.searchClicks += row.clicks;
     }
 
     if (byDate.size > 0) {
@@ -265,13 +290,14 @@ async function fetchTrendData(days: number): Promise<TrendDataPoint[]> {
         point = {
           date: `${dateObj.getMonth() + 1}/${dateObj.getDate()}`,
           pageviews: 0,
-          clicks: 0,
+          searchClicks: 0,
+          affiliateClicks: 0,
           conversions: 0,
         };
         byDate.set(d, point);
       }
       point.pageviews += row.pageviews ?? 0;
-      point.clicks += Math.round((row.ctr ?? 0) * (row.pageviews ?? 0));
+      point.searchClicks += Math.round((row.ctr ?? 0) * (row.pageviews ?? 0));
       point.conversions += row.conversions ?? 0;
     }
 
@@ -312,18 +338,18 @@ function buildRankingData(
   const byCTR = [...withStats]
     .filter((x) => x.stats.pageviews > 0)
     .sort((a, b) => {
-      const ctrA = a.stats.clicks / a.stats.pageviews;
-      const ctrB = b.stats.clicks / b.stats.pageviews;
+      const ctrA = a.stats.affiliateClicks / a.stats.pageviews;
+      const ctrB = b.stats.affiliateClicks / b.stats.pageviews;
       return ctrB - ctrA;
     });
   const byRevenue = [...withStats].sort((a, b) => b.stats.revenue - a.stats.revenue);
 
   return {
     pageviews: makeItems(byPV, (v) => v.toLocaleString("ja-JP"), (s) => s.pageviews),
-    ctr: makeItems(
+    affiliateCtr: makeItems(
       byCTR,
       (v) => `${(v * 100).toFixed(1)}%`,
-      (s) => s.clicks / s.pageviews,
+      (s) => s.affiliateClicks / s.pageviews,
     ),
     revenue: makeItems(byRevenue, (v) => `¥${v.toLocaleString("ja-JP")}`, (s) => s.revenue),
   };
@@ -370,14 +396,16 @@ async function ArticlesSummarySection() {
   const analytics = await fetchAnalyticsData(articles);
   const values = [...analytics.values()];
   const totalPageviews = values.reduce((s, a) => s + a.pageviews, 0);
-  const totalClicks = values.reduce((s, a) => s + a.clicks, 0);
+  const totalSearchClicks = values.reduce((s, a) => s + a.searchClicks, 0);
+  const totalAffiliateClicks = values.reduce((s, a) => s + a.affiliateClicks, 0);
   const totalConversions = values.reduce((s, a) => s + a.conversions, 0);
   const totalRevenue = values.reduce((s, a) => s + a.revenue, 0);
 
   return (
     <AnalyticsSummaryCards
       totalPageviews={totalPageviews}
-      totalClicks={totalClicks}
+      totalSearchClicks={totalSearchClicks}
+      totalAffiliateClicks={totalAffiliateClicks}
       totalConversions={totalConversions}
       totalRevenue={totalRevenue}
     />

@@ -10,7 +10,7 @@ interface ArticleTableProps {
   analytics?: Map<string, ArticleAnalytics>;
 }
 
-type SortColumn = "pageviews" | "clicks" | "conversions" | "revenue" | null;
+type SortColumn = "pageviews" | "searchClicks" | "affiliateClicks" | "conversions" | "revenue" | null;
 type SortDirection = "asc" | "desc";
 
 const STATUS_STYLES: Record<ReviewStatus, { bg: string; text: string; label: string }> = {
@@ -76,6 +76,16 @@ function RevenueValue({ value }: { value: number }) {
   return <>{formatted}</>;
 }
 
+function AffiliateCtrValue({ affiliateClicks, pageviews }: { affiliateClicks: number; pageviews: number }) {
+  if (pageviews === 0) return <ZeroValue />;
+  const ctr = (affiliateClicks / pageviews) * 100;
+  const formatted = `${ctr.toFixed(1)}%`;
+  if (ctr >= 5) {
+    return <span className="font-bold text-green-700">{formatted}</span>;
+  }
+  return <>{formatted}</>;
+}
+
 export function ArticleTable({ articles, analytics }: ArticleTableProps) {
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
@@ -123,7 +133,9 @@ export function ArticleTable({ articles, analytics }: ArticleTableProps) {
             <th className="px-4 py-3 font-medium text-neutral-600">コンプライアンス</th>
             <th className="px-4 py-3 font-medium text-neutral-600">ステータス</th>
             <SortableHeader label="PV" column="pageviews" active={sortColumn === "pageviews"} direction={sortDirection} onClick={handleSort} />
-            <SortableHeader label="クリック" column="clicks" active={sortColumn === "clicks"} direction={sortDirection} onClick={handleSort} />
+            <SortableHeader label="検索CL" column="searchClicks" active={sortColumn === "searchClicks"} direction={sortDirection} onClick={handleSort} />
+            <SortableHeader label="広告CL" column="affiliateClicks" active={sortColumn === "affiliateClicks"} direction={sortDirection} onClick={handleSort} />
+            <th className="px-4 py-3 text-right font-medium text-neutral-600">広告CTR</th>
             <SortableHeader label="CV" column="conversions" active={sortColumn === "conversions"} direction={sortDirection} onClick={handleSort} />
             <SortableHeader label="収益" column="revenue" active={sortColumn === "revenue"} direction={sortDirection} onClick={handleSort} />
             <th className="px-4 py-3 font-medium text-neutral-600">日付</th>
@@ -135,7 +147,8 @@ export function ArticleTable({ articles, analytics }: ArticleTableProps) {
             const statusStyle = STATUS_STYLES[article.status];
             const stats = analytics?.get(article.id);
             const pv = stats?.pageviews ?? 0;
-            const clicks = stats?.clicks ?? 0;
+            const searchCl = stats?.searchClicks ?? 0;
+            const affiliateCl = stats?.affiliateClicks ?? 0;
             const cv = stats?.conversions ?? 0;
             const rev = stats?.revenue ?? 0;
             return (
@@ -160,7 +173,13 @@ export function ArticleTable({ articles, analytics }: ArticleTableProps) {
                   {pv === 0 ? <ZeroValue /> : formatNumber(pv)}
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums text-neutral-600">
-                  {clicks === 0 ? <ZeroValue /> : formatNumber(clicks)}
+                  {searchCl === 0 ? <ZeroValue /> : formatNumber(searchCl)}
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums text-neutral-600">
+                  {affiliateCl === 0 ? <ZeroValue /> : formatNumber(affiliateCl)}
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums text-neutral-600">
+                  <AffiliateCtrValue affiliateClicks={affiliateCl} pageviews={pv} />
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums text-neutral-600">
                   {cv === 0 ? <ZeroValue /> : formatNumber(cv)}

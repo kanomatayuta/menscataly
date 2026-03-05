@@ -91,3 +91,75 @@ export function createMockGA4Response(
     ...overrides,
   }
 }
+
+// ============================================================
+// アフィリエイトクリック用モック
+// ============================================================
+
+/**
+ * アフィリエイトクリック行の入力型
+ */
+interface AffiliateClickRowInput {
+  pagePath?: string
+  date?: string
+  aspName?: string
+  programId?: string
+  eventCount?: number
+}
+
+/**
+ * GA4 アフィリエイトクリックレポートレスポンス モックファクトリ
+ * fetchAffiliateClicks が内部で使う GA4 RunReport レスポンスを生成する
+ *
+ * dimensions: pagePath, date, customEvent:asp_name, customEvent:program_id
+ * metrics: eventCount
+ *
+ * @param rows - カスタム行データ (省略時はデフォルト2件のクリックデータ)
+ */
+export function createMockAffiliateClickResponse(
+  rows?: AffiliateClickRowInput[]
+): GA4RunReportResponse {
+  const defaultRows: AffiliateClickRowInput[] = [
+    {
+      pagePath: '/articles/aga-clinic-ranking',
+      date: '20260305',
+      aspName: 'a8',
+      programId: 'a8-aga-001',
+      eventCount: 12,
+    },
+    {
+      pagePath: '/articles/hair-loss-treatment',
+      date: '20260305',
+      aspName: 'afb',
+      programId: 'afb-aga-002',
+      eventCount: 5,
+    },
+  ]
+
+  const resolvedRows = rows ?? defaultRows
+
+  return {
+    dimensionHeaders: [
+      { name: 'pagePath' },
+      { name: 'date' },
+      { name: 'customEvent:asp_name' },
+      { name: 'customEvent:program_id' },
+    ],
+    metricHeaders: [
+      { name: 'eventCount', type: 'TYPE_INTEGER' },
+    ],
+    rows: resolvedRows.map((row) => ({
+      dimensionValues: [
+        { value: row.pagePath ?? '/articles/aga-clinic-ranking' },
+        { value: row.date ?? '20260305' },
+        { value: row.aspName ?? 'a8' },
+        { value: row.programId ?? 'a8-aga-001' },
+      ],
+      metricValues: [
+        { value: String(row.eventCount ?? 1) },
+      ],
+    })),
+    rowCount: resolvedRows.length,
+    metadata: { currencyCode: 'JPY', timeZone: 'Asia/Tokyo' },
+  }
+}
