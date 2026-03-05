@@ -578,7 +578,16 @@ export default function AdminAspPage() {
 
   return (
     <>
-      <AdminHeader title="ASPリンク管理" breadcrumbs={[{ label: "ASP管理" }]} />
+      <div className="flex items-start justify-between">
+        <AdminHeader title="ASPリンク管理" breadcrumbs={[{ label: "ASP管理" }]} />
+        <button
+          type="button"
+          onClick={handleAdd}
+          className="shrink-0 rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
+        >
+          + プログラム追加
+        </button>
+      </div>
 
       {/* Modal */}
       <ProgramModal
@@ -630,9 +639,9 @@ export default function AdminAspPage() {
         </div>
       </div>
 
-      {/* Summary stats + Add button */}
-      <div className="mb-6 flex items-end justify-between">
-        <div className="grid flex-1 grid-cols-2 gap-4 sm:grid-cols-4">
+      {/* Summary stats */}
+      <div className="mb-6">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
             <p className="text-xs font-medium text-neutral-500">全プログラム数</p>
             <p className="mt-1 text-xl font-bold text-neutral-900">{totalPrograms}</p>
@@ -650,13 +659,6 @@ export default function AdminAspPage() {
             <p className="mt-1 text-xl font-bold text-neutral-900">{Math.round(avgEpc)}円</p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={handleAdd}
-          className="ml-4 shrink-0 rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
-        >
-          + プログラム追加
-        </button>
       </div>
 
       {/* Filters */}
