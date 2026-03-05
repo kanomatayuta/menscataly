@@ -121,6 +121,16 @@ export interface TrendDataPoint {
   conversions: number;
 }
 
+/** カテゴリ別トレンドデータポイント (積み上げ棒グラフ用) */
+export interface CategoryTrendDataPoint {
+  date: string;
+  aga: number;
+  ed: number;
+  hairRemoval: number;
+  skincare: number;
+  supplement: number;
+}
+
 /** ランキングタブ種別 */
 export type RankingTab = "pageviews" | "affiliateCtr" | "revenue";
 

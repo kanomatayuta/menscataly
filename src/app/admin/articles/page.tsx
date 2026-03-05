@@ -5,8 +5,10 @@ import { AnalyticsSummaryCards } from "@/components/admin/AnalyticsSummaryCards"
 import { TrendChart } from "@/components/admin/TrendChart";
 import { ArticleRanking } from "@/components/admin/ArticleRanking";
 import { ArticleTable } from "@/components/admin/ArticleTable";
+import { CategoryChart } from "@/components/admin/CategoryChart";
 import { getArticles } from "@/lib/microcms/client";
-import type { ArticleReviewItem, ArticleAnalytics, TrendDataPoint, RankingData, RankingItem } from "@/types/admin";
+import { extractSlugFromPath } from "@/lib/analytics/ga4-client";
+import type { ArticleReviewItem, ArticleAnalytics, TrendDataPoint, RankingData, RankingItem, CategoryTrendDataPoint } from "@/types/admin";
 import type { ContentCategory } from "@/types/content";
 
 // ------------------------------------------------------------------
@@ -198,6 +200,75 @@ async function fetchAnalyticsData(
 
 const getCachedArticlesData = cache(fetchArticlesData);
 const getCachedAnalyticsData = cache(fetchAnalyticsData);
+
+// ------------------------------------------------------------------
+// Category trend data fetching (GA4 per-page PV → category aggregation)
+// ------------------------------------------------------------------
+
+async function fetchCategoryTrendData(days: number): Promise<CategoryTrendDataPoint[]> {
+  try {
+    await connection();
+
+    const { articles } = await getCachedArticlesData();
+
+    // Build slug → category map
+    const slugToCategory = new Map<string, string>();
+    for (const article of articles) {
+      const slug = article.slug ?? article.id;
+      slugToCategory.set(slug, article.category);
+    }
+
+    // Category key mapping (ContentCategory → CategoryTrendDataPoint key)
+    const categoryKeyMap: Record<string, keyof Omit<CategoryTrendDataPoint, "date">> = {
+      "aga": "aga",
+      "ed": "ed",
+      "hair-removal": "hairRemoval",
+      "skincare": "skincare",
+      "column": "supplement",  // column category maps to supplement
+    };
+
+    const { fetchGA4DailyMetrics } = await import("@/lib/analytics/ga4-client");
+    const ga4Data = await fetchGA4DailyMetrics(`${days}daysAgo`, "today");
+
+    const byDate = new Map<string, CategoryTrendDataPoint>();
+
+    for (const row of ga4Data) {
+      const slug = extractSlugFromPath(row.pagePath);
+      if (!slug) continue;
+
+      const category = slugToCategory.get(slug);
+      if (!category) continue;
+
+      const catKey = categoryKeyMap[category];
+      if (!catKey) continue;
+
+      let point = byDate.get(row.date);
+      if (!point) {
+        const dateObj = new Date(row.date);
+        point = {
+          date: `${dateObj.getMonth() + 1}/${dateObj.getDate()}`,
+          aga: 0,
+          ed: 0,
+          hairRemoval: 0,
+          skincare: 0,
+          supplement: 0,
+        };
+        byDate.set(row.date, point);
+      }
+
+      point[catKey] += row.pageviews;
+    }
+
+    return [...byDate.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([, v]) => v);
+  } catch (err) {
+    console.error("[admin/articles] Category trend fetch error:", err);
+    return [];
+  }
+}
+
+const getCachedCategoryTrendData = cache(fetchCategoryTrendData);
 
 // ------------------------------------------------------------------
 // Trend data fetching (GA4 API直接 → Supabase フォールバック)
@@ -430,6 +501,28 @@ async function RankingSection() {
   return <ArticleRanking rankings={rankings} />;
 }
 
+async function CategoryChartSection() {
+  const data = await getCachedCategoryTrendData(90);
+  const { articles } = await getCachedArticlesData();
+
+  // Count articles by category
+  const articleCountByCategory: Record<string, number> = {};
+  const categoryKeyMap: Record<string, string> = {
+    "aga": "aga",
+    "ed": "ed",
+    "hair-removal": "hairRemoval",
+    "skincare": "skincare",
+    "column": "supplement",
+  };
+
+  for (const article of articles) {
+    const catKey = categoryKeyMap[article.category] ?? article.category;
+    articleCountByCategory[catKey] = (articleCountByCategory[catKey] ?? 0) + 1;
+  }
+
+  return <CategoryChart data={data} articleCountByCategory={articleCountByCategory} />;
+}
+
 async function ArticlesTableSection() {
   const { articles, total } = await getCachedArticlesData();
   const analytics = await getCachedAnalyticsData(articles);
@@ -468,6 +561,13 @@ export default function AdminArticlesPage() {
             <RankingSection />
           </Suspense>
         </div>
+      </div>
+
+      {/* Category breakdown */}
+      <div className="mt-6">
+        <Suspense fallback={<ChartSkeleton />}>
+          <CategoryChartSection />
+        </Suspense>
       </div>
 
       <div className="mt-6">

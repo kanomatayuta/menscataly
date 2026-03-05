@@ -13,6 +13,14 @@ interface ArticleTableProps {
 type SortColumn = "pageviews" | "searchClicks" | "affiliateClicks" | "conversions" | "revenue" | null;
 type SortDirection = "asc" | "desc";
 
+const CATEGORY_LABELS: Record<string, string> = {
+  aga: "AGA治療",
+  ed: "ED治療",
+  "hair-removal": "医療脱毛",
+  skincare: "スキンケア",
+  column: "サプリメント",
+};
+
 const STATUS_STYLES: Record<ReviewStatus, { bg: string; text: string; label: string }> = {
   draft: { bg: "bg-neutral-100", text: "text-neutral-700", label: "下書き" },
   pending: { bg: "bg-yellow-100", text: "text-yellow-800", label: "レビュー待ち" },
@@ -156,8 +164,8 @@ export function ArticleTable({ articles, analytics }: ArticleTableProps) {
                 <td className="min-w-[200px] truncate px-4 py-3 font-medium text-neutral-900">
                   {article.title}
                 </td>
-                <td className="px-4 py-3 text-neutral-600 capitalize">
-                  {article.category}
+                <td className="px-4 py-3 text-neutral-600">
+                  {CATEGORY_LABELS[article.category] ?? article.category}
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums text-neutral-600">
                   {pv === 0 ? <ZeroValue /> : formatNumber(pv)}
