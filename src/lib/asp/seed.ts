@@ -10,7 +10,7 @@
  *   Felmat/Moshimo: ¥0 ~ ¥30,000 (物販/クリニック)
  */
 
-import type { AspName } from '@/types/asp-config'
+import type { AspName, AdCreative } from '@/types/asp-config'
 import type { ContentCategory } from '@/types/content'
 
 // ============================================================
@@ -36,6 +36,7 @@ export interface AspProgramSeed {
   recommendedAnchors: string[]
   landingPageUrl: string
   notes?: string
+  adCreatives?: AdCreative[]
 }
 
 // ============================================================

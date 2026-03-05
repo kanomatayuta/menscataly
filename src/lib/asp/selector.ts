@@ -63,15 +63,22 @@ export async function selectBestPrograms(
 
 /**
  * AspProgram[] を AffiliateLink[] に変換する
+ * adCreatives (useForInjection) があればクリエイティブURLを優先
  */
 export function toAffiliateLinks(programs: AspProgram[]): AffiliateLink[] {
-  return programs.map((program) => ({
-    programName: program.programName,
-    aspName: program.aspName,
-    url: program.affiliateUrl,
-    rewardAmount: program.rewardAmount,
-    anchorText: program.recommendedAnchors[0] ?? program.programName,
-  }))
+  return programs.map((program) => {
+    // adCreatives から有効なテキストクリエイティブを探す
+    const textCreative = program.adCreatives?.find(
+      (c) => c.type === 'text' && c.isActive && c.useForInjection
+    )
+    return {
+      programName: program.programName,
+      aspName: program.aspName,
+      url: textCreative?.affiliateUrl ?? program.affiliateUrl,
+      rewardAmount: program.rewardAmount,
+      anchorText: (textCreative?.anchorText || undefined) ?? program.recommendedAnchors[0] ?? program.programName,
+    }
+  })
 }
 
 /**

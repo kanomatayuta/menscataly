@@ -9,7 +9,7 @@
  */
 
 import type { ContentCategory } from '@/types/content'
-import type { AspProgram } from '@/types/asp-config'
+import type { AspProgram, AdCreative } from '@/types/asp-config'
 import { selectBestPrograms } from './selector'
 
 // ============================================================
@@ -165,8 +165,73 @@ export async function injectAffiliateLinksByCategory(
 }
 
 /**
+ * プログラムからテキストリンク用クリエイティブを解決する
+ * adCreatives があれば useForInjection=true のものを優先、なければ従来の affiliateUrl にフォールバック
+ */
+export function resolveTextCreatives(
+  program: AspProgram
+): Array<{ affiliateUrl: string; anchors: string[] }> {
+  if (program.adCreatives && program.adCreatives.length > 0) {
+    const textCreatives = program.adCreatives.filter(
+      (c) => c.type === 'text' && c.isActive && c.useForInjection
+    )
+    if (textCreatives.length > 0) {
+      return textCreatives
+        .map((c) => ({
+          affiliateUrl: c.affiliateUrl,
+          anchors: c.anchorText ? [c.anchorText] : program.recommendedAnchors,
+        }))
+        .filter((c) => c.anchors.length > 0)
+    }
+  }
+  // フォールバック: 従来の affiliateUrl + recommendedAnchors
+  return [{ affiliateUrl: program.affiliateUrl, anchors: program.recommendedAnchors }]
+}
+
+/**
+ * バナーHTMLを生成する
+ */
+export function generateBannerHtml(creative: AdCreative, aspName: string, programId: string, category: string): string {
+  if (creative.type !== 'banner' || !creative.imageUrl) return ''
+  const width = creative.bannerSize ? creative.bannerSize.split('x')[0] : undefined
+  const height = creative.bannerSize ? creative.bannerSize.split('x')[1] : undefined
+  const sizeAttrs = width && height && creative.bannerSize !== 'custom'
+    ? ` width="${width}" height="${height}"`
+    : ''
+  return `<a href="${escapeHtmlAttr(creative.affiliateUrl)}" rel="sponsored noopener" target="_blank" data-asp="${escapeHtmlAttr(aspName)}" data-program="${escapeHtmlAttr(programId)}" data-category="${escapeHtmlAttr(category)}"><img src="${escapeHtmlAttr(creative.imageUrl)}" alt="${escapeHtmlAttr(creative.altText ?? creative.label)}"${sizeAttrs} loading="lazy" /></a>`
+}
+
+/**
+ * カテゴリ別バナーセクションHTMLを生成する
+ */
+export async function generateBannerSection(
+  category: ContentCategory,
+  maxPrograms: number = 3
+): Promise<string> {
+  const programs = await selectBestPrograms(category, { maxResults: maxPrograms })
+  const bannerHtmls: string[] = []
+
+  for (const program of programs) {
+    if (!program.adCreatives) continue
+    const bannerCreatives = program.adCreatives.filter(
+      (c) => c.type === 'banner' && c.isActive && c.useForBanner
+    )
+    for (const creative of bannerCreatives) {
+      bannerHtmls.push(generateBannerHtml(creative, program.aspName, program.programId, program.category))
+    }
+  }
+
+  if (bannerHtmls.length === 0) return ''
+
+  return `<div class="affiliate-banner-section">
+<p>※以下はアフィリエイト広告です</p>
+${bannerHtmls.join('\n')}
+</div>`
+}
+
+/**
  * 単一プログラムのアフィリエイトリンクをコンテンツに注入する
- * recommendedAnchors の中から最初にヒットしたテキストをリンク化する
+ * adCreatives (useForInjection) があればクリエイティブURLを使用、なければ従来の affiliateUrl にフォールバック
  *
  * マッチング優先順位:
  * 1. 完全一致
@@ -182,30 +247,39 @@ function injectSingleLink(
   // 禁止範囲を一度だけ計算する
   const forbiddenRanges = computeForbiddenRanges(content)
 
-  for (const anchor of program.recommendedAnchors) {
-    // 既にリンク化済み（<a> タグ内）でないかチェック
-    // href="..." 内やタグ属性内に含まれるテキストは除外する
-    const escapedAnchor = anchor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const alreadyLinked = new RegExp(
-      `<a\\s[^>]*>[^<]*${escapedAnchor}[^<]*</a>`,
-      'i'
-    )
+  // クリエイティブからテキストリンク用を解決
+  const creatives = resolveTextCreatives(program)
 
-    if (alreadyLinked.test(content)) {
-      continue
+  for (const creative of creatives) {
+    // クリエイティブのURLでプログラムオブジェクトを拡張
+    const effectiveProgram: AspProgram = creative.affiliateUrl !== program.affiliateUrl
+      ? { ...program, affiliateUrl: creative.affiliateUrl }
+      : program
+
+    for (const anchor of creative.anchors) {
+      // 既にリンク化済み（<a> タグ内）でないかチェック
+      const escapedAnchor = anchor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const alreadyLinked = new RegExp(
+        `<a\\s[^>]*>[^<]*${escapedAnchor}[^<]*</a>`,
+        'i'
+      )
+
+      if (alreadyLinked.test(content)) {
+        continue
+      }
+
+      // --- Pass 1: 完全一致 ---
+      const exactResult = tryExactMatch(content, anchor, effectiveProgram, forbiddenRanges)
+      if (exactResult !== null) return exactResult
+
+      // --- Pass 2: 正規化マッチング ---
+      const normalizedResult = tryNormalizedMatch(content, anchor, effectiveProgram, forbiddenRanges)
+      if (normalizedResult !== null) return normalizedResult
+
+      // --- Pass 3: コアネーム マッチング ---
+      const coreResult = tryCoreNameMatch(content, anchor, effectiveProgram, forbiddenRanges)
+      if (coreResult !== null) return coreResult
     }
-
-    // --- Pass 1: 完全一致 ---
-    const exactResult = tryExactMatch(content, anchor, program, forbiddenRanges)
-    if (exactResult !== null) return exactResult
-
-    // --- Pass 2: 正規化マッチング ---
-    const normalizedResult = tryNormalizedMatch(content, anchor, program, forbiddenRanges)
-    if (normalizedResult !== null) return normalizedResult
-
-    // --- Pass 3: コアネーム マッチング ---
-    const coreResult = tryCoreNameMatch(content, anchor, program, forbiddenRanges)
-    if (coreResult !== null) return coreResult
   }
 
   return null

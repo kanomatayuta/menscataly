@@ -116,6 +116,7 @@ async function fetchProgramsFromSupabase(category: ContentCategory): Promise<Asp
       recommendedAnchors: seed.recommendedAnchors,
       landingPageUrl: seed.landingPageUrl,
       notes: seed.notes,
+      adCreatives: seed.adCreatives,
     }
   })
 

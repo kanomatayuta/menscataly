@@ -136,6 +136,7 @@ interface CreateAspProgramRequest {
   recommendedAnchors?: string[]
   landingPageUrl: string
   notes?: string
+  adCreatives?: unknown[]
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -187,6 +188,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       recommendedAnchors: body.recommendedAnchors ?? [body.programName],
       landingPageUrl: body.landingPageUrl,
       notes: body.notes,
+      adCreatives: body.adCreatives as AspProgramSeed['adCreatives'],
     }
 
     inMemoryPrograms.push(newProgram)
@@ -223,6 +225,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         recommended_anchors: body.recommendedAnchors ?? [body.programName],
         landing_page_url: body.landingPageUrl,
         notes: body.notes ?? null,
+        ad_creatives: body.adCreatives ?? [],
         created_at: now,
         updated_at: now,
       })
@@ -277,5 +280,36 @@ function validateCreateRequest(body: CreateAspProgramRequest): string | null {
     return `category must be one of: ${validCategories.join(', ')}`
   }
 
+  // adCreatives バリデーション
+  if (body.adCreatives !== undefined) {
+    const creativesError = validateAdCreatives(body.adCreatives)
+    if (creativesError) return creativesError
+  }
+
+  return null
+}
+
+function validateAdCreatives(creatives: unknown[]): string | null {
+  if (!Array.isArray(creatives)) return 'adCreatives must be an array'
+
+  for (let i = 0; i < creatives.length; i++) {
+    const item = creatives[i]
+    if (typeof item !== 'object' || item === null) {
+      return `adCreatives[${i}]: must be an object`
+    }
+    const c = item as Record<string, unknown>
+    if (typeof c.id !== 'string' || !c.id) {
+      return `adCreatives[${i}].id: must be a non-empty string`
+    }
+    if (!['text', 'banner'].includes(c.type as string)) {
+      return `adCreatives[${i}].type: must be 'text' or 'banner'`
+    }
+    if (typeof c.affiliateUrl !== 'string' || !c.affiliateUrl) {
+      return `adCreatives[${i}].affiliateUrl: must be a non-empty string`
+    }
+    if (typeof c.isActive !== 'boolean') {
+      return `adCreatives[${i}].isActive: must be a boolean`
+    }
+  }
   return null
 }

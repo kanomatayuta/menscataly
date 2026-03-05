@@ -7,6 +7,23 @@ import type { ContentCategory } from "@/types/content";
 
 export type AspName = "afb" | "a8" | "accesstrade" | "valuecommerce" | "felmat" | "moshimo";
 
+export type AdCreativeType = 'text' | 'banner'
+export type BannerSize = '120x60' | '300x250' | '468x60' | '728x90' | '160x600' | 'custom'
+
+export interface AdCreative {
+  id: string
+  type: AdCreativeType
+  label: string
+  affiliateUrl: string
+  anchorText?: string
+  imageUrl?: string
+  bannerSize?: BannerSize
+  altText?: string
+  isActive: boolean
+  useForInjection: boolean
+  useForBanner: boolean
+}
+
 export interface AspProgram {
   id: string;
   aspName: AspName;
@@ -26,6 +43,7 @@ export interface AspProgram {
   recommendedAnchors: string[];
   landingPageUrl: string;
   notes?: string;
+  adCreatives?: AdCreative[];
 }
 
 export interface AspCategoryMapping {

@@ -965,5 +965,24 @@ CREATE INDEX IF NOT EXISTS idx_asp_programs_priority
   ON asp_programs(priority ASC);
 
 -- ============================================================
--- Done — v2.2 (Migration 006: article_review_comments + asp_programs columns)
+-- 17. Migration 007: asp_programs.ad_creatives JSONB
+-- ============================================================
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'asp_programs' AND column_name = 'ad_creatives'
+  ) THEN
+    ALTER TABLE asp_programs ADD COLUMN ad_creatives JSONB DEFAULT '[]';
+    RAISE NOTICE 'Migration 007: ad_creatives column added to asp_programs';
+  ELSE
+    RAISE NOTICE 'Migration 007: ad_creatives column already exists, skipping';
+  END IF;
+END $$;
+
+COMMENT ON COLUMN asp_programs.ad_creatives IS '広告クリエイティブ (テキストリンク/バナー) JSONB配列';
+
+-- ============================================================
+-- Done — v2.3 (Migration 007: asp_programs.ad_creatives JSONB)
 -- ============================================================

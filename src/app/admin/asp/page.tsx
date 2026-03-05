@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { AdminHeader } from "@/components/admin/AdminHeader";
-import type { AspName, AspProgram } from "@/types/asp-config";
+import type { AspName, AspProgram, AdCreative, AdCreativeType, BannerSize } from "@/types/asp-config";
 import type { ContentCategory } from "@/types/content";
 
 // ------------------------------------------------------------------
@@ -26,6 +26,24 @@ const CATEGORY_LABELS: Record<ContentCategory, string> = {
   column: "コラム",
 };
 
+const BANNER_SIZES: BannerSize[] = ["120x60", "300x250", "468x60", "728x90", "160x600", "custom"];
+
+function createEmptyCreative(): AdCreative {
+  return {
+    id: `cr-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    type: "text",
+    label: "",
+    affiliateUrl: "",
+    anchorText: "",
+    imageUrl: "",
+    bannerSize: "300x250",
+    altText: "",
+    isActive: true,
+    useForInjection: false,
+    useForBanner: false,
+  };
+}
+
 // ------------------------------------------------------------------
 // Form type
 // ------------------------------------------------------------------
@@ -47,6 +65,7 @@ interface ProgramFormData {
   priority: number;
   recommendedAnchors: string;
   conversionCondition: string;
+  adCreatives: AdCreative[];
 }
 
 const EMPTY_FORM: ProgramFormData = {
@@ -66,6 +85,7 @@ const EMPTY_FORM: ProgramFormData = {
   priority: 3,
   recommendedAnchors: "",
   conversionCondition: "",
+  adCreatives: [],
 };
 
 // ------------------------------------------------------------------
@@ -132,6 +152,206 @@ async function apiDeleteProgram(id: string): Promise<void> {
     const body = await res.json().catch(() => ({ error: "Unknown error" }));
     throw new Error(body.error ?? `HTTP ${res.status}`);
   }
+}
+
+// ------------------------------------------------------------------
+// Ad Creatives sub-component
+// ------------------------------------------------------------------
+
+function AdCreativesSection({
+  creatives,
+  onChange,
+}: {
+  creatives: AdCreative[];
+  onChange: (creatives: AdCreative[]) => void;
+}) {
+  const [expanded, setExpanded] = useState(creatives.length > 0);
+
+  const updateCreative = (index: number, updates: Partial<AdCreative>) => {
+    const next = creatives.map((c, i) => (i === index ? { ...c, ...updates } : c));
+    onChange(next);
+  };
+
+  const removeCreative = (index: number) => {
+    onChange(creatives.filter((_, i) => i !== index));
+  };
+
+  const addCreative = () => {
+    onChange([...creatives, createEmptyCreative()]);
+    setExpanded(true);
+  };
+
+  return (
+    <div className="rounded-lg border border-neutral-200">
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="flex w-full items-center justify-between px-4 py-3 text-left"
+      >
+        <span className="text-sm font-medium text-neutral-700">
+          広告クリエイティブ
+          {creatives.length > 0 && (
+            <span className="ml-2 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+              {creatives.length}
+            </span>
+          )}
+        </span>
+        <svg className={`h-4 w-4 text-neutral-400 transition-transform ${expanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {expanded && (
+        <div className="border-t border-neutral-200 px-4 py-3 space-y-4">
+          {creatives.map((creative, idx) => (
+            <div key={creative.id} className={`rounded-lg border border-neutral-100 bg-neutral-50 p-3 space-y-3 ${!creative.isActive ? "opacity-60" : ""}`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${creative.type === "text" ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"}`}>
+                    {creative.type === "text" ? "テキスト" : "バナー"}
+                  </span>
+                  <span className="text-xs text-neutral-500">{creative.label || `クリエイティブ ${idx + 1}`}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-1 text-xs text-neutral-500">
+                    <input
+                      type="checkbox"
+                      checked={creative.isActive}
+                      onChange={(e) => updateCreative(idx, { isActive: e.target.checked })}
+                      className="rounded border-neutral-300"
+                    />
+                    有効
+                  </label>
+                  <button type="button" onClick={() => removeCreative(idx)} className="rounded p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600" title="削除">
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Type + Label */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-[10px] font-medium text-neutral-500">種別</label>
+                  <select
+                    value={creative.type}
+                    onChange={(e) => updateCreative(idx, { type: e.target.value as AdCreativeType, useForInjection: e.target.value === "text" ? creative.useForInjection : false, useForBanner: e.target.value === "banner" ? creative.useForBanner : false })}
+                    className="w-full rounded border border-neutral-300 px-2 py-1.5 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none"
+                  >
+                    <option value="text">テキストリンク</option>
+                    <option value="banner">バナー</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-[10px] font-medium text-neutral-500">ラベル</label>
+                  <input
+                    type="text"
+                    value={creative.label}
+                    onChange={(e) => updateCreative(idx, { label: e.target.value })}
+                    placeholder="例: 300x250 バナー"
+                    className="w-full rounded border border-neutral-300 px-2 py-1.5 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Affiliate URL */}
+              <div>
+                <label className="mb-1 block text-[10px] font-medium text-neutral-500">アフィリエイトURL *</label>
+                <input
+                  type="url"
+                  value={creative.affiliateUrl}
+                  onChange={(e) => updateCreative(idx, { affiliateUrl: e.target.value })}
+                  placeholder="https://px.a8.net/..."
+                  className="w-full rounded border border-neutral-300 px-2 py-1.5 font-mono text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none"
+                />
+              </div>
+
+              {/* Text-specific fields */}
+              {creative.type === "text" && (
+                <>
+                  <div>
+                    <label className="mb-1 block text-[10px] font-medium text-neutral-500">アンカーテキスト</label>
+                    <input
+                      type="text"
+                      value={creative.anchorText ?? ""}
+                      onChange={(e) => updateCreative(idx, { anchorText: e.target.value })}
+                      placeholder="例: 公式サイトはこちら"
+                      className="w-full rounded border border-neutral-300 px-2 py-1.5 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none"
+                    />
+                  </div>
+                  <label className="flex items-center gap-2 text-xs text-neutral-600">
+                    <input
+                      type="checkbox"
+                      checked={creative.useForInjection}
+                      onChange={(e) => updateCreative(idx, { useForInjection: e.target.checked })}
+                      className="rounded border-neutral-300"
+                    />
+                    記事内テキストリンク注入に使用
+                  </label>
+                </>
+              )}
+
+              {/* Banner-specific fields */}
+              {creative.type === "banner" && (
+                <>
+                  <div>
+                    <label className="mb-1 block text-[10px] font-medium text-neutral-500">バナー画像URL *</label>
+                    <input
+                      type="url"
+                      value={creative.imageUrl ?? ""}
+                      onChange={(e) => updateCreative(idx, { imageUrl: e.target.value })}
+                      placeholder="https://..."
+                      className="w-full rounded border border-neutral-300 px-2 py-1.5 font-mono text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1 block text-[10px] font-medium text-neutral-500">サイズ</label>
+                      <select
+                        value={creative.bannerSize ?? "300x250"}
+                        onChange={(e) => updateCreative(idx, { bannerSize: e.target.value as BannerSize })}
+                        className="w-full rounded border border-neutral-300 px-2 py-1.5 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none"
+                      >
+                        {BANNER_SIZES.map((size) => (
+                          <option key={size} value={size}>{size}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] font-medium text-neutral-500">alt テキスト</label>
+                      <input
+                        type="text"
+                        value={creative.altText ?? ""}
+                        onChange={(e) => updateCreative(idx, { altText: e.target.value })}
+                        placeholder="バナーの説明"
+                        className="w-full rounded border border-neutral-300 px-2 py-1.5 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                  <label className="flex items-center gap-2 text-xs text-neutral-600">
+                    <input
+                      type="checkbox"
+                      checked={creative.useForBanner}
+                      onChange={(e) => updateCreative(idx, { useForBanner: e.target.checked })}
+                      className="rounded border-neutral-300"
+                    />
+                    バナー配置に使用
+                  </label>
+                </>
+              )}
+            </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={addCreative}
+            className="w-full rounded-md border border-dashed border-neutral-300 px-3 py-2 text-xs font-medium text-neutral-500 hover:border-blue-400 hover:text-blue-600"
+          >
+            + クリエイティブ追加
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ------------------------------------------------------------------
@@ -360,6 +580,12 @@ function ProgramModal({
               有効
             </label>
           </div>
+
+          {/* Ad Creatives Section */}
+          <AdCreativesSection
+            creatives={form.adCreatives}
+            onChange={(adCreatives) => onChange({ adCreatives })}
+          />
         </div>
 
         {/* Actions */}
@@ -461,6 +687,7 @@ export default function AdminAspPage() {
       priority: program.priority ?? 3,
       recommendedAnchors: (program.recommendedAnchors ?? []).join(", "),
       conversionCondition: program.conversionCondition ?? "",
+      adCreatives: program.adCreatives ?? [],
     });
     setModalTitle("プログラム編集");
     setModalOpen(true);
@@ -724,7 +951,14 @@ export default function AdminAspPage() {
               return (
                 <tr key={program.id} className={`hover:bg-neutral-50 ${!program.isActive ? "opacity-60" : ""}`}>
                   <td className="max-w-[200px] px-4 py-3 font-medium text-neutral-900">
-                    <p className="truncate">{program.programName}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="truncate">{program.programName}</p>
+                      {program.adCreatives && program.adCreatives.length > 0 && (
+                        <span className="shrink-0 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-700" title="広告クリエイティブ数">
+                          {program.adCreatives.length}素材
+                        </span>
+                      )}
+                    </div>
                     <p className="mt-0.5 truncate font-mono text-xs text-neutral-400">{program.affiliateUrl.slice(0, 40)}...</p>
                   </td>
                   <td className="px-4 py-3">

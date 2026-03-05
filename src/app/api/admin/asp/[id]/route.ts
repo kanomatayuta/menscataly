@@ -106,6 +106,7 @@ interface UpdateAspProgramRequest {
   recommendedAnchors?: string[]
   landingPageUrl?: string
   notes?: string
+  adCreatives?: unknown[]
 }
 
 export async function PUT(
@@ -143,6 +144,14 @@ export async function PUT(
     )
   }
 
+  // adCreatives バリデーション
+  if (body.adCreatives !== undefined) {
+    const creativesError = validateAdCreatives(body.adCreatives)
+    if (creativesError) {
+      return NextResponse.json({ error: creativesError }, { status: 400 })
+    }
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
@@ -174,6 +183,7 @@ export async function PUT(
       ...(body.recommendedAnchors !== undefined && { recommendedAnchors: body.recommendedAnchors }),
       ...(body.landingPageUrl !== undefined && { landingPageUrl: body.landingPageUrl }),
       ...(body.notes !== undefined && { notes: body.notes }),
+      ...(body.adCreatives !== undefined && { adCreatives: body.adCreatives as AspProgramSeed['adCreatives'] }),
     }
     programs[index] = updated
 
@@ -202,6 +212,7 @@ export async function PUT(
     if (body.recommendedAnchors !== undefined) updatePayload.recommended_anchors = body.recommendedAnchors
     if (body.landingPageUrl !== undefined) updatePayload.landing_page_url = body.landingPageUrl
     if (body.notes !== undefined) updatePayload.notes = body.notes
+    if (body.adCreatives !== undefined) updatePayload.ad_creatives = body.adCreatives
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any)
@@ -310,4 +321,33 @@ export async function DELETE(
       { status: 500 }
     )
   }
+}
+
+// ============================================================
+// ヘルパー関数
+// ============================================================
+
+function validateAdCreatives(creatives: unknown[]): string | null {
+  if (!Array.isArray(creatives)) return 'adCreatives must be an array'
+
+  for (let i = 0; i < creatives.length; i++) {
+    const item = creatives[i]
+    if (typeof item !== 'object' || item === null) {
+      return `adCreatives[${i}]: must be an object`
+    }
+    const c = item as Record<string, unknown>
+    if (typeof c.id !== 'string' || !c.id) {
+      return `adCreatives[${i}].id: must be a non-empty string`
+    }
+    if (!['text', 'banner'].includes(c.type as string)) {
+      return `adCreatives[${i}].type: must be 'text' or 'banner'`
+    }
+    if (typeof c.affiliateUrl !== 'string' || !c.affiliateUrl) {
+      return `adCreatives[${i}].affiliateUrl: must be a non-empty string`
+    }
+    if (typeof c.isActive !== 'boolean') {
+      return `adCreatives[${i}].isActive: must be a boolean`
+    }
+  }
+  return null
 }

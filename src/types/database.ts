@@ -126,6 +126,7 @@ export interface AspProgramRow {
   recommended_anchors: string[]
   landing_page_url: string | null
   notes: string | null
+  ad_creatives: Json | null
   created_at: string
   updated_at: string
 }
@@ -149,6 +150,7 @@ export type AspProgramInsert = {
   recommended_anchors?: string[]
   landing_page_url?: string | null
   notes?: string | null
+  ad_creatives?: Json | null
 }
 
 export type AspProgramUpdate = Partial<Omit<AspProgramRow, 'id' | 'created_at'>>
