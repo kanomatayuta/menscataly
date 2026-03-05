@@ -66,19 +66,23 @@ export async function POST(req: NextRequest) {
 
   // ── シグネチャ検証 ──────────────────────────────────────────
   const webhookSecret = process.env.MICROCMS_WEBHOOK_SECRET
-  if (webhookSecret) {
-    // microCMS は 'X-MICROCMS-Signature' ヘッダを使用
-    const signature =
-      req.headers.get('X-MICROCMS-Signature') ??
-      req.headers.get('x-microcms-signature') ??
-      req.headers.get('x-webhook-secret') ??
-      ''
+  if (!webhookSecret) {
+    // シークレット未設定の場合はリクエストを拒否 (セキュリティ対策)
+    console.error('[webhook/microcms] MICROCMS_WEBHOOK_SECRET is not configured')
+    return NextResponse.json({ error: 'Webhook not configured' }, { status: 503 })
+  }
 
-    const isValid = await verifySignature(webhookSecret, signature, rawBody)
-    if (!isValid) {
-      console.warn('[webhook/microcms] Invalid signature')
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  // microCMS は 'X-MICROCMS-Signature' ヘッダを使用
+  const signature =
+    req.headers.get('X-MICROCMS-Signature') ??
+    req.headers.get('x-microcms-signature') ??
+    req.headers.get('x-webhook-secret') ??
+    ''
+
+  const isValid = await verifySignature(webhookSecret, signature, rawBody)
+  if (!isValid) {
+    console.warn('[webhook/microcms] Invalid signature')
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   // ── ペイロード解析 ─────────────────────────────────────────

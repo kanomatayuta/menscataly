@@ -18,6 +18,14 @@ import {
 import type { ContentCategory } from '@/types/content'
 
 // ============================================================
+// ilike エスケープ (SQL インジェクション防止)
+// ============================================================
+
+function escapeIlike(str: string): string {
+  return str.replace(/[%_\\]/g, '\\$&')
+}
+
+// ============================================================
 // インメモリストア (Supabase未設定時のフォールバック)
 // ============================================================
 
@@ -28,7 +36,7 @@ const inMemoryKeywords: KeywordEntry[] = []
 // ============================================================
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  const auth = validateAdminAuth(request)
+  const auth = await validateAdminAuth(request)
   if (!auth.authorized) {
     return NextResponse.json({ error: auth.error }, { status: 401 })
   }
@@ -90,7 +98,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       query = query.gte('trend_score', filter.minTrendScore)
     }
     if (filter.query) {
-      query = query.ilike('keyword', `%${filter.query}%`)
+      query = query.ilike('keyword', `%${escapeIlike(filter.query)}%`)
     }
 
     // ソート
@@ -150,7 +158,7 @@ interface AddKeywordRequest {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const auth = validateAdminAuth(request)
+  const auth = await validateAdminAuth(request)
   if (!auth.authorized) {
     return NextResponse.json({ error: auth.error }, { status: 401 })
   }

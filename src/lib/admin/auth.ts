@@ -1,10 +1,12 @@
 /**
  * 管理者認証ヘルパー
  * Authorization: Bearer <key> ヘッダーをサポート（X-Admin-Api-Key もフォールバック）
+ * Supabase Auth セッション (Cookie) による認証もサポート（ブラウザ管理画面用）
  * Pipeline API 認証も統合
  */
 
 import crypto from 'crypto'
+import { createServerClient } from '@supabase/ssr'
 
 // ============================================================
 // エラーコード
@@ -70,13 +72,57 @@ function extractApiKey(request: Request, fallbackHeader: string): string | null 
 // ============================================================
 
 /**
+ * Supabase Auth セッション (Cookie) を検証する
+ * ブラウザの管理画面からのリクエストで使用
+ */
+async function validateSupabaseSession(request: Request): Promise<boolean> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!supabaseUrl || !supabaseAnonKey) return false
+
+  // Request に cookies メソッドがない場合はスキップ (非ブラウザリクエスト)
+  if (!('cookies' in request) || typeof (request as unknown as { cookies: unknown }).cookies !== 'object') {
+    return false
+  }
+
+  try {
+    // NextRequest の cookies API を使用
+    const nextReq = request as unknown as {
+      cookies: {
+        getAll(): Array<{ name: string; value: string }>
+      }
+    }
+
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          return nextReq.cookies.getAll()
+        },
+        setAll() {
+          // 検証時は読み取り専用 — Cookie の更新は不要
+        },
+      },
+    })
+
+    const { data: { user } } = await supabase.auth.getUser()
+    return !!user
+  } catch (err) {
+    console.error('[AdminAuth] Supabase session validation error:', err)
+    return false
+  }
+}
+
+/**
  * 管理者APIリクエストを認証する
  *
- * - ADMIN_API_KEY が設定されている場合: ヘッダーと照合 (timing-safe)
+ * 以下のいずれかで認証可能:
+ * 1. Authorization: Bearer <ADMIN_API_KEY> ヘッダー (machine-to-machine / cron / pipeline)
+ * 2. Supabase Auth セッション Cookie (ブラウザ管理画面)
+ *
  * - 開発環境 + ADMIN_API_KEY 未設定: 認証をバイパス
- * - 本番環境 + ADMIN_API_KEY 未設定: 認証失敗
+ * - 本番環境 + ADMIN_API_KEY 未設定: Supabase セッションのみで認証
  */
-export function validateAdminAuth(request: Request): AuthResult {
+export async function validateAdminAuth(request: Request): Promise<AuthResult> {
   const adminApiKey = process.env.ADMIN_API_KEY
 
   // 開発環境でAPIキーが未設定の場合はバイパス
@@ -84,8 +130,24 @@ export function validateAdminAuth(request: Request): AuthResult {
     return { authorized: true }
   }
 
+  // 1. ADMIN_API_KEY による認証 (Bearer token / X-Admin-Api-Key header)
+  if (adminApiKey) {
+    const providedKey = extractApiKey(request, 'X-Admin-Api-Key')
+
+    if (providedKey && timingSafeCompare(providedKey, adminApiKey)) {
+      return { authorized: true }
+    }
+  }
+
+  // 2. Supabase Auth セッション (Cookie) による認証
+  const hasValidSession = await validateSupabaseSession(request)
+  if (hasValidSession) {
+    return { authorized: true }
+  }
+
+  // 認証失敗: API キーもセッションも無効
   if (!adminApiKey) {
-    console.error('[AdminAuth] ADMIN_API_KEY is not configured')
+    console.error('[AdminAuth] ADMIN_API_KEY is not configured and no valid Supabase session')
     return {
       authorized: false,
       error: {
@@ -95,19 +157,9 @@ export function validateAdminAuth(request: Request): AuthResult {
     }
   }
 
+  // API キーが提供されたが無効だったのか、そもそも認証情報がなかったのか
   const providedKey = extractApiKey(request, 'X-Admin-Api-Key')
-
-  if (!providedKey) {
-    return {
-      authorized: false,
-      error: {
-        code: 'UNAUTHORIZED',
-        message: 'Unauthorized: Missing authentication credentials',
-      },
-    }
-  }
-
-  if (!timingSafeCompare(providedKey, adminApiKey)) {
+  if (providedKey) {
     return {
       authorized: false,
       error: {
@@ -117,7 +169,13 @@ export function validateAdminAuth(request: Request): AuthResult {
     }
   }
 
-  return { authorized: true }
+  return {
+    authorized: false,
+    error: {
+      code: 'UNAUTHORIZED',
+      message: 'Unauthorized: Missing authentication credentials',
+    },
+  }
 }
 
 // ============================================================

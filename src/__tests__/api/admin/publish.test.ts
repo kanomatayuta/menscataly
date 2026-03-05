@@ -11,7 +11,7 @@ vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', '')
 
 // 認証モック
 vi.mock('@/lib/admin/auth', () => ({
-  validateAdminAuth: vi.fn(() => ({ authorized: true })),
+  validateAdminAuth: vi.fn(async () => ({ authorized: true })),
   getAuthErrorStatus: vi.fn((error: { code: string }) => error.code === 'FORBIDDEN' ? 403 : 401),
 }))
 
@@ -22,7 +22,7 @@ describe('記事公開 API', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
-    ;(validateAdminAuth as ReturnType<typeof vi.fn>).mockReturnValue({ authorized: true })
+    ;(validateAdminAuth as ReturnType<typeof vi.fn>).mockResolvedValue({ authorized: true })
 
     const publishRoute = await import('@/app/api/admin/articles/[id]/publish/route')
     POST = publishRoute.POST
@@ -46,7 +46,7 @@ describe('記事公開 API', () => {
     })
 
     it('未認証リクエストが401を返すこと', async () => {
-      ;(validateAdminAuth as ReturnType<typeof vi.fn>).mockReturnValue({
+      ;(validateAdminAuth as ReturnType<typeof vi.fn>).mockResolvedValue({
         authorized: false,
         error: 'Unauthorized',
       })

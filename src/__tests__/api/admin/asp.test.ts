@@ -11,7 +11,7 @@ vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', '')
 
 // 認証をバイパスする
 vi.mock('@/lib/admin/auth', () => ({
-  validateAdminAuth: vi.fn(() => ({ authorized: true })),
+  validateAdminAuth: vi.fn(async () => ({ authorized: true })),
   getAuthErrorStatus: vi.fn((error: { code: string }) => error.code === 'FORBIDDEN' ? 403 : 401),
 }))
 
@@ -24,7 +24,7 @@ describe('ASP CRUD API', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
-    ;(validateAdminAuth as ReturnType<typeof vi.fn>).mockReturnValue({ authorized: true })
+    ;(validateAdminAuth as ReturnType<typeof vi.fn>).mockResolvedValue({ authorized: true })
 
     // 動的インポートでモジュールを取得（各テスト毎にリセットできるように）
     const aspRoute = await import('@/app/api/admin/asp/route')
@@ -47,7 +47,7 @@ describe('ASP CRUD API', () => {
     })
 
     it('未認証リクエストが401を返すこと', async () => {
-      ;(validateAdminAuth as ReturnType<typeof vi.fn>).mockReturnValue({
+      ;(validateAdminAuth as ReturnType<typeof vi.fn>).mockResolvedValue({
         authorized: false,
         error: 'Unauthorized',
       })
@@ -155,7 +155,7 @@ describe('ASP CRUD API', () => {
     })
 
     it('未認証リクエストが401を返すこと', async () => {
-      ;(validateAdminAuth as ReturnType<typeof vi.fn>).mockReturnValue({
+      ;(validateAdminAuth as ReturnType<typeof vi.fn>).mockResolvedValue({
         authorized: false,
         error: 'Unauthorized',
       })

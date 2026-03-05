@@ -46,7 +46,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
-  const auth = validateAdminAuth(request)
+  const auth = await validateAdminAuth(request)
   if (!auth.authorized) {
     return NextResponse.json({ error: auth.error }, { status: 401 })
   }
@@ -121,7 +121,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
-  const auth = validateAdminAuth(request)
+  const auth = await validateAdminAuth(request)
   if (!auth.authorized) {
     return NextResponse.json({ error: auth.error }, { status: 401 })
   }
@@ -272,7 +272,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
-  const auth = validateAdminAuth(request)
+  const auth = await validateAdminAuth(request)
   if (!auth.authorized) {
     return NextResponse.json({ error: auth.error }, { status: 401 })
   }

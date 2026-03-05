@@ -27,23 +27,6 @@ const CATEGORY_LABELS: Record<ContentCategory, string> = {
 };
 
 // ------------------------------------------------------------------
-// Auth helper
-// ------------------------------------------------------------------
-
-function getApiKey(): string {
-  // 1. sessionStorage (set via /admin/login page)
-  if (typeof window !== "undefined") {
-    const sessionKey = sessionStorage.getItem("adminApiKey");
-    if (sessionKey) return sessionKey;
-  }
-  // 2. NEXT_PUBLIC env var (Vercel public env)
-  if (process.env.NEXT_PUBLIC_ADMIN_API_KEY) {
-    return process.env.NEXT_PUBLIC_ADMIN_API_KEY;
-  }
-  return "";
-}
-
-// ------------------------------------------------------------------
 // API helpers
 // ------------------------------------------------------------------
 
@@ -53,11 +36,8 @@ interface FetchProgramsResponse {
 }
 
 async function fetchPrograms(): Promise<FetchProgramsResponse> {
-  const apiKey = getApiKey();
   const res = await fetch("/api/admin/asp?active=false&limit=200", {
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-    },
+    credentials: "include",
   });
 
   if (!res.ok) {
@@ -72,13 +52,12 @@ async function updateProgram(
   id: string,
   updates: Partial<Pick<AspProgram, "itpSupport" | "isActive">>
 ): Promise<AspProgram> {
-  const apiKey = getApiKey();
   const res = await fetch(`/api/admin/asp/${encodeURIComponent(id)}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
     },
+    credentials: "include",
     body: JSON.stringify(updates),
   });
 

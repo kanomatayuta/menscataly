@@ -8,7 +8,6 @@
 
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { createServerClient as createSSRServerClient, createBrowserClient as createSSRBrowserClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import type { Database, ArticleInsert, ArticleUpdate, ArticleRow } from '@/types/database'
 
 // ============================================================
@@ -59,6 +58,7 @@ export const createServerClient = createServerSupabaseClient
  * Supabase Auth セッション管理に必要
  */
 export async function createSupabaseServerClient() {
+  const { cookies } = await import('next/headers')
   const cookieStore = await cookies()
   return createSSRServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

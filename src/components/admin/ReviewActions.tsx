@@ -25,14 +25,23 @@ export function ReviewActions({ articleId, currentStatus, onStatusChange }: Revi
     setMessage("");
 
     try {
+      // Map component action values to API-expected values
+      const actionMap: Record<string, string> = {
+        approved: "approve",
+        rejected: "reject",
+        revision: "revision",
+        published: "published",
+      };
+
       const res = await fetch(`/api/admin/articles/${articleId}/review`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({
-          status: action,
-          reviewNotes: notes,
+          action: actionMap[action] ?? action,
+          notes,
         }),
       });
 

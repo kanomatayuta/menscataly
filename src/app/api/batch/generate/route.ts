@@ -89,7 +89,7 @@ function validateRequest(body: unknown): { valid: true; request: BatchGeneration
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   // 認証チェック
-  const auth = validateAdminAuth(request)
+  const auth = await validateAdminAuth(request)
   if (!auth.authorized) {
     return NextResponse.json(
       { error: auth.error },

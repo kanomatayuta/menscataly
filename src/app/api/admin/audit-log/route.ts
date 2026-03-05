@@ -1,110 +1,82 @@
 /**
- * GET /api/admin/audit-log
- * 管理者認証監査ログビューアー
- *
- * Query params:
- *   event_type  — フィルタ: login_success | login_failure | logout | session_expired | unauthorized_access
- *   success     — フィルタ: true | false
- *   ip_address  — フィルタ: IPアドレス (部分一致)
- *   from        — 開始日時 (ISO 8601)
- *   to          — 終了日時 (ISO 8601)
- *   limit       — 取得件数 (default: 50, max: 200)
- *   offset      — オフセット (default: 0)
+ * /api/admin/audit-log
+ * GET: 監査ログ一覧取得 (フィルタ・ページネーション付き)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { validateAdminAuth, getAuthErrorStatus } from '@/lib/admin/auth'
-import { createServerSupabaseClient } from '@/lib/supabase/client'
-import type { AdminAuditEventType } from '@/lib/admin/audit-log'
+import { validateAdminAuth } from '@/lib/admin/auth'
 
 // ============================================================
-// 定数
+// ilike エスケープ (SQL インジェクション防止)
 // ============================================================
 
-const VALID_EVENT_TYPES: AdminAuditEventType[] = [
-  'login_success',
-  'login_failure',
-  'logout',
-  'session_expired',
-  'unauthorized_access',
-]
-
-const MAX_LIMIT = 200
-const DEFAULT_LIMIT = 50
+function escapeIlike(str: string): string {
+  return str.replace(/[%_\\]/g, '\\$&')
+}
 
 // ============================================================
-// Route Handler
+// GET: 監査ログ一覧取得
 // ============================================================
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  // 認証チェック
-  const auth = validateAdminAuth(request)
+  const auth = await validateAdminAuth(request)
   if (!auth.authorized) {
-    const status = auth.error ? getAuthErrorStatus(auth.error) : 401
-    return NextResponse.json({ error: auth.error }, { status })
+    return NextResponse.json({ error: auth.error }, { status: 401 })
+  }
+
+  const { searchParams } = new URL(request.url)
+
+  const limitNum = Math.min(parseInt(searchParams.get('limit') ?? '50', 10), 200)
+  const offsetNum = Math.max(parseInt(searchParams.get('offset') ?? '0', 10), 0)
+  const tableName = searchParams.get('table') ?? undefined
+  const operation = searchParams.get('operation') ?? undefined
+  const search = searchParams.get('q') ?? undefined
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    return NextResponse.json({
+      data: [],
+      total: 0,
+      limit: limitNum,
+      offset: offsetNum,
+    })
   }
 
   try {
-    const { searchParams } = new URL(request.url)
-
-    // パラメータ解析
-    const eventType = searchParams.get('event_type') as AdminAuditEventType | null
-    const successParam = searchParams.get('success')
-    const ipAddress = searchParams.get('ip_address')
-    const fromDate = searchParams.get('from')
-    const toDate = searchParams.get('to')
-    const limitParam = Math.min(
-      Math.max(parseInt(searchParams.get('limit') ?? String(DEFAULT_LIMIT), 10) || DEFAULT_LIMIT, 1),
-      MAX_LIMIT
-    )
-    const offsetParam = Math.max(parseInt(searchParams.get('offset') ?? '0', 10) || 0, 0)
-
-    // event_type バリデーション
-    if (eventType && !VALID_EVENT_TYPES.includes(eventType)) {
-      return NextResponse.json(
-        { error: `Invalid event_type. Must be one of: ${VALID_EVENT_TYPES.join(', ')}` },
-        { status: 400 }
-      )
-    }
-
+    const { createServerSupabaseClient } = await import('@/lib/supabase/client')
     const supabase = createServerSupabaseClient()
 
-    // クエリ構築
+    // Supabase クエリ構築
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let query = (supabase as any)
-      .from('admin_audit_log')
+      .from('audit_log')
       .select('*', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(offsetParam, offsetParam + limitParam - 1)
 
     // フィルタ適用
-    if (eventType) {
-      query = query.eq('event_type', eventType)
+    if (tableName) {
+      query = query.eq('table_name', tableName)
+    }
+    if (operation) {
+      query = query.eq('operation', operation.toUpperCase())
+    }
+    if (search) {
+      query = query.ilike('changed_by', `%${escapeIlike(search)}%`)
     }
 
-    if (successParam !== null) {
-      query = query.eq('success', successParam === 'true')
-    }
+    // ソート (新しい順)
+    query = query.order('created_at', { ascending: false })
 
-    if (ipAddress) {
-      // INET型のテキスト表現での部分一致
-      query = query.ilike('ip_address::text', `%${ipAddress}%`)
-    }
-
-    if (fromDate) {
-      query = query.gte('created_at', fromDate)
-    }
-
-    if (toDate) {
-      query = query.lte('created_at', toDate)
-    }
+    // ページネーション
+    query = query.range(offsetNum, offsetNum + limitNum - 1)
 
     const { data, error, count } = await query
 
     if (error) {
-      console.error('[admin/audit-log] Supabase error:', error)
+      console.error('[admin/audit-log] Query error:', error.message)
       return NextResponse.json(
-        { error: 'Failed to retrieve audit logs' },
+        { error: 'Failed to query audit log' },
         { status: 500 }
       )
     }
@@ -112,6 +84,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({
       data: data ?? [],
       total: count ?? 0,
+      limit: limitNum,
+      offset: offsetNum,
     })
   } catch (err) {
     console.error('[admin/audit-log] Error:', err)

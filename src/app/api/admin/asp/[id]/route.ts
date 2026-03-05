@@ -20,7 +20,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
-  const auth = validateAdminAuth(request)
+  const auth = await validateAdminAuth(request)
   if (!auth.authorized) {
     return NextResponse.json(
       { error: auth.error },
@@ -112,7 +112,7 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
-  const auth = validateAdminAuth(request)
+  const auth = await validateAdminAuth(request)
   if (!auth.authorized) {
     return NextResponse.json(
       { error: auth.error },
@@ -243,7 +243,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
-  const auth = validateAdminAuth(request)
+  const auth = await validateAdminAuth(request)
   if (!auth.authorized) {
     return NextResponse.json(
       { error: auth.error },

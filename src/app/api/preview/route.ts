@@ -21,7 +21,11 @@ export async function GET(req: NextRequest) {
 
   // ── シークレット検証 ──────────────────────────────────────
   const previewSecret = process.env.MICROCMS_PREVIEW_SECRET
-  if (previewSecret && secret !== previewSecret) {
+  if (!previewSecret) {
+    // シークレット未設定の場合はリクエストを拒否 (セキュリティ対策)
+    return NextResponse.json({ error: 'Preview not configured' }, { status: 503 })
+  }
+  if (secret !== previewSecret) {
     return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
   }
 

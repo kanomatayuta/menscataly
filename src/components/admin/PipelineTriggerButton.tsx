@@ -16,6 +16,7 @@ export function PipelineTriggerButton() {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({ type: "manual" }),
       });
 

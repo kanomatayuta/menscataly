@@ -12,12 +12,9 @@ import { ArticlePublisher } from '@/lib/content/publisher'
 import type { ContentGenerationRequest } from '@/types/content'
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  // 本番環境では無効化
-  if (process.env.NODE_ENV === 'production') {
-    return NextResponse.json(
-      { error: 'This endpoint is disabled in production' },
-      { status: 403 }
-    )
+  // 本番環境では無効化 (Vercel preview deployments も含む)
+  if (process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not available' }, { status: 404 })
   }
 
   // リクエストボディ (オプション: カスタムキーワード)

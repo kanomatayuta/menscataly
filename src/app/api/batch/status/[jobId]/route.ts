@@ -16,7 +16,7 @@ export async function GET(
   { params }: { params: Promise<{ jobId: string }> }
 ): Promise<NextResponse> {
   // 認証チェック
-  const auth = validateAdminAuth(request)
+  const auth = await validateAdminAuth(request)
   if (!auth.authorized) {
     return NextResponse.json(
       { error: auth.error },

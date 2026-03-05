@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 const NAV_ITEMS = [
   {
@@ -161,7 +162,15 @@ export function Sidebar({
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      await fetch("/api/admin/auth", { method: "DELETE" });
+      // Clear browser-side Supabase session first
+      const supabase = createBrowserSupabaseClient();
+      await supabase.auth.signOut();
+
+      // Backup: also call server-side logout endpoint
+      await fetch("/api/admin/auth", {
+        method: "DELETE",
+        credentials: "include",
+      });
     } catch {
       // Even if the request fails, redirect to login
     } finally {

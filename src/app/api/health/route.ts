@@ -1,10 +1,12 @@
 /**
  * GET /api/health
  * ヘルスチェックエンドポイント
- * 各外部サービス（microCMS, Supabase）の接続状態と環境変数の設定状態を返す
+ *
+ * 未認証: シンプルなステータスのみ返す (機密情報を含まない)
+ * 認証済み (ADMIN_API_KEY or PIPELINE_API_KEY): 詳細なサービス状態・環境情報を返す
  */
 
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
 // ============================================================
 // サービスステータス型
@@ -18,7 +20,7 @@ interface ServiceHealth {
   latencyMs?: number
 }
 
-interface HealthResponse {
+interface DetailedHealthResponse {
   status: 'healthy' | 'degraded' | 'unhealthy'
   timestamp: string
   services: {
@@ -35,6 +37,27 @@ interface HealthResponse {
     SLACK_WEBHOOK_URL: boolean
   }
   version: string
+}
+
+// ============================================================
+// 認証チェック (ADMIN_API_KEY or PIPELINE_API_KEY)
+// ============================================================
+
+function isAuthenticated(request: NextRequest): boolean {
+  const authHeader = request.headers.get('Authorization')
+  if (!authHeader) return false
+
+  const match = authHeader.match(/^Bearer\s+(.+)$/i)
+  if (!match) return false
+
+  const token = match[1]
+  const adminKey = process.env.ADMIN_API_KEY
+  const pipelineKey = process.env.PIPELINE_API_KEY
+
+  if (adminKey && token === adminKey) return true
+  if (pipelineKey && token === pipelineKey) return true
+
+  return false
 }
 
 // ============================================================
@@ -146,10 +169,15 @@ async function checkSupabase(): Promise<ServiceHealth> {
 // Route Handler
 // ============================================================
 
-export async function GET(): Promise<NextResponse> {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   const timestamp = new Date().toISOString()
 
-  // 各サービスのチェックを並列実行（1つの失敗が他に影響しない）
+  // 未認証リクエスト: 機密情報を含まないシンプルなステータスのみ返す
+  if (!isAuthenticated(request)) {
+    return NextResponse.json({ status: 'ok', timestamp })
+  }
+
+  // 認証済みリクエスト: 詳細なサービス状態を返す
   const [microcms, supabase] = await Promise.all([
     checkMicroCMS(),
     checkSupabase(),
@@ -170,7 +198,7 @@ export async function GET(): Promise<NextResponse> {
   const services = { microcms, supabase }
   const statuses = Object.values(services).map((s) => s.status)
 
-  let overallStatus: HealthResponse['status']
+  let overallStatus: DetailedHealthResponse['status']
   if (statuses.every((s) => s === 'ok' || s === 'not_configured')) {
     overallStatus = 'healthy'
   } else if (statuses.some((s) => s === 'ok')) {
@@ -179,7 +207,7 @@ export async function GET(): Promise<NextResponse> {
     overallStatus = 'unhealthy'
   }
 
-  const response: HealthResponse = {
+  const response: DetailedHealthResponse = {
     status: overallStatus,
     timestamp,
     services,

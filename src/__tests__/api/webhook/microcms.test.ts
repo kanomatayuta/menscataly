@@ -52,6 +52,8 @@ async function generateSignature(secret: string, body: string): Promise<string> 
   return btoa(String.fromCharCode(...new Uint8Array(signatureBuffer)))
 }
 
+const TEST_WEBHOOK_SECRET = 'test-webhook-secret-for-tests'
+
 function createWebhookRequest(
   body: Record<string, unknown>,
   headers: Record<string, string> = {}
@@ -63,6 +65,27 @@ function createWebhookRequest(
     headers: {
       'Content-Type': 'application/json',
       ...headers,
+    },
+  })
+}
+
+/**
+ * 署名付きWebhookリクエストを生成する
+ */
+async function createSignedWebhookRequest(
+  body: Record<string, unknown>,
+  secret: string = TEST_WEBHOOK_SECRET,
+  extraHeaders: Record<string, string> = {}
+): Promise<NextRequest> {
+  const bodyStr = JSON.stringify(body)
+  const signature = await generateSignature(secret, bodyStr)
+  return new NextRequest('http://localhost:3000/api/webhook/microcms', {
+    method: 'POST',
+    body: bodyStr,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-MICROCMS-Signature': signature,
+      ...extraHeaders,
     },
   })
 }
@@ -134,15 +157,15 @@ describe('Webhook /api/webhook/microcms', () => {
   // ============================================================
 
   describe('POST — 署名検証', () => {
-    it('MICROCMS_WEBHOOK_SECRET未設定時に署名検証をスキップすること', async () => {
+    it('MICROCMS_WEBHOOK_SECRET未設定時に503を返すこと', async () => {
       delete process.env.MICROCMS_WEBHOOK_SECRET
 
       const req = createWebhookRequest(newArticlePayload)
       const response = await POST(req)
 
-      expect(response.status).toBe(200)
+      expect(response.status).toBe(503)
       const data = await response.json()
-      expect(data.message).toContain('created')
+      expect(data.error).toBe('Webhook not configured')
     })
 
     it('有効な署名でリクエストが処理されること', async () => {
@@ -222,11 +245,11 @@ describe('Webhook /api/webhook/microcms', () => {
 
   describe('POST — 新規記事', () => {
     beforeEach(() => {
-      delete process.env.MICROCMS_WEBHOOK_SECRET
+      process.env.MICROCMS_WEBHOOK_SECRET = TEST_WEBHOOK_SECRET
     })
 
     it('新規記事をSupabaseにupsertすること', async () => {
-      const req = createWebhookRequest(newArticlePayload)
+      const req = await createSignedWebhookRequest(newArticlePayload)
       const response = await POST(req)
 
       expect(response.status).toBe(200)
@@ -248,7 +271,7 @@ describe('Webhook /api/webhook/microcms', () => {
     })
 
     it('revalidateされるパスとタグが正しいこと', async () => {
-      const req = createWebhookRequest(newArticlePayload)
+      const req = await createSignedWebhookRequest(newArticlePayload)
       const response = await POST(req)
 
       const data = await response.json()
@@ -264,11 +287,11 @@ describe('Webhook /api/webhook/microcms', () => {
 
   describe('POST — 記事更新', () => {
     beforeEach(() => {
-      delete process.env.MICROCMS_WEBHOOK_SECRET
+      process.env.MICROCMS_WEBHOOK_SECRET = TEST_WEBHOOK_SECRET
     })
 
     it('更新記事をSupabaseにupsertすること', async () => {
-      const req = createWebhookRequest(editArticlePayload)
+      const req = await createSignedWebhookRequest(editArticlePayload)
       const response = await POST(req)
 
       expect(response.status).toBe(200)
@@ -292,7 +315,7 @@ describe('Webhook /api/webhook/microcms', () => {
         },
       }
 
-      const req = createWebhookRequest(draftOnlyPayload)
+      const req = await createSignedWebhookRequest(draftOnlyPayload)
       const response = await POST(req)
 
       expect(response.status).toBe(200)
@@ -308,11 +331,11 @@ describe('Webhook /api/webhook/microcms', () => {
 
   describe('POST — 記事削除', () => {
     beforeEach(() => {
-      delete process.env.MICROCMS_WEBHOOK_SECRET
+      process.env.MICROCMS_WEBHOOK_SECRET = TEST_WEBHOOK_SECRET
     })
 
     it('記事をSupabaseから削除すること', async () => {
-      const req = createWebhookRequest(deleteArticlePayload)
+      const req = await createSignedWebhookRequest(deleteArticlePayload)
       const response = await POST(req)
 
       expect(response.status).toBe(200)
@@ -332,7 +355,7 @@ describe('Webhook /api/webhook/microcms', () => {
 
   describe('POST — エッジケース', () => {
     beforeEach(() => {
-      delete process.env.MICROCMS_WEBHOOK_SECRET
+      process.env.MICROCMS_WEBHOOK_SECRET = TEST_WEBHOOK_SECRET
     })
 
     it('articles以外のAPIはスキップすること', async () => {
@@ -343,7 +366,7 @@ describe('Webhook /api/webhook/microcms', () => {
         type: 'new' as const,
       }
 
-      const req = createWebhookRequest(nonArticlePayload)
+      const req = await createSignedWebhookRequest(nonArticlePayload)
       const response = await POST(req)
 
       expect(response.status).toBe(200)
@@ -353,10 +376,17 @@ describe('Webhook /api/webhook/microcms', () => {
     })
 
     it('不正なJSONで400を返すこと', async () => {
+      // 不正なJSONの場合、署名はボディに対して生成
+      const badBody = 'not-json-body{{{'
+      const signature = await generateSignature(TEST_WEBHOOK_SECRET, badBody)
+
       const req = new NextRequest('http://localhost:3000/api/webhook/microcms', {
         method: 'POST',
-        body: 'not-json-body{{{',
-        headers: { 'Content-Type': 'application/json' },
+        body: badBody,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-MICROCMS-Signature': signature,
+        },
       })
 
       const response = await POST(req)

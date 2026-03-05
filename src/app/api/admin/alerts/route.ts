@@ -13,7 +13,7 @@ import { AlertManager } from '@/lib/monitoring/alert-manager'
 // ============================================================
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  const auth = validateAdminAuth(request)
+  const auth = await validateAdminAuth(request)
   if (!auth.authorized) {
     return NextResponse.json({ error: auth.error }, { status: 401 })
   }
@@ -42,7 +42,7 @@ interface AlertActionRequest {
 }
 
 export async function PATCH(request: NextRequest): Promise<NextResponse> {
-  const auth = validateAdminAuth(request)
+  const auth = await validateAdminAuth(request)
   if (!auth.authorized) {
     return NextResponse.json({ error: auth.error }, { status: 401 })
   }

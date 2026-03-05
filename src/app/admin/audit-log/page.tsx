@@ -8,7 +8,7 @@ import { useState, useEffect, useCallback } from "react";
 
 interface AuditLogEntry {
   id: string;
-  timestamp: string;
+  created_at: string;
   event_type: string;
   actor: string;
   ip_address: string;
@@ -20,10 +20,8 @@ interface AuditLogEntry {
 }
 
 interface AuditLogResponse {
-  entries: AuditLogEntry[];
+  data: AuditLogEntry[];
   total: number;
-  limit: number;
-  offset: number;
 }
 
 // ------------------------------------------------------------------
@@ -136,9 +134,10 @@ export default function AuditLogPage() {
       setData(json);
 
       // Calculate summary from current page
-      const successful = json.entries.filter((e) => e.success).length;
-      const failed = json.entries.filter((e) => !e.success).length;
-      const uniqueIps = new Set(json.entries.map((e) => e.ip_address)).size;
+      const entries = json.data ?? [];
+      const successful = entries.filter((e) => e.success).length;
+      const failed = entries.filter((e) => !e.success).length;
+      const uniqueIps = new Set(entries.map((e) => e.ip_address)).size;
 
       setSummary({
         total: json.total,
@@ -367,7 +366,7 @@ export default function AuditLogPage() {
                 </td>
               </tr>
             )}
-            {!loading && data && data.entries.length === 0 && (
+            {!loading && data && data.data.length === 0 && (
               <tr>
                 <td
                   colSpan={8}
@@ -378,13 +377,13 @@ export default function AuditLogPage() {
               </tr>
             )}
             {data &&
-              data.entries.map((entry) => (
+              data.data.map((entry) => (
                 <tr
                   key={entry.id}
                   className="border-b border-neutral-100 hover:bg-neutral-50"
                 >
                   <td className="whitespace-nowrap px-4 py-3 text-neutral-700">
-                    {formatTimestamp(entry.timestamp)}
+                    {formatTimestamp(entry.created_at)}
                   </td>
                   <td className="px-4 py-3">
                     <span
