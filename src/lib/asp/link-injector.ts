@@ -226,7 +226,7 @@ function tryExactMatch(
   // 禁止タグ内チェック
   if (isInForbiddenRange(forbiddenRanges, index, anchor.length)) return null
 
-  const linkHtml = `<a href="${escapeHtmlAttr(program.affiliateUrl)}" rel="sponsored noopener" target="_blank">${anchor}</a>`
+  const linkHtml = `<a href="${escapeHtmlAttr(program.affiliateUrl)}" rel="sponsored noopener" target="_blank" data-asp="${escapeHtmlAttr(program.aspName)}" data-program="${escapeHtmlAttr(program.programId)}" data-category="${escapeHtmlAttr(program.category)}">${anchor}</a>`
   const before = content.slice(0, index)
   const after = content.slice(index + anchor.length)
 
@@ -268,7 +268,7 @@ function tryNormalizedMatch(
     // 禁止タグ内チェック
     if (isInForbiddenRange(forbiddenRanges, absoluteStart, matchedText.length)) continue
 
-    const linkHtml = `<a href="${escapeHtmlAttr(program.affiliateUrl)}" rel="sponsored noopener" target="_blank">${matchedText}</a>`
+    const linkHtml = `<a href="${escapeHtmlAttr(program.affiliateUrl)}" rel="sponsored noopener" target="_blank" data-asp="${escapeHtmlAttr(program.aspName)}" data-program="${escapeHtmlAttr(program.programId)}" data-category="${escapeHtmlAttr(program.category)}">${matchedText}</a>`
     const before = content.slice(0, absoluteStart)
     const after = content.slice(absoluteEnd)
 
@@ -302,7 +302,7 @@ function tryCoreNameMatch(
   // 禁止タグ内チェック
   if (isInForbiddenRange(forbiddenRanges, index, coreName.length)) return null
 
-  const linkHtml = `<a href="${escapeHtmlAttr(program.affiliateUrl)}" rel="sponsored noopener" target="_blank">${coreName}</a>`
+  const linkHtml = `<a href="${escapeHtmlAttr(program.affiliateUrl)}" rel="sponsored noopener" target="_blank" data-asp="${escapeHtmlAttr(program.aspName)}" data-program="${escapeHtmlAttr(program.programId)}" data-category="${escapeHtmlAttr(program.category)}">${coreName}</a>`
   const before = content.slice(0, index)
   const after = content.slice(index + coreName.length)
 
@@ -428,7 +428,7 @@ export async function generateAffiliateSection(
   const listItems = programs
     .map(
       (p) =>
-        `  <li><a href="${escapeHtmlAttr(p.affiliateUrl)}" rel="sponsored noopener" target="_blank">${p.recommendedAnchors[0] ?? p.programName}</a> - ${p.programName}</li>`
+        `  <li><a href="${escapeHtmlAttr(p.affiliateUrl)}" rel="sponsored noopener" target="_blank" data-asp="${escapeHtmlAttr(p.aspName)}" data-program="${escapeHtmlAttr(p.programId)}" data-category="${escapeHtmlAttr(p.category)}">${p.recommendedAnchors[0] ?? p.programName}</a> - ${p.programName}</li>`
     )
     .join('\n')
 

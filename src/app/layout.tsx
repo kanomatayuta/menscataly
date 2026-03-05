@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Noto_Sans_JP } from "next/font/google";
 import "./globals.css";
 import { GA4Script } from "@/components/analytics/GA4Script";
+import { GA4PageViewTracker } from "@/components/analytics/GA4PageViewTracker";
 import { A8LinkManager } from "@/components/tracking/A8LinkManager";
+import { AffiliateClickTracker } from "@/components/tracking/AffiliateClickTracker";
 
 const notoSansJP = Noto_Sans_JP({
   variable: "--font-noto-sans-jp",
@@ -82,7 +85,11 @@ export default function RootLayout({
     <html lang="ja" className={notoSansJP.variable}>
       <body className="flex min-h-screen flex-col antialiased">
         <GA4Script />
+        <Suspense fallback={null}>
+          <GA4PageViewTracker />
+        </Suspense>
         <A8LinkManager />
+        <AffiliateClickTracker />
         {children}
       </body>
     </html>
