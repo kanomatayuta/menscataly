@@ -530,6 +530,7 @@ async function ArticlesTableSection() {
   return (
     <>
       <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-neutral-700">記事一覧</h3>
         <p className="text-sm text-neutral-500">{total} 記事</p>
       </div>
       <ArticleTable articles={articles} analytics={analytics} />
