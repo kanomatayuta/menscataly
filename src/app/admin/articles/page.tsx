@@ -458,6 +458,8 @@ async function fetchTrendData(days: number): Promise<TrendDataPoint[]> {
   }
 }
 
+const getCachedTrendData = cache(() => fetchTrendData(90));
+
 // ------------------------------------------------------------------
 // Growth rate data (PV週次伸び率)
 // ------------------------------------------------------------------
@@ -602,7 +604,10 @@ function TableSkeleton() {
 // ------------------------------------------------------------------
 
 async function ArticlesSummarySection() {
-  const { articles, total } = await getCachedArticlesData();
+  const [{ articles, total }, trendData] = await Promise.all([
+    getCachedArticlesData(),
+    getCachedTrendData(),
+  ]);
   const analytics = await getCachedAnalyticsData(articles);
   const values = [...analytics.values()];
   const totalPageviews = values.reduce((s, a) => s + a.pageviews, 0);
@@ -617,12 +622,13 @@ async function ArticlesSummarySection() {
       totalAffiliateClicks={totalAffiliateClicks}
       totalRevenue={totalRevenue}
       totalArticles={total}
+      trendData={trendData}
     />
   );
 }
 
 async function TrendChartSection() {
-  const data = await fetchTrendData(90);
+  const data = await getCachedTrendData();
   return <TrendChart data={data} />;
 }
 

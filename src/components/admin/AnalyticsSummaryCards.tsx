@@ -1,4 +1,12 @@
-import { StatCard } from "./StatCard";
+"use client";
+
+import {
+  LineChart,
+  Line,
+  ResponsiveContainer,
+  Tooltip,
+} from "recharts";
+import type { TrendDataPoint } from "@/types/admin";
 
 interface AnalyticsSummaryCardsProps {
   totalPageviews: number;
@@ -8,7 +16,93 @@ interface AnalyticsSummaryCardsProps {
   totalArticles?: number;
   /** @deprecated no longer shown as a card; kept for backward-compatibility */
   totalConversions?: number;
+  trendData?: TrendDataPoint[];
 }
+
+// ------------------------------------------------------------------
+// Sparkline mini chart
+// ------------------------------------------------------------------
+
+function Sparkline({
+  data,
+  dataKey,
+  color,
+}: {
+  data: { date: string; value: number }[];
+  dataKey: string;
+  color: string;
+}) {
+  if (data.length < 2) return null;
+
+  return (
+    <ResponsiveContainer width="100%" height={48}>
+      <LineChart data={data} margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
+        <Tooltip
+          contentStyle={{
+            fontSize: 11,
+            borderRadius: 6,
+            border: "1px solid #e5e5e5",
+            padding: "4px 8px",
+          }}
+          formatter={(v: number) => [v.toLocaleString("ja-JP"), dataKey]}
+          labelStyle={{ fontSize: 10, color: "#a3a3a3" }}
+        />
+        <Line
+          type="monotone"
+          dataKey="value"
+          stroke={color}
+          strokeWidth={1.5}
+          dot={false}
+          activeDot={{ r: 3, fill: color }}
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+}
+
+// ------------------------------------------------------------------
+// Trend Card
+// ------------------------------------------------------------------
+
+interface TrendCardProps {
+  title: string;
+  value: string;
+  sparkData: { date: string; value: number }[];
+  color: string;
+  borderColor: string;
+  bgColor: string;
+  valueColor: string;
+  sparkLabel: string;
+}
+
+function TrendCard({
+  title,
+  value,
+  sparkData,
+  color,
+  borderColor,
+  bgColor,
+  valueColor,
+  sparkLabel,
+}: TrendCardProps) {
+  return (
+    <div className={`rounded-lg border p-4 shadow-sm ${borderColor} ${bgColor}`}>
+      <p className="text-xs font-medium text-neutral-500">{title}</p>
+      <p className={`mt-0.5 text-xl font-bold tabular-nums ${valueColor}`}>
+        {value}
+      </p>
+      {sparkData.length >= 2 && (
+        <div className="mt-2">
+          <Sparkline data={sparkData} dataKey={sparkLabel} color={color} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------
+// Main
+// ------------------------------------------------------------------
 
 export function AnalyticsSummaryCards({
   totalPageviews,
@@ -16,62 +110,78 @@ export function AnalyticsSummaryCards({
   totalAffiliateClicks,
   totalRevenue,
   totalArticles = 0,
+  trendData = [],
 }: AnalyticsSummaryCardsProps) {
-  // Card 1: 総PV — subtitle shows per-article average
-  const avgPv =
-    totalArticles > 0
-      ? (totalPageviews / totalArticles).toFixed(1)
-      : "0.0";
-  const pvSubtitle = `記事平均 ${avgPv} PV`;
+  // 直近30日のデータでスパークライン
+  const recent = trendData.slice(-30);
 
-  // Card 2: 検索CL — subtitle changes when data is not yet available
-  const searchSubtitle =
-    totalSearchClicks === 0 ? "GSCデータ蓄積中" : "過去30日間 (GSC)";
+  const pvSpark = recent.map((d) => ({ date: d.date, value: d.pageviews }));
+  const searchSpark = recent.map((d) => ({ date: d.date, value: d.searchClicks }));
+  const affiliateSpark = recent.map((d) => ({ date: d.date, value: d.affiliateClicks }));
 
-  // Card 3: 広告CTR
+  // 広告CTR
   const ctrValue =
     totalPageviews > 0
       ? `${((totalAffiliateClicks / totalPageviews) * 100).toFixed(1)}%`
       : "-";
-  const ctrSubtitle = `広告CL ${totalAffiliateClicks}件 / PV ${totalPageviews}件`;
-
-  // Card 4: 総収益
-  const revenueVariant = totalRevenue > 0 ? "success" : "warning";
-  const revenueSubtitle =
-    totalRevenue > 0 ? "過去30日間" : "ASP承認後に計上";
 
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-      <StatCard
-        title="総記事数"
-        value={totalArticles.toLocaleString("ja-JP")}
-        variant="default"
-        subtitle="公開済み記事"
-      />
-      <StatCard
+      {/* 総記事数 — スパークラインなし（日次データなし） */}
+      <div className="flex flex-col justify-center rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
+        <p className="text-xs font-medium text-neutral-500">総記事数</p>
+        <p className="mt-0.5 text-xl font-bold tabular-nums text-neutral-900">
+          {totalArticles.toLocaleString("ja-JP")}
+        </p>
+        <p className="mt-1 text-[10px] text-neutral-400">公開済み記事</p>
+      </div>
+
+      {/* 総PV */}
+      <TrendCard
         title="総PV"
         value={totalPageviews.toLocaleString("ja-JP")}
-        variant="blue"
-        subtitle={pvSubtitle}
+        sparkData={pvSpark}
+        color="#3b82f6"
+        borderColor="border-blue-200"
+        bgColor="bg-white"
+        valueColor="text-blue-700"
+        sparkLabel="PV"
       />
-      <StatCard
+
+      {/* 検索CL */}
+      <TrendCard
         title="検索CL"
         value={totalSearchClicks.toLocaleString("ja-JP")}
-        variant="success"
-        subtitle={searchSubtitle}
+        sparkData={searchSpark}
+        color="#10b981"
+        borderColor="border-green-200"
+        bgColor="bg-white"
+        valueColor="text-green-700"
+        sparkLabel="検索CL"
       />
-      <StatCard
+
+      {/* 広告CTR */}
+      <TrendCard
         title="広告CTR"
         value={ctrValue}
-        variant="purple"
-        subtitle={ctrSubtitle}
+        sparkData={affiliateSpark}
+        color="#8b5cf6"
+        borderColor="border-purple-200"
+        bgColor="bg-white"
+        valueColor="text-purple-600"
+        sparkLabel="広告CL"
       />
-      <StatCard
-        title="総収益"
-        value={`¥${totalRevenue.toLocaleString("ja-JP")}`}
-        variant={revenueVariant}
-        subtitle={revenueSubtitle}
-      />
+
+      {/* 総収益 */}
+      <div className={`rounded-lg border p-4 shadow-sm ${totalRevenue > 0 ? "border-green-300" : "border-amber-200"} bg-white`}>
+        <p className="text-xs font-medium text-neutral-500">総収益</p>
+        <p className={`mt-0.5 text-xl font-bold tabular-nums ${totalRevenue > 0 ? "text-green-700" : "text-amber-700"}`}>
+          ¥{totalRevenue.toLocaleString("ja-JP")}
+        </p>
+        <p className="mt-1 text-[10px] text-neutral-400">
+          {totalRevenue > 0 ? "過去30日間" : "ASP承認後に計上"}
+        </p>
+      </div>
     </div>
   );
 }
