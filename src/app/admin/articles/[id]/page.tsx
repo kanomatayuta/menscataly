@@ -1,14 +1,13 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { connection } from "next/server";
 import { headers } from "next/headers";
 import { AdminHeader } from "@/components/admin/AdminHeader";
-import { ComplianceScoreBadge } from "@/components/admin/ComplianceScoreBadge";
-import { ComplianceBreakdown } from "@/components/admin/ComplianceBreakdown";
-import { ReviewActions } from "@/components/admin/ReviewActions";
-import { ReviewCommentHistory } from "@/components/admin/ReviewCommentHistory";
-import { StatusBadge, StatusWorkflow } from "@/components/admin/StatusBadge";
-import type { ArticleReviewDetail } from "@/types/admin";
+import { StatusBadge } from "@/components/admin/StatusBadge";
+import { StatCard } from "@/components/admin/StatCard";
+import { ArticleDetailTabs } from "@/components/admin/ArticleDetailTabs";
+import type { ArticleReviewDetail, AffiliateLinkPerformance } from "@/types/admin";
+import type { ContentCategory } from "@/types/content";
+import type { AspProgram } from "@/types/asp-config";
 
 // ------------------------------------------------------------------
 // Mock data (Supabase未設定時のフォールバック)
@@ -200,6 +199,43 @@ async function fetchArticleDetail(id: string): Promise<ArticleReviewDetail | nul
     return MOCK_ARTICLES[id] ?? null;
   }
 
+  // microCMS から直接取得を試みる
+  try {
+    const { getArticleById } = await import("@/lib/microcms/client");
+    const item = await getArticleById(id);
+    if (item) {
+      return {
+        id: item.id,
+        contentId: item.id,
+        articleId: item.id,
+        microcmsId: item.id,
+        title: item.title,
+        slug: item.slug ?? item.id,
+        category: (item.category?.slug ?? "column") as ContentCategory,
+        complianceScore: item.compliance_score ?? 0,
+        status: "published",
+        authorName: item.author_name ?? "メンズカタリ編集部",
+        generatedAt: item.publishedAt ?? item.createdAt,
+        reviewedAt: null,
+        reviewedBy: null,
+        reviewNotes: null,
+        reviewComment: null,
+        complianceBreakdown: {
+          yakkinhou: item.compliance_score ?? 0,
+          keihinhou: item.compliance_score ?? 0,
+          sutema: item.compliance_score ?? 0,
+          eeat: item.compliance_score ?? 0,
+        },
+        reviewHistory: [],
+        content: item.content,
+        seoTitle: item.seo_title,
+        seoDescription: item.excerpt,
+      };
+    }
+  } catch (err) {
+    console.error(`[admin/articles/${id}] microCMS fetch error:`, err);
+  }
+
   // Supabase未設定時はモックにフォールバック
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -209,8 +245,6 @@ async function fetchArticleDetail(id: string): Promise<ArticleReviewDetail | nul
   }
 
   try {
-    // 内部APIルート経由でデータを取得
-    // Server Component から同一オリジンの API Route を呼ぶ
     const headersList = await headers();
     const host = headersList.get("host") ?? "localhost:3000";
     const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
@@ -233,7 +267,6 @@ async function fetchArticleDetail(id: string): Promise<ArticleReviewDetail | nul
 
     if (!res.ok) {
       console.error(`[admin/articles/${id}] API error: HTTP ${res.status}`);
-      // APIエラー時はモックにフォールバック
       return MOCK_ARTICLES[id] ?? null;
     }
 
@@ -241,9 +274,116 @@ async function fetchArticleDetail(id: string): Promise<ArticleReviewDetail | nul
     return data.article ?? null;
   } catch (err) {
     console.error(`[admin/articles/${id}] Fetch error:`, err);
-    // ネットワークエラー時はモックにフォールバック
     return MOCK_ARTICLES[id] ?? null;
   }
+}
+
+// ------------------------------------------------------------------
+// Analytics data fetching for article detail page
+// ------------------------------------------------------------------
+
+interface ArticleAnalyticsData {
+  pv30d: number;
+  affiliateClicks: number;
+  conversions: number;
+  revenue: number;
+  pvTrend: { date: string; pageviews: number }[];
+  affiliateLinks: AffiliateLinkPerformance[];
+  aspPrograms: AspProgram[];
+}
+
+async function fetchArticleAnalytics(
+  slug: string,
+  articleId: string,
+  category: ContentCategory,
+): Promise<ArticleAnalyticsData> {
+  const result: ArticleAnalyticsData = {
+    pv30d: 0,
+    affiliateClicks: 0,
+    conversions: 0,
+    revenue: 0,
+    pvTrend: [],
+    affiliateLinks: [],
+    aspPrograms: [],
+  };
+
+  try {
+    await connection();
+
+    // GA4 PV + affiliate clicks を並列取得
+    const { fetchGA4DailyMetrics, extractSlugFromPath, fetchAffiliateClicks } = await import("@/lib/analytics/ga4-client");
+    const [ga4Data, affiliateData] = await Promise.all([
+      fetchGA4DailyMetrics("30daysAgo", "today"),
+      fetchAffiliateClicks("30daysAgo", "today"),
+    ]);
+
+    // PV日別集計 (この記事のみ)
+    const pvByDate = new Map<string, number>();
+    for (const row of ga4Data) {
+      const rowSlug = extractSlugFromPath(row.pagePath);
+      if (rowSlug !== slug) continue;
+      result.pv30d += row.pageviews;
+      const d = new Date(row.date);
+      const label = `${d.getMonth() + 1}/${d.getDate()}`;
+      pvByDate.set(label, (pvByDate.get(label) ?? 0) + row.pageviews);
+    }
+
+    // 日別PVトレンド
+    result.pvTrend = [...pvByDate.entries()].map(([date, pageviews]) => ({ date, pageviews }));
+
+    // アフィリエイトクリック集計
+    for (const row of affiliateData) {
+      const rowSlug = extractSlugFromPath(row.pagePath);
+      if (rowSlug !== slug) continue;
+      result.affiliateClicks += row.clickCount;
+    }
+  } catch (err) {
+    console.error(`[admin/articles/${articleId}] GA4 analytics error:`, err);
+  }
+
+  // Supabase: affiliate_links + revenue (article_id はスラッグまたはmicroCMS IDで検索)
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (supabaseUrl && serviceRoleKey) {
+      const { createServerSupabaseClient } = await import("@/lib/supabase/client");
+      const supabase = createServerSupabaseClient();
+
+      // article_id または slug でマッチを試みる (エラーは無視)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: links } = await (supabase as any)
+        .from("affiliate_links")
+        .select("*")
+        .or(`article_id.eq.${articleId},article_id.eq.${slug}`)
+        .order("click_count", { ascending: false });
+
+      if (links && links.length > 0) {
+        result.affiliateLinks = links.map((l: { asp_name: string; program_name: string; click_count: number; conversion_count: number; revenue: number }) => ({
+          aspName: l.asp_name,
+          programName: l.program_name,
+          clickCount: l.click_count,
+          conversionCount: l.conversion_count,
+          revenue: l.revenue,
+        }));
+
+        result.conversions = links.reduce((s: number, l: { conversion_count: number }) => s + (l.conversion_count ?? 0), 0);
+        result.revenue = links.reduce((s: number, l: { revenue: number }) => s + (l.revenue ?? 0), 0);
+      }
+    }
+  } catch {
+    // Supabase未接続やテーブル未作成時は静かにスキップ
+  }
+
+  // ASP programs by category
+  try {
+    const { getProgramsByCategoryFromDB } = await import("@/lib/asp/repository");
+    result.aspPrograms = await getProgramsByCategoryFromDB(category);
+  } catch (err) {
+    console.error(`[admin/articles/${articleId}] ASP programs error:`, err);
+  }
+
+  return result;
 }
 
 // ------------------------------------------------------------------
@@ -277,164 +417,79 @@ async function ArticleDetailContent({
     );
   }
 
+  // Fetch analytics data
+  const analytics = await fetchArticleAnalytics(
+    article.slug,
+    article.articleId ?? article.id,
+    article.category as ContentCategory,
+  );
+
+  const categoryLabel = CATEGORY_LABELS[article.category] ?? article.category;
+
+  // Format number helper
+  const fmt = (n: number) => n.toLocaleString("ja-JP");
+
   return (
     <>
       <AdminHeader
-        title="記事レビュー"
+        title="記事詳細"
         breadcrumbs={[
           { label: "記事一覧", href: "/admin/articles" },
           { label: article.title },
         ]}
       />
 
-      {/* Status workflow */}
-      <div className="mb-6">
-        <StatusWorkflow current={article.status} />
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Left column: Article details + Compliance breakdown + Review history */}
-        <div className="space-y-6 lg:col-span-2">
-          {/* Article meta info */}
-          <div className="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-neutral-900">
-                {article.title}
-              </h2>
+      {/* Status + Summary cards — always visible above tabs */}
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
+        {/* Status badge card */}
+        <div className="flex items-center rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+          <div>
+            <p className="text-sm font-medium text-neutral-500">ステータス</p>
+            <div className="mt-1">
               <StatusBadge status={article.status} size="md" />
             </div>
-
-            <dl className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <dt className="font-medium text-neutral-500">カテゴリ</dt>
-                <dd className="mt-0.5 text-neutral-900">
-                  {CATEGORY_LABELS[article.category] ?? article.category}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium text-neutral-500">スラッグ</dt>
-                <dd className="mt-0.5 font-mono text-xs text-neutral-700">
-                  {article.slug}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium text-neutral-500">著者</dt>
-                <dd className="mt-0.5 text-neutral-900">
-                  {article.authorName}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium text-neutral-500">生成日時</dt>
-                <dd className="mt-0.5 text-neutral-900">
-                  {new Date(article.generatedAt).toLocaleString("ja-JP")}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium text-neutral-500">
-                  コンプライアンススコア
-                </dt>
-                <dd className="mt-1">
-                  <ComplianceScoreBadge score={article.complianceScore} />
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium text-neutral-500">microCMS ID</dt>
-                <dd className="mt-0.5 font-mono text-xs text-neutral-700">
-                  {article.microcmsId ?? "未公開"}
-                </dd>
-              </div>
-              {article.reviewedAt && (
-                <div>
-                  <dt className="font-medium text-neutral-500">レビュー日時</dt>
-                  <dd className="mt-0.5 text-neutral-900">
-                    {new Date(article.reviewedAt).toLocaleString("ja-JP")}
-                  </dd>
-                </div>
-              )}
-              {article.reviewedBy && (
-                <div>
-                  <dt className="font-medium text-neutral-500">レビュー担当</dt>
-                  <dd className="mt-0.5 text-neutral-900">
-                    {article.reviewedBy}
-                  </dd>
-                </div>
-              )}
-            </dl>
-
-            {/* Preview link */}
-            <div className="mt-4 border-t border-neutral-100 pt-4">
-              <Link
-                href={`/admin/articles/${article.id}/preview`}
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                プレビューを表示
-              </Link>
-            </div>
-          </div>
-
-          {/* Compliance breakdown */}
-          <ComplianceBreakdown
-            breakdown={article.complianceBreakdown}
-            overall={article.complianceScore}
-          />
-
-          {/* Review comment history */}
-          <ReviewCommentHistory comments={article.reviewHistory} />
-        </div>
-
-        {/* Right column: Review actions */}
-        <div className="space-y-6">
-          <ReviewActions
-            articleId={article.id}
-            currentStatus={article.status}
-          />
-
-          {/* Quick info card */}
-          <div className="rounded-lg border border-neutral-200 bg-white p-5">
-            <h3 className="mb-3 text-sm font-semibold text-neutral-800">
-              クイック情報
-            </h3>
-            <dl className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <dt className="text-neutral-500">記事ID</dt>
-                <dd className="font-mono text-xs text-neutral-700">{article.articleId}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-neutral-500">コンテンツID</dt>
-                <dd className="font-mono text-xs text-neutral-700">{article.contentId}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-neutral-500">薬機法</dt>
-                <dd className="font-mono text-xs">
-                  <ComplianceScoreBadge score={article.complianceBreakdown.yakkinhou} />
-                </dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-neutral-500">景表法</dt>
-                <dd className="font-mono text-xs">
-                  <ComplianceScoreBadge score={article.complianceBreakdown.keihinhou} />
-                </dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-neutral-500">ステマ</dt>
-                <dd className="font-mono text-xs">
-                  <ComplianceScoreBadge score={article.complianceBreakdown.sutema} />
-                </dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-neutral-500">E-E-A-T</dt>
-                <dd className="font-mono text-xs">
-                  <ComplianceScoreBadge score={article.complianceBreakdown.eeat} />
-                </dd>
-              </div>
-            </dl>
           </div>
         </div>
+        <StatCard title="PV (30日)" value={fmt(analytics.pv30d)} variant="blue" />
+        <StatCard title="広告CL" value={fmt(analytics.affiliateClicks)} variant="purple" />
+        <StatCard title="CV" value={fmt(analytics.conversions)} variant="default" />
+        <StatCard
+          title="収益"
+          value={`¥${fmt(analytics.revenue)}`}
+          variant={analytics.revenue > 0 ? "success" : "warning"}
+        />
       </div>
+
+      {/* Tab-based content: 詳細分析 / プレビュー */}
+      <ArticleDetailTabs
+        article={{
+          id: article.id,
+          title: article.title,
+          slug: article.slug,
+          category: article.category,
+          complianceScore: article.complianceScore,
+          status: article.status,
+          authorName: article.authorName,
+          generatedAt: article.generatedAt,
+          reviewedAt: article.reviewedAt ?? null,
+          reviewedBy: article.reviewedBy ?? null,
+          microcmsId: article.microcmsId ?? null,
+          complianceBreakdown: article.complianceBreakdown,
+          reviewHistory: article.reviewHistory,
+          articleId: article.articleId,
+          contentId: article.contentId,
+        }}
+        analytics={{
+          pv30d: analytics.pv30d,
+          affiliateClicks: analytics.affiliateClicks,
+          conversions: analytics.conversions,
+          revenue: analytics.revenue,
+          pvTrend: analytics.pvTrend,
+          affiliateLinks: analytics.affiliateLinks,
+          aspPrograms: analytics.aspPrograms,
+        }}
+        categoryLabel={categoryLabel}
+      />
     </>
   );
 }

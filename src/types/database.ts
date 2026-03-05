@@ -202,6 +202,33 @@ export type AspProgramInsert = {
 export type AspProgramUpdate = Partial<Omit<AspProgramRow, 'id' | 'created_at'>>
 
 // ============================================================
+// Heatmap Events テーブル
+// ============================================================
+
+export type HeatmapEventType = 'click' | 'scroll'
+
+export interface HeatmapEventRow {
+  id: string
+  article_slug: string
+  event_type: HeatmapEventType
+  x_pct: number        // 0.0 ~ 100.0 (クリック位置 水平%)
+  y_pct: number        // 0.0 ~ 100.0 (クリック位置 垂直%)
+  scroll_depth: number  // 0 ~ 100 (スクロール到達%)
+  viewport_width: number
+  created_at: string
+}
+
+export type HeatmapEventInsert = {
+  id?: string
+  article_slug: string
+  event_type: HeatmapEventType
+  x_pct?: number
+  y_pct?: number
+  scroll_depth?: number
+  viewport_width?: number
+}
+
+// ============================================================
 // Pipeline Runs テーブル
 // ============================================================
 
@@ -559,6 +586,12 @@ export interface Database {
         Row: AspProgramRow
         Insert: AspProgramInsert
         Update: AspProgramUpdate
+        Relationships: []
+      }
+      heatmap_events: {
+        Row: HeatmapEventRow
+        Insert: HeatmapEventInsert
+        Update: Partial<Omit<HeatmapEventRow, 'id' | 'created_at'>>
         Relationships: []
       }
       pipeline_runs: {

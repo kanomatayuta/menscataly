@@ -3,23 +3,18 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { ComplianceScoreBadge } from "./ComplianceScoreBadge";
-import type { ArticleReviewItem, ArticleAnalytics, ReviewStatus } from "@/types/admin";
+import type { ArticleReviewItem, ArticleAnalytics, ArticleGrowthRate, ReviewStatus, CategoryInfo } from "@/types/admin";
 
 interface ArticleTableProps {
   articles: ArticleReviewItem[];
   analytics?: Map<string, ArticleAnalytics>;
+  categories?: CategoryInfo[];
+  updatedAtMap?: Map<string, string>;
+  growthRates?: Map<string, ArticleGrowthRate>;
 }
 
-type SortColumn = "pageviews" | "searchClicks" | "affiliateClicks" | "conversions" | "revenue" | null;
+type SortColumn = "pageviews" | "searchClicks" | "affiliateClicks" | "affiliateCtr" | "conversions" | "revenue" | "growthRate" | null;
 type SortDirection = "asc" | "desc";
-
-const CATEGORY_LABELS: Record<string, string> = {
-  aga: "AGA・薄毛",
-  ed: "ED治療",
-  "hair-removal": "メンズ脱毛",
-  skincare: "スキンケア",
-  column: "コラム",
-};
 
 const STATUS_STYLES: Record<ReviewStatus, { bg: string; text: string; label: string }> = {
   draft: { bg: "bg-neutral-100", text: "text-neutral-700", label: "下書き" },
@@ -57,7 +52,7 @@ function SortableHeader({
 }) {
   return (
     <th
-      className="cursor-pointer select-none px-4 py-3 text-right font-medium text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+      className="sticky top-0 z-20 cursor-pointer select-none whitespace-nowrap bg-neutral-50 px-4 py-3 text-right font-medium text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
       onClick={() => onClick(column)}
     >
       {label}
@@ -94,9 +89,31 @@ function AffiliateCtrValue({ affiliateClicks, pageviews }: { affiliateClicks: nu
   return <>{formatted}</>;
 }
 
-export function ArticleTable({ articles, analytics }: ArticleTableProps) {
+function GrowthRateValue({ rate }: { rate: number | null | undefined }) {
+  if (rate === null || rate === undefined) return <span className="text-neutral-300">-</span>;
+  const pct = (rate * 100).toFixed(1);
+  if (rate > 0) return <span className="font-medium text-green-600">+{pct}%</span>;
+  if (rate < 0) return <span className="font-medium text-red-600">{pct}%</span>;
+  return <span className="text-neutral-400">0.0%</span>;
+}
+
+export function ArticleTable({ articles, analytics, categories, updatedAtMap, growthRates }: ArticleTableProps) {
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterCategory, setFilterCategory] = useState<string>("");
+  const [filterStatus, setFilterStatus] = useState<string>("");
+
+  // Build category label map from dynamic categories
+  const categoryLabels = useMemo(() => {
+    const map: Record<string, string> = {};
+    if (categories) {
+      for (const cat of categories) {
+        map[cat.slug] = cat.name;
+      }
+    }
+    return map;
+  }, [categories]);
 
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
@@ -112,16 +129,45 @@ export function ArticleTable({ articles, analytics }: ArticleTableProps) {
     }
   };
 
+  const filteredArticles = useMemo(() => {
+    let result = articles;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter((a) => a.title.toLowerCase().includes(q));
+    }
+    if (filterCategory) {
+      result = result.filter((a) => a.category === filterCategory);
+    }
+    if (filterStatus) {
+      result = result.filter((a) => a.status === filterStatus);
+    }
+    return result;
+  }, [articles, searchQuery, filterCategory, filterStatus]);
+
   const sortedArticles = useMemo(() => {
-    if (!sortColumn) return articles;
-    return [...articles].sort((a, b) => {
+    if (!sortColumn) return filteredArticles;
+    return [...filteredArticles].sort((a, b) => {
+      if (sortColumn === "growthRate") {
+        const grA = growthRates?.get(a.id)?.growthRate ?? -Infinity;
+        const grB = growthRates?.get(b.id)?.growthRate ?? -Infinity;
+        return sortDirection === "asc" ? grA - grB : grB - grA;
+      }
+      if (sortColumn === "affiliateCtr") {
+        const statsA = analytics?.get(a.id);
+        const statsB = analytics?.get(b.id);
+        const ctrA = (statsA?.pageviews ?? 0) > 0 ? (statsA?.affiliateClicks ?? 0) / statsA!.pageviews : 0;
+        const ctrB = (statsB?.pageviews ?? 0) > 0 ? (statsB?.affiliateClicks ?? 0) / statsB!.pageviews : 0;
+        return sortDirection === "asc" ? ctrA - ctrB : ctrB - ctrA;
+      }
       const statsA = analytics?.get(a.id);
       const statsB = analytics?.get(b.id);
       const valA = statsA?.[sortColumn] ?? 0;
       const valB = statsB?.[sortColumn] ?? 0;
       return sortDirection === "asc" ? valA - valB : valB - valA;
     });
-  }, [articles, analytics, sortColumn, sortDirection]);
+  }, [filteredArticles, analytics, growthRates, sortColumn, sortDirection]);
+
+  const hasActiveFilter = searchQuery || filterCategory || filterStatus;
 
   if (articles.length === 0) {
     return (
@@ -132,22 +178,77 @@ export function ArticleTable({ articles, analytics }: ArticleTableProps) {
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white shadow-sm">
+    <div className="rounded-lg border border-neutral-200 bg-white shadow-sm">
+      {/* Filter bar */}
+      <div className="flex flex-wrap items-center gap-3 border-b border-neutral-200 px-4 py-3">
+        <div className="relative">
+          <svg className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+          <input
+            type="text"
+            placeholder="タイトル検索..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-8 w-48 rounded-md border border-neutral-200 bg-white pl-8 pr-3 text-xs text-neutral-700 outline-none transition-colors placeholder:text-neutral-400 focus:border-neutral-400 focus:ring-1 focus:ring-neutral-400"
+          />
+        </div>
+        <select
+          value={filterCategory}
+          onChange={(e) => setFilterCategory(e.target.value)}
+          className="h-8 rounded-md border border-neutral-200 bg-white px-2.5 text-xs text-neutral-700 outline-none transition-colors focus:border-neutral-400 focus:ring-1 focus:ring-neutral-400"
+        >
+          <option value="">全カテゴリ</option>
+          {categories?.map((cat) => (
+            <option key={cat.slug} value={cat.slug}>{cat.name}</option>
+          ))}
+        </select>
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          className="h-8 rounded-md border border-neutral-200 bg-white px-2.5 text-xs text-neutral-700 outline-none transition-colors focus:border-neutral-400 focus:ring-1 focus:ring-neutral-400"
+        >
+          <option value="">全ステータス</option>
+          {Object.entries(STATUS_STYLES).map(([key, style]) => (
+            <option key={key} value={key}>{style.label}</option>
+          ))}
+        </select>
+        {hasActiveFilter && (
+          <button
+            onClick={() => { setSearchQuery(""); setFilterCategory(""); setFilterStatus(""); }}
+            className="h-8 rounded-md px-2.5 text-xs font-medium text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-700"
+          >
+            クリア
+          </button>
+        )}
+        <span className="ml-auto text-xs text-neutral-400">
+          {sortedArticles.length}/{articles.length}件
+        </span>
+      </div>
+
+      {sortedArticles.length === 0 ? (
+        <div className="py-12 text-center">
+          <p className="text-sm text-neutral-500">条件に一致する記事がありません</p>
+        </div>
+      ) : (
+      <div className="max-h-[70vh] overflow-auto">
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="border-b border-neutral-200 bg-neutral-50">
-            <th className="px-4 py-3 font-medium text-neutral-600">タイトル</th>
-            <th className="px-4 py-3 font-medium text-neutral-600">カテゴリ</th>
+            <th className="sticky left-0 top-0 z-30 max-w-[300px] bg-neutral-50 px-4 py-3 font-medium text-neutral-600 after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-neutral-200">タイトル</th>
+            <th className="sticky top-0 z-20 whitespace-nowrap bg-neutral-50 px-4 py-3 font-medium text-neutral-600">カテゴリ</th>
+            <th className="sticky top-0 z-20 whitespace-nowrap bg-neutral-50 px-4 py-3 font-medium text-neutral-600">ステータス</th>
             <SortableHeader label="PV" column="pageviews" active={sortColumn === "pageviews"} direction={sortDirection} onClick={handleSort} />
+            <SortableHeader label="伸び率" column="growthRate" active={sortColumn === "growthRate"} direction={sortDirection} onClick={handleSort} />
             <SortableHeader label="検索CL" column="searchClicks" active={sortColumn === "searchClicks"} direction={sortDirection} onClick={handleSort} />
             <SortableHeader label="広告CL" column="affiliateClicks" active={sortColumn === "affiliateClicks"} direction={sortDirection} onClick={handleSort} />
-            <th className="px-4 py-3 text-right font-medium text-neutral-600">広告CTR</th>
+            <SortableHeader label="広告CTR" column="affiliateCtr" active={sortColumn === "affiliateCtr"} direction={sortDirection} onClick={handleSort} />
             <SortableHeader label="CV" column="conversions" active={sortColumn === "conversions"} direction={sortDirection} onClick={handleSort} />
             <SortableHeader label="収益" column="revenue" active={sortColumn === "revenue"} direction={sortDirection} onClick={handleSort} />
-            <th className="px-4 py-3 font-medium text-neutral-600">ステータス</th>
-            <th className="px-4 py-3 font-medium text-neutral-600">コンプライアンス</th>
-            <th className="px-4 py-3 font-medium text-neutral-600">日付</th>
-            <th className="px-4 py-3 font-medium text-neutral-600">操作</th>
+            <th className="sticky top-0 z-20 whitespace-nowrap bg-neutral-50 px-4 py-3 font-medium text-neutral-600">コンプラ</th>
+            <th className="sticky top-0 z-20 whitespace-nowrap bg-neutral-50 px-4 py-3 font-medium text-neutral-600">作成日</th>
+            <th className="sticky top-0 z-20 whitespace-nowrap bg-neutral-50 px-4 py-3 font-medium text-neutral-600">更新日</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-neutral-100">
@@ -160,15 +261,41 @@ export function ArticleTable({ articles, analytics }: ArticleTableProps) {
             const cv = stats?.conversions ?? 0;
             const rev = stats?.revenue ?? 0;
             return (
-              <tr key={article.id} className="hover:bg-neutral-50">
-                <td className="min-w-[200px] truncate px-4 py-3 font-medium text-neutral-900">
-                  {article.title}
+              <tr key={article.id} className="group/row hover:bg-neutral-50">
+                <td className="sticky left-0 z-10 max-w-[300px] bg-white px-4 py-2 font-medium after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-neutral-200 group-hover/row:bg-neutral-50">
+                  <Link
+                    href={`/admin/articles/${article.id}`}
+                    className="flex items-center gap-2.5 text-neutral-900 hover:text-blue-600 hover:underline"
+                  >
+                    {article.thumbnailUrl ? (
+                      <img
+                        src={`${article.thumbnailUrl}?w=120&h=64&fit=crop`}
+                        alt=""
+                        className="h-8 w-14 shrink-0 rounded object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-8 w-14 shrink-0 items-center justify-center rounded bg-neutral-100 text-xs text-neutral-400">
+                        No
+                      </span>
+                    )}
+                    <span className="truncate">{article.title}</span>
+                  </Link>
                 </td>
-                <td className="px-4 py-3 text-neutral-600">
-                  {CATEGORY_LABELS[article.category] ?? article.category}
+                <td className="whitespace-nowrap px-4 py-3 text-neutral-600">
+                  {categoryLabels[article.category] ?? article.category}
+                </td>
+                <td className="px-4 py-3">
+                  <span
+                    className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${statusStyle.bg} ${statusStyle.text}`}
+                  >
+                    {statusStyle.label}
+                  </span>
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums text-neutral-600">
                   {pv === 0 ? <ZeroValue /> : formatNumber(pv)}
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums text-neutral-600">
+                  <GrowthRateValue rate={growthRates?.get(article.id)?.growthRate} />
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums text-neutral-600">
                   {searchCl === 0 ? <ZeroValue /> : formatNumber(searchCl)}
@@ -186,31 +313,21 @@ export function ArticleTable({ articles, analytics }: ArticleTableProps) {
                   <RevenueValue value={rev} />
                 </td>
                 <td className="px-4 py-3">
-                  <span
-                    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusStyle.bg} ${statusStyle.text}`}
-                  >
-                    {statusStyle.label}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
                   <ComplianceScoreBadge score={article.complianceScore} />
                 </td>
-                <td className="px-4 py-3 text-neutral-500">
+                <td className="whitespace-nowrap px-4 py-3 text-neutral-500">
                   {formatDate(article.generatedAt)}
                 </td>
-                <td className="px-4 py-3">
-                  <Link
-                    href={`/admin/articles/${article.id}`}
-                    className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
-                  >
-                    レビュー
-                  </Link>
+                <td className="whitespace-nowrap px-4 py-3 text-neutral-500">
+                  {updatedAtMap?.get(article.id) ? formatDate(updatedAtMap.get(article.id)!) : <ZeroValue />}
                 </td>
               </tr>
             );
           })}
         </tbody>
       </table>
+    </div>
+      )}
     </div>
   );
 }

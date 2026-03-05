@@ -48,6 +48,7 @@ export interface ArticleReviewItem {
   reviewedBy?: string | null;
   reviewComment?: string | null;
   generationCostUsd?: number;
+  thumbnailUrl?: string;
 }
 
 /** 記事レビュー詳細 (個別ページ用) */
@@ -124,11 +125,13 @@ export interface TrendDataPoint {
 /** カテゴリ別トレンドデータポイント (積み上げ棒グラフ用) */
 export interface CategoryTrendDataPoint {
   date: string;
-  aga: number;
-  ed: number;
-  hairRemoval: number;
-  skincare: number;
-  column: number;
+  [categorySlug: string]: string | number;
+}
+
+/** カテゴリ情報 (microCMSから動的取得) */
+export interface CategoryInfo {
+  slug: string;
+  name: string;
 }
 
 /** ランキングタブ種別 */
@@ -154,6 +157,32 @@ export interface ArticlesSummary {
   totalClicks: number;
   totalConversions: number;
   totalRevenue: number;
+}
+
+// ============================================================
+// 記事別アフィリエイトリンクパフォーマンス (詳細ページ用)
+// ============================================================
+
+/** アフィリエイトリンク別パフォーマンス */
+export interface AffiliateLinkPerformance {
+  aspName: string;
+  programName: string;
+  clickCount: number;
+  conversionCount: number;
+  revenue: number;
+}
+
+// ============================================================
+// 記事PV伸び率 (テーブル列用)
+// ============================================================
+
+/** 記事PV週次伸び率 */
+export interface ArticleGrowthRate {
+  articleId: string;
+  currentWeekPv: number;
+  previousWeekPv: number;
+  /** (currentWeekPv - previousWeekPv) / previousWeekPv, null = データ不足 */
+  growthRate: number | null;
 }
 
 // ============================================================

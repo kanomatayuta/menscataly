@@ -41,7 +41,13 @@ export function AnalyticsSummaryCards({
     totalRevenue > 0 ? "過去30日間" : "ASP承認後に計上";
 
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+      <StatCard
+        title="総記事数"
+        value={totalArticles.toLocaleString("ja-JP")}
+        variant="default"
+        subtitle="公開済み記事"
+      />
       <StatCard
         title="総PV"
         value={totalPageviews.toLocaleString("ja-JP")}

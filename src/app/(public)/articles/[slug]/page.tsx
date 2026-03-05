@@ -18,6 +18,7 @@ import { ArticleBody } from "@/components/article/ArticleBody";
 import { TableOfContents } from "@/components/article/TableOfContents";
 import { RelatedArticles } from "@/components/article/RelatedArticles";
 import { enrichContentWithAffiliateLinks } from "@/lib/asp/enrich-content";
+import { HeatmapTracker } from "@/components/HeatmapTracker";
 import type { ContentCategory } from "@/types/content";
 
 /** thumbnail_url (Cloudinary) → thumbnail (microCMS画像) → null のフォールバック */
@@ -390,6 +391,9 @@ export default async function ArticleDetailPage({ params, searchParams }: Props)
 
   return (
     <div className="bg-white py-8 sm:py-12">
+      {/* Heatmap tracker (非表示、クリック/スクロール記録) */}
+      <HeatmapTracker articleSlug={slug} />
+
       {/* Draft Mode バナー (動的、Suspense でラップ) */}
       <Suspense fallback={null}>
         <DraftModeBanner />

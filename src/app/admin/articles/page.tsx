@@ -6,14 +6,36 @@ import { TrendChart } from "@/components/admin/TrendChart";
 import { ArticleRanking } from "@/components/admin/ArticleRanking";
 import { ArticleTable } from "@/components/admin/ArticleTable";
 import { CategoryChart } from "@/components/admin/CategoryChart";
-import { getArticles } from "@/lib/microcms/client";
-import { extractSlugFromPath } from "@/lib/analytics/ga4-client";
-import type { ArticleReviewItem, ArticleAnalytics, TrendDataPoint, RankingData, RankingItem, CategoryTrendDataPoint } from "@/types/admin";
+import { getArticles, getCategories } from "@/lib/microcms/client";
+import type { ArticleReviewItem, ArticleAnalytics, ArticleGrowthRate, TrendDataPoint, RankingData, RankingItem, CategoryTrendDataPoint, CategoryInfo } from "@/types/admin";
 import type { ContentCategory } from "@/types/content";
+import type { MicroCMSArticle } from "@/types/microcms";
+import type { MicroCMSListResponse } from "microcms-js-sdk";
 
 // ------------------------------------------------------------------
 // Data fetching (microCMS から記事取得)
 // ------------------------------------------------------------------
+
+const EMPTY_MICROCMS_RESPONSE: MicroCMSListResponse<MicroCMSArticle> = {
+  contents: [], totalCount: 0, offset: 0, limit: 100,
+};
+
+/** microCMS 生データ (キャッシュ) — fetchArticlesData と CategoryChartSection で共有 */
+async function fetchRawArticles(): Promise<MicroCMSListResponse<MicroCMSArticle>> {
+  try {
+    await connection();
+  } catch {
+    return EMPTY_MICROCMS_RESPONSE;
+  }
+  try {
+    return await getArticles({ limit: 100, orders: "-publishedAt" });
+  } catch (err) {
+    console.error("[admin/articles] microCMS fetch error:", err);
+    return EMPTY_MICROCMS_RESPONSE;
+  }
+}
+
+const getCachedRawArticles = cache(fetchRawArticles);
 
 interface ArticlesResponse {
   articles: ArticleReviewItem[];
@@ -21,33 +43,23 @@ interface ArticlesResponse {
 }
 
 async function fetchArticlesData(): Promise<ArticlesResponse> {
-  try {
-    await connection();
-  } catch {
-    return { articles: [], total: 0 };
-  }
+  const response = await getCachedRawArticles();
 
-  try {
-    const response = await getArticles({ limit: 50, orders: "-publishedAt" });
+  const articles: ArticleReviewItem[] = response.contents.map((item) => ({
+    id: item.id,
+    contentId: item.id,
+    title: item.title,
+    slug: item.slug ?? item.id,
+    category: (item.category?.slug ?? "column") as ContentCategory,
+    complianceScore: item.compliance_score ?? 0,
+    status: "published" as const,
+    generatedAt: item.publishedAt ?? item.createdAt,
+    reviewedAt: null,
+    reviewedBy: null,
+    thumbnailUrl: item.thumbnail?.url ?? item.thumbnail_url ?? undefined,
+  }));
 
-    const articles: ArticleReviewItem[] = response.contents.map((item) => ({
-      id: item.id,
-      contentId: item.id,
-      title: item.title,
-      slug: item.slug ?? item.id,
-      category: (item.category?.slug ?? "column") as ContentCategory,
-      complianceScore: 0,
-      status: "published" as const,
-      generatedAt: item.publishedAt ?? item.createdAt,
-      reviewedAt: null,
-      reviewedBy: null,
-    }));
-
-    return { articles, total: response.totalCount };
-  } catch (err) {
-    console.error("[admin/articles] Error fetching from microCMS:", err);
-    return { articles: [], total: 0 };
-  }
+  return { articles, total: response.totalCount };
 }
 
 // ------------------------------------------------------------------
@@ -201,74 +213,134 @@ async function fetchAnalyticsData(
 const getCachedArticlesData = cache(fetchArticlesData);
 const getCachedAnalyticsData = cache(fetchAnalyticsData);
 
+const getCachedCategories = cache(async (): Promise<CategoryInfo[]> => {
+  try {
+    await connection();
+  } catch {
+    return [];
+  }
+  try {
+    const response = await getCategories();
+    return response.contents.map((c) => ({ slug: c.slug ?? c.id, name: c.name }));
+  } catch (err) {
+    console.error("[admin/articles] Category fetch error:", err);
+    return [];
+  }
+});
+
 // ------------------------------------------------------------------
-// Category trend data fetching (GA4 per-page PV → category aggregation)
+// Category article count helpers (日別/月別 × 作成/更新)
 // ------------------------------------------------------------------
 
-async function fetchCategoryTrendData(days: number): Promise<CategoryTrendDataPoint[]> {
+function buildArticleCountData(
+  rawArticles: MicroCMSArticle[],
+  categories: CategoryInfo[],
+  getDate: (article: MicroCMSArticle) => string | undefined,
+  groupBy: "day" | "month",
+): CategoryTrendDataPoint[] {
+  const categorySlugs = new Set(categories.map((c) => c.slug));
+  const byKey = new Map<string, CategoryTrendDataPoint>();
+
+  for (const article of rawArticles) {
+    const dateStr = getDate(article);
+    if (!dateStr) continue;
+
+    const catSlug = article.category?.slug;
+    if (!catSlug || !categorySlugs.has(catSlug)) continue;
+
+    const d = new Date(dateStr);
+    let key: string;
+    let label: string;
+
+    if (groupBy === "day") {
+      key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      label = `${d.getMonth() + 1}/${d.getDate()}`;
+    } else {
+      key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      label = `${d.getFullYear()}/${d.getMonth() + 1}`;
+    }
+
+    let point = byKey.get(key);
+    if (!point) {
+      point = { date: label };
+      for (const cat of categories) {
+        point[cat.slug] = 0;
+      }
+      byKey.set(key, point);
+    }
+
+    (point[catSlug] as number) += 1;
+  }
+
+  return [...byKey.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, v]) => v);
+}
+
+// ------------------------------------------------------------------
+// Category PV data (GA4 per-page PV → category aggregation)
+// ------------------------------------------------------------------
+
+async function fetchCategoryPvData(
+  days: number,
+  groupBy: "day" | "month",
+): Promise<CategoryTrendDataPoint[]> {
   try {
     await connection();
 
     const { articles } = await getCachedArticlesData();
+    const categories = await getCachedCategories();
 
-    // Build slug → category map
     const slugToCategory = new Map<string, string>();
     for (const article of articles) {
-      const slug = article.slug ?? article.id;
-      slugToCategory.set(slug, article.category);
+      slugToCategory.set(article.slug ?? article.id, article.category);
     }
+    const categorySlugs = new Set(categories.map((c) => c.slug));
 
-    // Category key mapping (ContentCategory → CategoryTrendDataPoint key)
-    const categoryKeyMap: Record<string, keyof Omit<CategoryTrendDataPoint, "date">> = {
-      "aga": "aga",
-      "ed": "ed",
-      "hair-removal": "hairRemoval",
-      "skincare": "skincare",
-      "column": "column",
-    };
-
-    const { fetchGA4DailyMetrics } = await import("@/lib/analytics/ga4-client");
+    const { fetchGA4DailyMetrics, extractSlugFromPath } = await import("@/lib/analytics/ga4-client");
     const ga4Data = await fetchGA4DailyMetrics(`${days}daysAgo`, "today");
 
-    const byDate = new Map<string, CategoryTrendDataPoint>();
+    const byKey = new Map<string, CategoryTrendDataPoint>();
 
     for (const row of ga4Data) {
       const slug = extractSlugFromPath(row.pagePath);
       if (!slug) continue;
 
       const category = slugToCategory.get(slug);
-      if (!category) continue;
+      if (!category || !categorySlugs.has(category)) continue;
 
-      const catKey = categoryKeyMap[category];
-      if (!catKey) continue;
+      const d = new Date(row.date);
+      let key: string;
+      let label: string;
 
-      let point = byDate.get(row.date);
-      if (!point) {
-        const dateObj = new Date(row.date);
-        point = {
-          date: `${dateObj.getMonth() + 1}/${dateObj.getDate()}`,
-          aga: 0,
-          ed: 0,
-          hairRemoval: 0,
-          skincare: 0,
-          column: 0,
-        };
-        byDate.set(row.date, point);
+      if (groupBy === "day") {
+        key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        label = `${d.getMonth() + 1}/${d.getDate()}`;
+      } else {
+        key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        label = `${d.getFullYear()}/${d.getMonth() + 1}`;
       }
 
-      point[catKey] += row.pageviews;
+      let point = byKey.get(key);
+      if (!point) {
+        point = { date: label };
+        for (const cat of categories) {
+          point[cat.slug] = 0;
+        }
+        byKey.set(key, point);
+      }
+
+      (point[category] as number) += row.pageviews;
     }
 
-    return [...byDate.entries()]
+    return [...byKey.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([, v]) => v);
   } catch (err) {
-    console.error("[admin/articles] Category trend fetch error:", err);
+    console.error("[admin/articles] Category PV fetch error:", err);
     return [];
   }
 }
-
-const getCachedCategoryTrendData = cache(fetchCategoryTrendData);
 
 // ------------------------------------------------------------------
 // Trend data fetching (GA4 API直接 → Supabase フォールバック)
@@ -387,6 +459,66 @@ async function fetchTrendData(days: number): Promise<TrendDataPoint[]> {
 }
 
 // ------------------------------------------------------------------
+// Growth rate data (PV週次伸び率)
+// ------------------------------------------------------------------
+
+async function fetchGrowthRates(
+  articles: ArticleReviewItem[]
+): Promise<Map<string, ArticleGrowthRate>> {
+  const map = new Map<string, ArticleGrowthRate>();
+
+  const slugToArticle = new Map<string, ArticleReviewItem>();
+  for (const a of articles) {
+    slugToArticle.set(a.slug, a);
+  }
+
+  try {
+    await connection();
+
+    const { fetchGA4DailyMetrics, extractSlugFromPath } = await import("@/lib/analytics/ga4-client");
+
+    // 今週 (7日) と先週 (14日前〜8日前) を並列取得
+    const [thisWeekData, prevWeekData] = await Promise.all([
+      fetchGA4DailyMetrics("7daysAgo", "today"),
+      fetchGA4DailyMetrics("14daysAgo", "8daysAgo"),
+    ]);
+
+    // 今週PV集計
+    const thisWeekPv = new Map<string, number>();
+    for (const row of thisWeekData) {
+      const slug = extractSlugFromPath(row.pagePath);
+      if (!slug) continue;
+      thisWeekPv.set(slug, (thisWeekPv.get(slug) ?? 0) + row.pageviews);
+    }
+
+    // 先週PV集計
+    const prevWeekPv = new Map<string, number>();
+    for (const row of prevWeekData) {
+      const slug = extractSlugFromPath(row.pagePath);
+      if (!slug) continue;
+      prevWeekPv.set(slug, (prevWeekPv.get(slug) ?? 0) + row.pageviews);
+    }
+
+    // 伸び率計算
+    for (const [slug, article] of slugToArticle) {
+      const current = thisWeekPv.get(slug) ?? 0;
+      const previous = prevWeekPv.get(slug) ?? 0;
+      const growthRate = previous > 0 ? (current - previous) / previous : null;
+      map.set(article.id, {
+        articleId: article.id,
+        currentWeekPv: current,
+        previousWeekPv: previous,
+        growthRate,
+      });
+    }
+  } catch (err) {
+    console.error("[admin/articles] Growth rate fetch error:", err);
+  }
+
+  return map;
+}
+
+// ------------------------------------------------------------------
 // Ranking data (from analytics map + articles)
 // ------------------------------------------------------------------
 
@@ -439,8 +571,8 @@ function buildRankingData(
 
 function SummaryCardsSkeleton() {
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {[...Array(4)].map((_, i) => (
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+      {[...Array(5)].map((_, i) => (
         <div key={i} className="h-24 animate-pulse rounded-lg bg-neutral-200" />
       ))}
     </div>
@@ -502,38 +634,67 @@ async function RankingSection() {
 }
 
 async function CategoryChartSection() {
-  const data = await getCachedCategoryTrendData(90);
   const { articles } = await getCachedArticlesData();
+  const categories = await getCachedCategories();
+  const rawResponse = await getCachedRawArticles();
+  const rawArticles = rawResponse.contents;
+
+  const getCreatedDate = (a: MicroCMSArticle) => a.publishedAt ?? a.createdAt;
+  const getUpdatedDate = (a: MicroCMSArticle) => a.revisedAt ?? a.publishedAt ?? a.createdAt;
+
+  // 記事数データ (4パターン)
+  const dailyCreatedData = buildArticleCountData(rawArticles, categories, getCreatedDate, "day");
+  const dailyUpdatedData = buildArticleCountData(rawArticles, categories, getUpdatedDate, "day");
+  const monthlyCreatedData = buildArticleCountData(rawArticles, categories, getCreatedDate, "month");
+  const monthlyUpdatedData = buildArticleCountData(rawArticles, categories, getUpdatedDate, "month");
+
+  // PVデータ (日別/月別)
+  const [dailyPvData, monthlyPvData] = await Promise.all([
+    fetchCategoryPvData(90, "day"),
+    fetchCategoryPvData(90, "month"),
+  ]);
 
   // Count articles by category
   const articleCountByCategory: Record<string, number> = {};
-  const categoryKeyMap: Record<string, string> = {
-    "aga": "aga",
-    "ed": "ed",
-    "hair-removal": "hairRemoval",
-    "skincare": "skincare",
-    "column": "column",
-  };
-
   for (const article of articles) {
-    const catKey = categoryKeyMap[article.category] ?? article.category;
-    articleCountByCategory[catKey] = (articleCountByCategory[catKey] ?? 0) + 1;
+    articleCountByCategory[article.category] = (articleCountByCategory[article.category] ?? 0) + 1;
   }
 
-  return <CategoryChart data={data} articleCountByCategory={articleCountByCategory} />;
+  return (
+    <CategoryChart
+      dailyCreatedData={dailyCreatedData}
+      dailyUpdatedData={dailyUpdatedData}
+      monthlyCreatedData={monthlyCreatedData}
+      monthlyUpdatedData={monthlyUpdatedData}
+      dailyPvData={dailyPvData}
+      monthlyPvData={monthlyPvData}
+      categories={categories}
+      articleCountByCategory={articleCountByCategory}
+    />
+  );
 }
 
 async function ArticlesTableSection() {
-  const { articles, total } = await getCachedArticlesData();
-  const analytics = await getCachedAnalyticsData(articles);
+  const { articles } = await getCachedArticlesData();
+  const [analytics, categories, growthRates] = await Promise.all([
+    getCachedAnalyticsData(articles),
+    getCachedCategories(),
+    fetchGrowthRates(articles),
+  ]);
+
+  // 更新日マップ (microCMS revisedAt)
+  const rawResponse = await getCachedRawArticles();
+  const updatedAtMap = new Map<string, string>();
+  for (const item of rawResponse.contents) {
+    if (item.revisedAt) {
+      updatedAtMap.set(item.id, item.revisedAt);
+    }
+  }
 
   return (
     <>
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-neutral-700">記事一覧</h3>
-        <p className="text-sm text-neutral-500">{total} 記事</p>
-      </div>
-      <ArticleTable articles={articles} analytics={analytics} />
+      <h3 className="mb-4 text-sm font-semibold text-neutral-700">記事一覧</h3>
+      <ArticleTable articles={articles} analytics={analytics} categories={categories} updatedAtMap={updatedAtMap} growthRates={growthRates} />
     </>
   );
 }

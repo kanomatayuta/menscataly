@@ -1,10 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/admin/Sidebar";
 
 export function AdminLayoutShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // 管理者フラグを立てる → HeatmapTracker が検出して計測を除外
+  useEffect(() => {
+    try { localStorage.setItem("menscataly_admin", "1"); } catch {}
+  }, []);
 
   return (
     <div className="flex h-screen overflow-hidden bg-neutral-50">
