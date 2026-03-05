@@ -87,6 +87,7 @@ export function TrendChart({ data }: TrendChartProps) {
               tick={{ fontSize: 12, fill: "#6b7280" }}
               tickLine={false}
               axisLine={{ stroke: "#e5e7eb" }}
+              allowDecimals={false}
             />
             <YAxis
               yAxisId="right"
@@ -94,6 +95,7 @@ export function TrendChart({ data }: TrendChartProps) {
               tick={{ fontSize: 12, fill: "#6b7280" }}
               tickLine={false}
               axisLine={{ stroke: "#e5e7eb" }}
+              allowDecimals={false}
             />
             <Tooltip
               contentStyle={{
@@ -112,43 +114,43 @@ export function TrendChart({ data }: TrendChartProps) {
             />
             <Line
               yAxisId="left"
-              type="monotone"
+              type="linear"
               dataKey="pageviews"
               name="pageviews"
               stroke="#3b82f6"
               strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 4 }}
+              dot={{ r: 4, fill: "#3b82f6", strokeWidth: 0 }}
+              activeDot={{ r: 6, fill: "#3b82f6" }}
             />
             <Line
               yAxisId="left"
-              type="monotone"
+              type="linear"
               dataKey="searchClicks"
               name="searchClicks"
               stroke="#10b981"
               strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 4 }}
+              dot={{ r: 4, fill: "#10b981", strokeWidth: 0 }}
+              activeDot={{ r: 6, fill: "#10b981" }}
             />
             <Line
               yAxisId="left"
-              type="monotone"
+              type="linear"
               dataKey="affiliateClicks"
               name="affiliateClicks"
               stroke="#8b5cf6"
               strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 4 }}
+              dot={{ r: 4, fill: "#8b5cf6", strokeWidth: 0 }}
+              activeDot={{ r: 6, fill: "#8b5cf6" }}
             />
             <Line
               yAxisId="right"
-              type="monotone"
+              type="linear"
               dataKey="conversions"
               name="conversions"
               stroke="#f59e0b"
               strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 4 }}
+              dot={{ r: 4, fill: "#f59e0b", strokeWidth: 0 }}
+              activeDot={{ r: 6, fill: "#f59e0b" }}
             />
           </LineChart>
         </ResponsiveContainer>
