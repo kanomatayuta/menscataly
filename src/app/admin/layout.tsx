@@ -41,12 +41,7 @@ export default async function AdminLayout({
   const adminToken = cookieStore.get("admin-token")?.value;
   const adminApiKey = process.env.ADMIN_API_KEY;
 
-  if (adminApiKey) {
-    if (!adminToken || adminToken !== adminApiKey) {
-      redirect("/admin/login");
-    }
-  } else if (process.env.NODE_ENV !== "development") {
-    // 本番環境で ADMIN_API_KEY が未設定
+  if (!adminToken || !adminApiKey || adminToken !== adminApiKey) {
     redirect("/admin/login");
   }
 

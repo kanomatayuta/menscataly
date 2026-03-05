@@ -120,11 +120,6 @@ export function middleware(request: NextRequest): NextResponse {
 
     const adminApiKey = process.env.ADMIN_API_KEY
 
-    // 開発環境でAPIキーが未設定の場合はバイパス
-    if (!adminApiKey && process.env.NODE_ENV === 'development') {
-      return NextResponse.next()
-    }
-
     // admin-token Cookie を検証
     const token = request.cookies.get(ADMIN_TOKEN_COOKIE)?.value
 

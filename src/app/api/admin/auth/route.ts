@@ -42,19 +42,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const adminApiKey = process.env.ADMIN_API_KEY
 
-    // 開発環境でAPIキーが未設定の場合はバイパス
-    if (!adminApiKey && process.env.NODE_ENV === 'development') {
-      const response = NextResponse.json({ success: true })
-      response.cookies.set(ADMIN_TOKEN_COOKIE, apiKey, {
-        httpOnly: true,
-        secure: false,
-        sameSite: 'strict',
-        path: '/admin',
-        maxAge: 60 * 60 * 24, // 24時間
-      })
-      return response
-    }
-
     if (!adminApiKey) {
       console.error('[AdminAuth] ADMIN_API_KEY is not configured')
       return NextResponse.json(
