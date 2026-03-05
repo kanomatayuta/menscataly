@@ -21,21 +21,16 @@ export function A8LinkManager() {
   if (!CONFIG_ID) return null;
 
   return (
-    <>
-      {/* A8 Link Manager SDK */}
-      <Script
-        id="a8-linkmgr-sdk"
-        src="https://statics.a8.net/a8link/a8linkmgr.js"
-        strategy="afterInteractive"
-      />
-      {/* 初期化 */}
-      <Script
-        id="a8-linkmgr-init"
-        strategy="afterInteractive"
-        dangerouslySetInnerHTML={{
-          __html: `a8linkmgr({"config_id":"${CONFIG_ID}"});`,
-        }}
-      />
-    </>
+    <Script
+      id="a8-linkmgr-sdk"
+      src="https://statics.a8.net/a8link/a8linkmgr.js"
+      strategy="afterInteractive"
+      onReady={() => {
+        // onReady fires after the script loads AND on every subsequent client-side navigation
+        (window as unknown as Record<string, Function>).a8linkmgr({
+          config_id: CONFIG_ID,
+        });
+      }}
+    />
   );
 }

@@ -1,7 +1,13 @@
 /**
  * Next.js ミドルウェア
+ * - 管理者ルート認証保護 (/admin/*)
  * - ASP ITPトラッキングスクリプト自動注入
  * - ファーストパーティ Cookie アフィリエイトトラッキング (Safari/Firefox ITP対策)
+ *
+ * 管理者ルート (/admin/*) にアクセスした場合:
+ *   1. /admin/login はそのまま通す
+ *   2. それ以外は admin-token Cookie を検証
+ *   3. 未認証の場合は /admin/login にリダイレクト
  *
  * 記事ページ (/articles/*) にアクセスした場合:
  *   1. アフィリエイトクリックパラメータ (utm_source, asp_ref, a8mat 等) を検出
@@ -14,6 +20,15 @@ import { NextRequest, NextResponse } from 'next/server'
 // ============================================================
 // 設定定数
 // ============================================================
+
+/** 管理者認証 Cookie 名 */
+const ADMIN_TOKEN_COOKIE = 'admin-token'
+
+/** 管理者ルートのパスパターン */
+const ADMIN_PATH_REGEX = /^\/admin(\/.*)?$/
+
+/** ログインページのパス */
+const ADMIN_LOGIN_PATH = '/admin/login'
 
 /** トラッキング Cookie 名 */
 const TRACKING_COOKIE_NAME = '_mc_aff'
@@ -68,8 +83,66 @@ const ITP_SCRIPT_MAP: Record<string, { url: string; attributes: Record<string, s
 // ミドルウェア本体
 // ============================================================
 
+/**
+ * admin-token Cookie を検証する
+ * Edge Runtime では crypto.timingSafeEqual が使えないため、
+ * 定数時間比較をピュアJSで実装する
+ */
+function verifyAdminToken(token: string, expected: string): boolean {
+  if (token.length !== expected.length) {
+    // 長さが異なる場合でもダミー比較を実行して定数時間にする
+    let result = 1
+    for (let i = 0; i < expected.length; i++) {
+      result |= expected.charCodeAt(i) ^ expected.charCodeAt(i)
+    }
+    return result === 0 // 常に false
+  }
+  let result = 0
+  for (let i = 0; i < token.length; i++) {
+    result |= token.charCodeAt(i) ^ expected.charCodeAt(i)
+  }
+  return result === 0
+}
+
 export function middleware(request: NextRequest): NextResponse {
   const { pathname, searchParams } = request.nextUrl
+
+  // --------------------------------------------------------
+  // 管理者ルート認証チェック
+  // --------------------------------------------------------
+  if (ADMIN_PATH_REGEX.test(pathname)) {
+    // /admin/login はそのまま通す（認証不要）
+    if (pathname === ADMIN_LOGIN_PATH) {
+      const response = NextResponse.next()
+      response.headers.set('x-admin-pathname', pathname)
+      return response
+    }
+
+    const adminApiKey = process.env.ADMIN_API_KEY
+
+    // 開発環境でAPIキーが未設定の場合はバイパス
+    if (!adminApiKey && process.env.NODE_ENV === 'development') {
+      return NextResponse.next()
+    }
+
+    // admin-token Cookie を検証
+    const token = request.cookies.get(ADMIN_TOKEN_COOKIE)?.value
+
+    if (!token || !adminApiKey || !verifyAdminToken(token, adminApiKey)) {
+      // 未認証 → ログインページにリダイレクト
+      const loginUrl = new URL(ADMIN_LOGIN_PATH, request.url)
+      loginUrl.searchParams.set('from', pathname)
+      return NextResponse.redirect(loginUrl)
+    }
+
+    const response = NextResponse.next()
+    response.headers.set('x-admin-pathname', pathname)
+    return response
+  }
+
+  // --------------------------------------------------------
+  // 記事ページ: ITPトラッキング処理
+  // --------------------------------------------------------
   const response = NextResponse.next()
 
   // 記事ページ以外はスキップ
@@ -220,7 +293,9 @@ export function getItpScriptConfigs(aspNames: string[]): Array<{
 
 export const config = {
   matcher: [
-    // 記事ページのみに適用
+    // 管理者ルート (認証保護)
+    '/admin/:path*',
+    // 記事ページ (ITPトラッキング)
     '/articles/:path*',
   ],
 }

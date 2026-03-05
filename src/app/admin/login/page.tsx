@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
-export default function AdminLoginPage() {
+function LoginForm() {
   const [apiKey, setApiKey] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,18 +21,77 @@ export default function AdminLoginPage() {
 
     setIsLoading(true);
 
-    // Simple validation: key must be non-empty
-    // In production, this would validate against a backend
     try {
+      // サーバーサイドでAPIキーを検証し、httpOnly Cookieを設定
+      const res = await fetch("/api/admin/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: apiKey.trim() }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "Authentication failed");
+        return;
+      }
+
+      // クライアントサイドAPIコール用にsessionStorageにも保存
+      // (Bearer tokenとしてfetchヘッダーに使用)
       sessionStorage.setItem("adminApiKey", apiKey.trim());
-      router.push("/admin");
+
+      // リダイレクト先を取得（ミドルウェアが ?from= を設定）
+      const redirectTo = searchParams.get("from") || "/admin";
+      router.push(redirectTo);
     } catch {
-      setError("Failed to save credentials");
+      setError("Failed to authenticate. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm"
+    >
+      <div className="mb-4">
+        <label
+          htmlFor="api-key"
+          className="mb-1.5 block text-sm font-medium text-neutral-700"
+        >
+          API Key
+        </label>
+        <input
+          id="api-key"
+          type="password"
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+          placeholder="Enter your admin API key"
+          className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none"
+          autoComplete="off"
+          autoFocus
+        />
+      </div>
+
+      {error && (
+        <p className="mb-4 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+
+      <button
+        type="submit"
+        disabled={isLoading}
+        className="w-full rounded-md px-4 py-2.5 text-sm font-medium text-white transition-colors disabled:opacity-50"
+        style={{ backgroundColor: "#1a365d" }}
+      >
+        {isLoading ? "Logging in..." : "Login"}
+      </button>
+    </form>
+  );
+}
+
+export default function AdminLoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-neutral-50 px-4">
       <div className="w-full max-w-sm">
@@ -44,45 +104,20 @@ export default function AdminLoginPage() {
           <p className="mt-2 text-sm text-neutral-500">Admin Login</p>
         </div>
 
-        {/* Form */}
-        <form
-          onSubmit={handleSubmit}
-          className="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm"
+        {/* Form (Suspense required for useSearchParams in App Router) */}
+        <Suspense
+          fallback={
+            <div className="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
+              <div className="animate-pulse">
+                <div className="mb-4 h-4 w-16 rounded bg-neutral-200" />
+                <div className="mb-4 h-10 rounded bg-neutral-100" />
+                <div className="h-10 rounded bg-neutral-200" />
+              </div>
+            </div>
+          }
         >
-          <div className="mb-4">
-            <label
-              htmlFor="api-key"
-              className="mb-1.5 block text-sm font-medium text-neutral-700"
-            >
-              API Key
-            </label>
-            <input
-              id="api-key"
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="Enter your admin API key"
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-900 placeholder-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none"
-              autoComplete="off"
-              autoFocus
-            />
-          </div>
-
-          {error && (
-            <p className="mb-4 text-sm text-red-600" role="alert">
-              {error}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full rounded-md px-4 py-2.5 text-sm font-medium text-white transition-colors disabled:opacity-50"
-            style={{ backgroundColor: "#1a365d" }}
-          >
-            {isLoading ? "Logging in..." : "Login"}
-          </button>
-        </form>
+          <LoginForm />
+        </Suspense>
       </div>
     </div>
   );
