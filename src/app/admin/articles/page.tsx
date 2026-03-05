@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { ArticleTable } from "@/components/admin/ArticleTable";
 import { getArticles } from "@/lib/microcms/client";
@@ -15,6 +16,13 @@ interface ArticlesResponse {
 }
 
 async function fetchArticlesData(): Promise<ArticlesResponse> {
+  // PPR対応: プリレンダリング時は空データを返す
+  try {
+    await connection();
+  } catch {
+    return { articles: [], total: 0 };
+  }
+
   try {
     const response = await getArticles({ limit: 50, orders: "-publishedAt" });
 

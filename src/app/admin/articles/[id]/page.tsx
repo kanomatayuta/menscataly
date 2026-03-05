@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { connection } from "next/server";
 import { headers } from "next/headers";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { ComplianceScoreBadge } from "@/components/admin/ComplianceScoreBadge";
@@ -192,6 +193,13 @@ const CATEGORY_LABELS: Record<string, string> = {
 // ------------------------------------------------------------------
 
 async function fetchArticleDetail(id: string): Promise<ArticleReviewDetail | null> {
+  // PPR対応: プリレンダリング時はモックにフォールバック
+  try {
+    await connection();
+  } catch {
+    return MOCK_ARTICLES[id] ?? null;
+  }
+
   // Supabase未設定時はモックにフォールバック
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

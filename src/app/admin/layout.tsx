@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/client";
 import { AdminLayoutShell } from "./AdminLayoutShell";
@@ -20,6 +21,14 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // PPR対応: プリレンダリング時は headers()/connection() が例外を投げる
+  // 管理画面はランタイム専用のため、プリレンダリング時はシェルのみ返す
+  try {
+    await connection();
+  } catch {
+    return <AdminLayoutShell>{children}</AdminLayoutShell>;
+  }
+
   // ミドルウェアが設定した x-admin-pathname を読み取る
   const headersList = await headers();
   const pathname = headersList.get("x-admin-pathname") ?? "";

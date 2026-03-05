@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { connection } from "next/server";
 
 export const alt = "MENS CATALY - メンズ医療・美容の総合メディア";
 export const size = {
@@ -7,7 +8,10 @@ export const size = {
 };
 export const contentType = "image/png";
 
-export default function OGImage() {
+export default async function OGImage() {
+  // PPR対応: ImageResponse が日本語フォントを内部で fetch するため
+  // プリレンダリング時にはこの例外で処理を中断させ、ランタイムで生成する
+  await connection();
   return new ImageResponse(
     (
       <div

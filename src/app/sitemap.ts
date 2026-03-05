@@ -11,6 +11,7 @@
 //   - 記事ページ (priority: 0.8, changeFrequency: weekly)
 
 import type { MetadataRoute } from 'next'
+import { connection } from 'next/server'
 import { getArticles, getCategories } from '@/lib/microcms/client'
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://menscataly.com'
@@ -28,49 +29,60 @@ const SUPERVISOR_SLUGS = [
 ]
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // PPR対応: プリレンダリング時は connection() が例外を投げるため
+  // 動的データ取得をスキップし静的ページのみ返す
+  let isDynamic = true
+  try {
+    await connection()
+  } catch {
+    isDynamic = false
+  }
+
   // ── カテゴリページ (動的データ取得) ─────────────────────────
   let categoryPages: MetadataRoute.Sitemap = []
   let articlePages: MetadataRoute.Sitemap = []
 
-  try {
-    const categoriesResult = await getCategories()
-    categoryPages = categoriesResult.contents.map((cat) => ({
-      url: `${BASE_URL}/articles?category=${cat.slug}`,
-      lastModified: new Date(cat.updatedAt),
-      changeFrequency: 'weekly' as const,
-      priority: 0.7,
-    }))
-  } catch (err) {
-    console.error('[sitemap] Failed to fetch categories:', err)
-  }
-
-  // ── 記事ページ (動的データ取得) ─────────────────────────────
-  try {
-    // 全記事を取得 (最大200件; 超える場合はページングが必要)
-    const firstPage = await getArticles({ limit: 100, offset: 0 })
-    const allArticles = [...firstPage.contents]
-
-    // totalCount が limit を超える場合は追加フェッチ
-    if (firstPage.totalCount > 100) {
-      const additionalFetches = Array.from(
-        { length: Math.ceil((firstPage.totalCount - 100) / 100) },
-        (_, i) => getArticles({ limit: 100, offset: 100 + i * 100 })
-      )
-      const additionalPages = await Promise.all(additionalFetches)
-      allArticles.push(...additionalPages.flatMap((p) => p.contents))
+  if (isDynamic) {
+    try {
+      const categoriesResult = await getCategories()
+      categoryPages = categoriesResult.contents.map((cat) => ({
+        url: `${BASE_URL}/articles?category=${cat.slug}`,
+        lastModified: new Date(cat.updatedAt),
+        changeFrequency: 'weekly' as const,
+        priority: 0.7,
+      }))
+    } catch (err) {
+      console.error('[sitemap] Failed to fetch categories:', err)
     }
 
-    articlePages = allArticles.map((article) => {
-      const slug = article.slug ?? article.id
-      return {
-        url: `${BASE_URL}/articles/${slug}`,
-        lastModified: new Date(article.updatedAt),
-        changeFrequency: 'weekly' as const,
-        priority: 0.8,
+    // ── 記事ページ (動的データ取得) ─────────────────────────────
+    try {
+      // 全記事を取得 (最大200件; 超える場合はページングが必要)
+      const firstPage = await getArticles({ limit: 100, offset: 0 })
+      const allArticles = [...firstPage.contents]
+
+      // totalCount が limit を超える場合は追加フェッチ
+      if (firstPage.totalCount > 100) {
+        const additionalFetches = Array.from(
+          { length: Math.ceil((firstPage.totalCount - 100) / 100) },
+          (_, i) => getArticles({ limit: 100, offset: 100 + i * 100 })
+        )
+        const additionalPages = await Promise.all(additionalFetches)
+        allArticles.push(...additionalPages.flatMap((p) => p.contents))
       }
-    })
-  } catch (err) {
-    console.error('[sitemap] Failed to fetch articles:', err)
+
+      articlePages = allArticles.map((article) => {
+        const slug = article.slug ?? article.id
+        return {
+          url: `${BASE_URL}/articles/${slug}`,
+          lastModified: new Date(article.updatedAt),
+          changeFrequency: 'weekly' as const,
+          priority: 0.8,
+        }
+      })
+    } catch (err) {
+      console.error('[sitemap] Failed to fetch articles:', err)
+    }
   }
 
   // 静的ページの lastModified は固定日時を使用
