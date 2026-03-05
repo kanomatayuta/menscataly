@@ -57,18 +57,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // ── 記事ページ (動的データ取得) ─────────────────────────────
     try {
-      // 全記事を取得 (最大200件; 超える場合はページングが必要)
-      const firstPage = await getArticles({ limit: 100, offset: 0 })
-      const allArticles = [...firstPage.contents]
-
-      // totalCount が limit を超える場合は追加フェッチ
-      if (firstPage.totalCount > 100) {
-        const additionalFetches = Array.from(
-          { length: Math.ceil((firstPage.totalCount - 100) / 100) },
-          (_, i) => getArticles({ limit: 100, offset: 100 + i * 100 })
-        )
-        const additionalPages = await Promise.all(additionalFetches)
-        allArticles.push(...additionalPages.flatMap((p) => p.contents))
+      // 全記事を取得 (ページングで全件取得、上限なし)
+      const allArticles = []
+      let offset = 0
+      const limit = 100
+      while (true) {
+        const page = await getArticles({ limit, offset })
+        allArticles.push(...page.contents)
+        if (allArticles.length >= page.totalCount) break
+        offset += limit
       }
 
       articlePages = allArticles.map((article) => {

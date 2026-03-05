@@ -22,6 +22,7 @@ export interface GA4AnalyticsRow {
 
 export interface GSCRow {
   page: string
+  date: string
   clicks: number
   impressions: number
   ctr: number

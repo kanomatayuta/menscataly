@@ -57,37 +57,56 @@ async function fetchAnalyticsFromGA4(
 ): Promise<Map<string, ArticleAnalytics>> {
   const map = new Map<string, ArticleAnalytics>();
 
+  // slug → article マッピング
+  const slugToArticle = new Map<string, ArticleReviewItem>();
+  for (const a of articles) {
+    slugToArticle.set(a.slug, a);
+  }
+
+  const ensure = (articleId: string): ArticleAnalytics => {
+    let entry = map.get(articleId);
+    if (!entry) {
+      entry = { articleId, pageviews: 0, clicks: 0, conversions: 0, revenue: 0 };
+      map.set(articleId, entry);
+    }
+    return entry;
+  };
+
   try {
     await connection(); // PPR: Date.now() 使用前に必須
+
+    // 1. GA4 PVデータ取得
     const { fetchGA4DailyMetrics, extractSlugFromPath } = await import("@/lib/analytics/ga4-client");
-
-    // 過去30日分を取得
-    const ga4Data = await fetchGA4DailyMetrics("30daysAgo");
-
-    if (ga4Data.length === 0) return map;
-
-    // slug → article マッピング
-    const slugToArticle = new Map<string, ArticleReviewItem>();
-    for (const a of articles) {
-      slugToArticle.set(a.slug, a);
-    }
+    const ga4Data = await fetchGA4DailyMetrics("30daysAgo", "today");
 
     for (const row of ga4Data) {
       const slug = extractSlugFromPath(row.pagePath);
       if (!slug) continue;
-
       const article = slugToArticle.get(slug);
       if (!article) continue;
-
-      let entry = map.get(article.id);
-      if (!entry) {
-        entry = { articleId: article.id, pageviews: 0, clicks: 0, conversions: 0, revenue: 0 };
-        map.set(article.id, entry);
-      }
+      const entry = ensure(article.id);
       entry.pageviews += row.pageviews;
     }
+
+    // 2. GSC クリック・CTRデータ取得
+    const { fetchGSCData, extractSlugFromGSCPage } = await import("@/lib/analytics/gsc-client");
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const sinceStr = thirtyDaysAgo.toISOString().split("T")[0];
+    const todayStr = new Date().toISOString().split("T")[0];
+
+    const gscData = await fetchGSCData(sinceStr, todayStr);
+
+    for (const row of gscData) {
+      const slug = extractSlugFromGSCPage(row.page);
+      if (!slug) continue;
+      const article = slugToArticle.get(slug);
+      if (!article) continue;
+      const entry = ensure(article.id);
+      entry.clicks += row.clicks;
+    }
   } catch (err) {
-    console.error("[admin/articles] GA4 direct fetch error:", err);
+    console.error("[admin/articles] GA4/GSC fetch error:", err);
   }
 
   return map;
@@ -165,31 +184,48 @@ async function fetchAnalyticsData(
 // ------------------------------------------------------------------
 
 async function fetchTrendData(days: number): Promise<TrendDataPoint[]> {
-  // まず GA4 API から直接取得を試みる
+  // GA4 (PV) + GSC (クリック) から直接取得
   try {
     await connection(); // PPR: Date.now() 使用前に必須
-    const { fetchGA4DailyMetrics } = await import("@/lib/analytics/ga4-client");
-    const ga4Data = await fetchGA4DailyMetrics(`${days}daysAgo`);
 
-    if (ga4Data.length > 0) {
-      const byDate = new Map<string, TrendDataPoint>();
-      for (const row of ga4Data) {
-        let point = byDate.get(row.date);
-        if (!point) {
-          const dateObj = new Date(row.date);
-          point = {
-            date: `${dateObj.getMonth() + 1}/${dateObj.getDate()}`,
-            pageviews: 0,
-            clicks: 0,
-            conversions: 0,
-          };
-          byDate.set(row.date, point);
-        }
-        point.pageviews += row.pageviews;
-        point.clicks += row.sessions; // sessions をクリック近似値として使用
+    const byDate = new Map<string, TrendDataPoint>();
+    const ensurePoint = (dateStr: string): TrendDataPoint => {
+      let point = byDate.get(dateStr);
+      if (!point) {
+        const dateObj = new Date(dateStr);
+        point = {
+          date: `${dateObj.getMonth() + 1}/${dateObj.getDate()}`,
+          pageviews: 0,
+          clicks: 0,
+          conversions: 0,
+        };
+        byDate.set(dateStr, point);
       }
+      return point;
+    };
 
-      // 日付順でソート
+    // 1. GA4 PVデータ
+    const { fetchGA4DailyMetrics } = await import("@/lib/analytics/ga4-client");
+    const ga4Data = await fetchGA4DailyMetrics(`${days}daysAgo`, "today");
+    for (const row of ga4Data) {
+      const point = ensurePoint(row.date);
+      point.pageviews += row.pageviews;
+    }
+
+    // 2. GSC クリックデータ (日別)
+    const { fetchGSCData } = await import("@/lib/analytics/gsc-client");
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+    const sinceStr = since.toISOString().split("T")[0];
+    const todayStr = new Date().toISOString().split("T")[0];
+    const gscData = await fetchGSCData(sinceStr, todayStr, ["page", "date"]);
+    for (const row of gscData) {
+      if (!row.date) continue;
+      const point = ensurePoint(row.date);
+      point.clicks += row.clicks;
+    }
+
+    if (byDate.size > 0) {
       return [...byDate.entries()]
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([, v]) => v);
