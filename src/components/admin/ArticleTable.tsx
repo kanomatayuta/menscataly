@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { ComplianceScoreBadge } from "./ComplianceScoreBadge";
-import type { ArticleReviewItem, ReviewStatus } from "@/types/admin";
+import type { ArticleReviewItem, ArticleAnalytics, ReviewStatus } from "@/types/admin";
 
 interface ArticleTableProps {
   articles: ArticleReviewItem[];
+  analytics?: Map<string, ArticleAnalytics>;
 }
 
 const STATUS_STYLES: Record<ReviewStatus, { bg: string; text: string; label: string }> = {
@@ -23,7 +24,15 @@ function formatDate(dateString: string): string {
   });
 }
 
-export function ArticleTable({ articles }: ArticleTableProps) {
+function formatNumber(n: number): string {
+  return n.toLocaleString("ja-JP");
+}
+
+function formatCurrency(n: number): string {
+  return `¥${n.toLocaleString("ja-JP")}`;
+}
+
+export function ArticleTable({ articles, analytics }: ArticleTableProps) {
   if (articles.length === 0) {
     return (
       <div className="rounded-lg border border-neutral-200 bg-white p-8 text-center">
@@ -45,6 +54,10 @@ export function ArticleTable({ articles }: ArticleTableProps) {
               コンプライアンス
             </th>
             <th className="px-4 py-3 font-medium text-neutral-600">ステータス</th>
+            <th className="px-4 py-3 font-medium text-neutral-600 text-right">PV</th>
+            <th className="px-4 py-3 font-medium text-neutral-600 text-right">クリック</th>
+            <th className="px-4 py-3 font-medium text-neutral-600 text-right">CV</th>
+            <th className="px-4 py-3 font-medium text-neutral-600 text-right">収益</th>
             <th className="px-4 py-3 font-medium text-neutral-600">日付</th>
             <th className="px-4 py-3 font-medium text-neutral-600">操作</th>
           </tr>
@@ -52,6 +65,7 @@ export function ArticleTable({ articles }: ArticleTableProps) {
         <tbody className="divide-y divide-neutral-100">
           {articles.map((article) => {
             const statusStyle = STATUS_STYLES[article.status];
+            const stats = analytics?.get(article.id);
             return (
               <tr key={article.id} className="hover:bg-neutral-50">
                 <td className="max-w-xs truncate px-4 py-3 font-medium text-neutral-900">
@@ -69,6 +83,18 @@ export function ArticleTable({ articles }: ArticleTableProps) {
                   >
                     {statusStyle.label}
                   </span>
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums text-neutral-600">
+                  {formatNumber(stats?.pageviews ?? 0)}
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums text-neutral-600">
+                  {formatNumber(stats?.clicks ?? 0)}
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums text-neutral-600">
+                  {formatNumber(stats?.conversions ?? 0)}
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums font-medium text-neutral-900">
+                  {formatCurrency(stats?.revenue ?? 0)}
                 </td>
                 <td className="px-4 py-3 text-neutral-500">
                   {formatDate(article.generatedAt)}

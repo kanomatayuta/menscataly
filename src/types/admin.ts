@@ -66,6 +66,19 @@ export interface ArticleReviewDetail extends ArticleReviewItem {
 }
 
 // ============================================================
+// 記事別アナリティクス
+// ============================================================
+
+/** 記事ごとの収益・PVデータ (一覧表示用) */
+export interface ArticleAnalytics {
+  articleId: string;
+  pageviews: number;
+  clicks: number;
+  conversions: number;
+  revenue: number;
+}
+
+// ============================================================
 // バッチ生成ジョブ
 // ============================================================
 
