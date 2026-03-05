@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, cache } from "react";
 import { connection } from "next/server";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { AnalyticsSummaryCards } from "@/components/admin/AnalyticsSummaryCards";
@@ -193,6 +193,13 @@ async function fetchAnalyticsData(
 }
 
 // ------------------------------------------------------------------
+// React.cache() wrappers for request-level deduplication
+// ------------------------------------------------------------------
+
+const getCachedArticlesData = cache(fetchArticlesData);
+const getCachedAnalyticsData = cache(fetchAnalyticsData);
+
+// ------------------------------------------------------------------
 // Trend data fetching (GA4 API直接 → Supabase フォールバック)
 // ------------------------------------------------------------------
 
@@ -218,16 +225,18 @@ async function fetchTrendData(days: number): Promise<TrendDataPoint[]> {
       return point;
     };
 
-    // 1. GA4 PVデータ + アフィリエイトクリックデータを並列取得
+    // GA4 PVデータ + アフィリエイトクリックデータ + GSC を並列取得
     const { fetchGA4DailyMetrics, fetchAffiliateClicks } = await import("@/lib/analytics/ga4-client");
+    const { fetchGSCData } = await import("@/lib/analytics/gsc-client");
     const since = new Date();
     since.setDate(since.getDate() - days);
     const sinceStr = since.toISOString().split("T")[0];
     const todayStr = new Date().toISOString().split("T")[0];
 
-    const [ga4Data, affiliateData] = await Promise.all([
+    const [ga4Data, affiliateData, gscData] = await Promise.all([
       fetchGA4DailyMetrics(`${days}daysAgo`, "today"),
       fetchAffiliateClicks(sinceStr, todayStr),
+      fetchGSCData(sinceStr, todayStr, ["page", "date"]),
     ]);
 
     for (const row of ga4Data) {
@@ -241,9 +250,7 @@ async function fetchTrendData(days: number): Promise<TrendDataPoint[]> {
       point.affiliateClicks += row.clickCount;
     }
 
-    // 2. GSC 検索クリックデータ (日別)
-    const { fetchGSCData } = await import("@/lib/analytics/gsc-client");
-    const gscData = await fetchGSCData(sinceStr, todayStr, ["page", "date"]);
+    // GSC 検索クリックデータ (日別)
     for (const row of gscData) {
       if (!row.date) continue;
       const point = ensurePoint(row.date);
@@ -361,7 +368,7 @@ function buildRankingData(
 
 function SummaryCardsSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {[...Array(4)].map((_, i) => (
         <div key={i} className="h-24 animate-pulse rounded-lg bg-neutral-200" />
       ))}
@@ -392,13 +399,12 @@ function TableSkeleton() {
 // ------------------------------------------------------------------
 
 async function ArticlesSummarySection() {
-  const { articles } = await fetchArticlesData();
-  const analytics = await fetchAnalyticsData(articles);
+  const { articles, total } = await getCachedArticlesData();
+  const analytics = await getCachedAnalyticsData(articles);
   const values = [...analytics.values()];
   const totalPageviews = values.reduce((s, a) => s + a.pageviews, 0);
   const totalSearchClicks = values.reduce((s, a) => s + a.searchClicks, 0);
   const totalAffiliateClicks = values.reduce((s, a) => s + a.affiliateClicks, 0);
-  const totalConversions = values.reduce((s, a) => s + a.conversions, 0);
   const totalRevenue = values.reduce((s, a) => s + a.revenue, 0);
 
   return (
@@ -406,8 +412,8 @@ async function ArticlesSummarySection() {
       totalPageviews={totalPageviews}
       totalSearchClicks={totalSearchClicks}
       totalAffiliateClicks={totalAffiliateClicks}
-      totalConversions={totalConversions}
       totalRevenue={totalRevenue}
+      totalArticles={total}
     />
   );
 }
@@ -418,15 +424,15 @@ async function TrendChartSection() {
 }
 
 async function RankingSection() {
-  const { articles } = await fetchArticlesData();
-  const analytics = await fetchAnalyticsData(articles);
+  const { articles } = await getCachedArticlesData();
+  const analytics = await getCachedAnalyticsData(articles);
   const rankings = buildRankingData(articles, analytics);
   return <ArticleRanking rankings={rankings} />;
 }
 
 async function ArticlesTableSection() {
-  const { articles, total } = await fetchArticlesData();
-  const analytics = await fetchAnalyticsData(articles);
+  const { articles, total } = await getCachedArticlesData();
+  const analytics = await getCachedAnalyticsData(articles);
 
   return (
     <>
@@ -452,12 +458,12 @@ export default function AdminArticlesPage() {
       </Suspense>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-12">
-        <div className="lg:col-span-7">
+        <div className="lg:col-span-5">
           <Suspense fallback={<ChartSkeleton />}>
             <TrendChartSection />
           </Suspense>
         </div>
-        <div className="lg:col-span-5">
+        <div className="lg:col-span-7">
           <Suspense fallback={<RankingSkeleton />}>
             <RankingSection />
           </Suspense>

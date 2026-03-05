@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import type { Props as LegendProps } from "recharts/types/component/DefaultLegendContent";
 import type { TrendDataPoint } from "@/types/admin";
 
 interface TrendChartProps {
@@ -25,10 +26,64 @@ const PERIODS: { value: Period; label: string }[] = [
   { value: 90, label: "90日" },
 ];
 
+const LINE_LABELS: Record<string, string> = {
+  pageviews: "PV",
+  searchClicks: "検索CL",
+  affiliateClicks: "広告CL",
+  conversions: "CV",
+};
+
+function getDefaultPeriod(dataLength: number): Period {
+  if (dataLength < 7) return 7;
+  if (dataLength < 30) return 30;
+  return 30;
+}
+
 export function TrendChart({ data }: TrendChartProps) {
-  const [period, setPeriod] = useState<Period>(30);
+  const [period, setPeriod] = useState<Period>(() => getDefaultPeriod(data.length));
+  const [visibleLines, setVisibleLines] = useState({
+    pageviews: true,
+    searchClicks: false,
+    affiliateClicks: true,
+    conversions: false,
+  });
 
   const filtered = data.slice(-period);
+
+  function handleLegendClick(dataKey: string) {
+    const key = dataKey as keyof typeof visibleLines;
+    if (key in visibleLines) {
+      setVisibleLines((prev) => ({ ...prev, [key]: !prev[key] }));
+    }
+  }
+
+  function renderLegend(props: LegendProps) {
+    const { payload } = props;
+    if (!payload) return null;
+    return (
+      <ul className="flex justify-center gap-4 pt-2">
+        {payload.map((entry) => {
+          const rawKey = typeof entry.dataKey === "string" ? entry.dataKey : "";
+          const key = rawKey as keyof typeof visibleLines;
+          const active = key in visibleLines ? visibleLines[key] : true;
+          return (
+            <li
+              key={key}
+              onClick={() => handleLegendClick(rawKey)}
+              className="flex cursor-pointer select-none items-center gap-1 text-xs transition-opacity"
+              style={{ opacity: active ? 1 : 0.3 }}
+            >
+              <span
+                className="inline-block h-2 w-4 rounded-sm"
+                style={{ backgroundColor: entry.color }}
+              />
+              <span className="text-neutral-600">{LINE_LABELS[rawKey] ?? rawKey}</span>
+            </li>
+          );
+        })}
+      </ul>
+    );
+  }
 
   return (
     <div className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
@@ -39,6 +94,7 @@ export function TrendChart({ data }: TrendChartProps) {
             <button
               key={p.value}
               onClick={() => setPeriod(p.value)}
+              aria-pressed={period === p.value}
               className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                 period === p.value
                   ? "bg-neutral-900 text-white"
@@ -52,8 +108,11 @@ export function TrendChart({ data }: TrendChartProps) {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="flex h-[300px] items-center justify-center">
-          <p className="text-sm text-neutral-500">データなし</p>
+        <div className="flex h-[300px] flex-col items-center justify-center gap-2">
+          <p className="text-sm font-medium text-neutral-600">まだデータがありません</p>
+          <p className="text-xs text-neutral-400">
+            GA4・GSC連携後、翌日以降からデータが表示されます
+          </p>
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={300}>
@@ -86,62 +145,54 @@ export function TrendChart({ data }: TrendChartProps) {
                 fontSize: "12px",
               }}
               formatter={(value: number, name: string) => {
-                const labels: Record<string, string> = {
-                  pageviews: "PV",
-                  searchClicks: "検索CL",
-                  affiliateClicks: "広告CL",
-                  conversions: "CV",
-                };
-                return [value.toLocaleString("ja-JP"), labels[name] ?? name];
+                return [value.toLocaleString("ja-JP"), LINE_LABELS[name] ?? name];
               }}
             />
-            <Legend
-              formatter={(value: string) => {
-                const labels: Record<string, string> = {
-                  pageviews: "PV",
-                  searchClicks: "検索CL",
-                  affiliateClicks: "広告CL",
-                  conversions: "CV",
-                };
-                return labels[value] ?? value;
-              }}
-            />
-            <Line
-              yAxisId="left"
-              type="monotone"
-              dataKey="pageviews"
-              stroke="#3b82f6"
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 4 }}
-            />
-            <Line
-              yAxisId="left"
-              type="monotone"
-              dataKey="searchClicks"
-              stroke="#10b981"
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 4 }}
-            />
-            <Line
-              yAxisId="left"
-              type="monotone"
-              dataKey="affiliateClicks"
-              stroke="#8b5cf6"
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 4 }}
-            />
-            <Line
-              yAxisId="right"
-              type="monotone"
-              dataKey="conversions"
-              stroke="#f59e0b"
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 4 }}
-            />
+            <Legend content={renderLegend} />
+            {visibleLines.pageviews && (
+              <Line
+                yAxisId="left"
+                type="monotone"
+                dataKey="pageviews"
+                stroke="#3b82f6"
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 4 }}
+              />
+            )}
+            {visibleLines.searchClicks && (
+              <Line
+                yAxisId="left"
+                type="monotone"
+                dataKey="searchClicks"
+                stroke="#10b981"
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 4 }}
+              />
+            )}
+            {visibleLines.affiliateClicks && (
+              <Line
+                yAxisId="left"
+                type="monotone"
+                dataKey="affiliateClicks"
+                stroke="#8b5cf6"
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 4 }}
+              />
+            )}
+            {visibleLines.conversions && (
+              <Line
+                yAxisId="right"
+                type="monotone"
+                dataKey="conversions"
+                stroke="#f59e0b"
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 4 }}
+              />
+            )}
           </LineChart>
         </ResponsiveContainer>
       )}

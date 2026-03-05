@@ -52,8 +52,11 @@ export function ArticleRanking({ rankings }: ArticleRankingProps) {
       </div>
 
       {items.length === 0 ? (
-        <div className="flex h-[300px] items-center justify-center">
-          <p className="text-sm text-neutral-500">データなし</p>
+        <div className="flex h-[300px] flex-col items-center justify-center gap-2">
+          <p className="text-sm font-medium text-neutral-600">まだデータがありません</p>
+          <p className="text-xs text-neutral-400">
+            記事のPVが集計されると自動表示されます
+          </p>
         </div>
       ) : (
         <ul className="space-y-1">

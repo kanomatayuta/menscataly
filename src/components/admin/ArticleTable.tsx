@@ -89,6 +89,7 @@ function AffiliateCtrValue({ affiliateClicks, pageviews }: { affiliateClicks: nu
 export function ArticleTable({ articles, analytics }: ArticleTableProps) {
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [showDetails, setShowDetails] = useState(false);
 
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
@@ -124,85 +125,119 @@ export function ArticleTable({ articles, analytics }: ArticleTableProps) {
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white shadow-sm">
-      <table className="w-full text-left text-sm">
-        <thead>
-          <tr className="border-b border-neutral-200 bg-neutral-50">
-            <th className="px-4 py-3 font-medium text-neutral-600">タイトル</th>
-            <th className="px-4 py-3 font-medium text-neutral-600">カテゴリ</th>
-            <th className="px-4 py-3 font-medium text-neutral-600">コンプライアンス</th>
-            <th className="px-4 py-3 font-medium text-neutral-600">ステータス</th>
-            <SortableHeader label="PV" column="pageviews" active={sortColumn === "pageviews"} direction={sortDirection} onClick={handleSort} />
-            <SortableHeader label="検索CL" column="searchClicks" active={sortColumn === "searchClicks"} direction={sortDirection} onClick={handleSort} />
-            <SortableHeader label="広告CL" column="affiliateClicks" active={sortColumn === "affiliateClicks"} direction={sortDirection} onClick={handleSort} />
-            <th className="px-4 py-3 text-right font-medium text-neutral-600">広告CTR</th>
-            <SortableHeader label="CV" column="conversions" active={sortColumn === "conversions"} direction={sortDirection} onClick={handleSort} />
-            <SortableHeader label="収益" column="revenue" active={sortColumn === "revenue"} direction={sortDirection} onClick={handleSort} />
-            <th className="px-4 py-3 font-medium text-neutral-600">日付</th>
-            <th className="px-4 py-3 font-medium text-neutral-600">操作</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-neutral-100">
-          {sortedArticles.map((article) => {
-            const statusStyle = STATUS_STYLES[article.status];
-            const stats = analytics?.get(article.id);
-            const pv = stats?.pageviews ?? 0;
-            const searchCl = stats?.searchClicks ?? 0;
-            const affiliateCl = stats?.affiliateClicks ?? 0;
-            const cv = stats?.conversions ?? 0;
-            const rev = stats?.revenue ?? 0;
-            return (
-              <tr key={article.id} className="hover:bg-neutral-50">
-                <td className="max-w-xs truncate px-4 py-3 font-medium text-neutral-900">
-                  {article.title}
-                </td>
-                <td className="px-4 py-3 text-neutral-600 capitalize">
-                  {article.category}
-                </td>
-                <td className="px-4 py-3">
-                  <ComplianceScoreBadge score={article.complianceScore} />
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusStyle.bg} ${statusStyle.text}`}
-                  >
-                    {statusStyle.label}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums text-neutral-600">
-                  {pv === 0 ? <ZeroValue /> : formatNumber(pv)}
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums text-neutral-600">
-                  {searchCl === 0 ? <ZeroValue /> : formatNumber(searchCl)}
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums text-neutral-600">
-                  {affiliateCl === 0 ? <ZeroValue /> : formatNumber(affiliateCl)}
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums text-neutral-600">
-                  <AffiliateCtrValue affiliateClicks={affiliateCl} pageviews={pv} />
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums text-neutral-600">
-                  {cv === 0 ? <ZeroValue /> : formatNumber(cv)}
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums text-neutral-600">
-                  <RevenueValue value={rev} />
-                </td>
-                <td className="px-4 py-3 text-neutral-500">
-                  {formatDate(article.generatedAt)}
-                </td>
-                <td className="px-4 py-3">
-                  <Link
-                    href={`/admin/articles/${article.id}`}
-                    className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
-                  >
-                    レビュー
-                  </Link>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div className="space-y-2">
+      <div className="flex justify-end">
+        <button
+          onClick={() => setShowDetails(!showDetails)}
+          className="text-xs text-neutral-500 hover:text-neutral-700 border border-neutral-300 rounded px-2 py-1"
+        >
+          {showDetails ? "簡易表示" : "詳細表示"}
+        </button>
+      </div>
+      <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white shadow-sm">
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-neutral-200 bg-neutral-50">
+              {/* Default columns (always visible) */}
+              <th className="px-4 py-3 font-medium text-neutral-600">タイトル</th>
+              <th className="px-4 py-3 font-medium text-neutral-600">カテゴリ</th>
+              <SortableHeader label="PV" column="pageviews" active={sortColumn === "pageviews"} direction={sortDirection} onClick={handleSort} />
+              <th className="px-4 py-3 text-right font-medium text-neutral-600">広告CTR</th>
+              <SortableHeader label="収益" column="revenue" active={sortColumn === "revenue"} direction={sortDirection} onClick={handleSort} />
+              <th className="px-4 py-3 font-medium text-neutral-600">ステータス</th>
+              <th className="px-4 py-3 font-medium text-neutral-600">操作</th>
+              {/* Detail columns (shown only when showDetails=true) */}
+              {showDetails && (
+                <th className="px-4 py-3 font-medium text-neutral-600">コンプライアンス</th>
+              )}
+              {showDetails && (
+                <SortableHeader label="検索CL" column="searchClicks" active={sortColumn === "searchClicks"} direction={sortDirection} onClick={handleSort} />
+              )}
+              {showDetails && (
+                <SortableHeader label="広告CL" column="affiliateClicks" active={sortColumn === "affiliateClicks"} direction={sortDirection} onClick={handleSort} />
+              )}
+              {showDetails && (
+                <SortableHeader label="CV" column="conversions" active={sortColumn === "conversions"} direction={sortDirection} onClick={handleSort} />
+              )}
+              {showDetails && (
+                <th className="px-4 py-3 font-medium text-neutral-600">日付</th>
+              )}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-neutral-100">
+            {sortedArticles.map((article) => {
+              const statusStyle = STATUS_STYLES[article.status];
+              const stats = analytics?.get(article.id);
+              const pv = stats?.pageviews ?? 0;
+              const searchCl = stats?.searchClicks ?? 0;
+              const affiliateCl = stats?.affiliateClicks ?? 0;
+              const cv = stats?.conversions ?? 0;
+              const rev = stats?.revenue ?? 0;
+              return (
+                <tr key={article.id} className="hover:bg-neutral-50">
+                  {/* Default columns */}
+                  <td className="min-w-[200px] truncate px-4 py-3 font-medium text-neutral-900">
+                    {article.title}
+                  </td>
+                  <td className="px-4 py-3 text-neutral-600 capitalize">
+                    {article.category}
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums text-neutral-600">
+                    {pv === 0 ? <ZeroValue /> : formatNumber(pv)}
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums text-neutral-600">
+                    <AffiliateCtrValue affiliateClicks={affiliateCl} pageviews={pv} />
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums text-neutral-600">
+                    <RevenueValue value={rev} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusStyle.bg} ${statusStyle.text}`}
+                    >
+                      {statusStyle.label}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <Link
+                      href={`/admin/articles/${article.id}`}
+                      className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      レビュー
+                    </Link>
+                  </td>
+                  {/* Detail columns */}
+                  {showDetails && (
+                    <td className="px-4 py-3">
+                      <ComplianceScoreBadge score={article.complianceScore} />
+                    </td>
+                  )}
+                  {showDetails && (
+                    <td className="px-4 py-3 text-right tabular-nums text-neutral-600">
+                      {searchCl === 0 ? <ZeroValue /> : formatNumber(searchCl)}
+                    </td>
+                  )}
+                  {showDetails && (
+                    <td className="px-4 py-3 text-right tabular-nums text-neutral-600">
+                      {affiliateCl === 0 ? <ZeroValue /> : formatNumber(affiliateCl)}
+                    </td>
+                  )}
+                  {showDetails && (
+                    <td className="px-4 py-3 text-right tabular-nums text-neutral-600">
+                      {cv === 0 ? <ZeroValue /> : formatNumber(cv)}
+                    </td>
+                  )}
+                  {showDetails && (
+                    <td className="px-4 py-3 text-neutral-500">
+                      {formatDate(article.generatedAt)}
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
