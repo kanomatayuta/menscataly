@@ -6,13 +6,13 @@ interface ArticleTableProps {
   articles: ArticleReviewItem[];
 }
 
-const STATUS_STYLES: Record<ReviewStatus, { bg: string; text: string }> = {
-  draft: { bg: "bg-neutral-100", text: "text-neutral-700" },
-  pending: { bg: "bg-yellow-100", text: "text-yellow-800" },
-  approved: { bg: "bg-green-100", text: "text-green-800" },
-  rejected: { bg: "bg-red-100", text: "text-red-800" },
-  revision: { bg: "bg-orange-100", text: "text-orange-800" },
-  published: { bg: "bg-blue-100", text: "text-blue-800" },
+const STATUS_STYLES: Record<ReviewStatus, { bg: string; text: string; label: string }> = {
+  draft: { bg: "bg-neutral-100", text: "text-neutral-700", label: "下書き" },
+  pending: { bg: "bg-yellow-100", text: "text-yellow-800", label: "レビュー待ち" },
+  approved: { bg: "bg-green-100", text: "text-green-800", label: "承認済み" },
+  rejected: { bg: "bg-red-100", text: "text-red-800", label: "却下" },
+  revision: { bg: "bg-orange-100", text: "text-orange-800", label: "修正依頼" },
+  published: { bg: "bg-blue-100", text: "text-blue-800", label: "公開済み" },
 };
 
 function formatDate(dateString: string): string {
@@ -27,7 +27,7 @@ export function ArticleTable({ articles }: ArticleTableProps) {
   if (articles.length === 0) {
     return (
       <div className="rounded-lg border border-neutral-200 bg-white p-8 text-center">
-        <p className="text-sm text-neutral-500">No articles found</p>
+        <p className="text-sm text-neutral-500">記事が見つかりません</p>
       </div>
     );
   }
@@ -37,16 +37,16 @@ export function ArticleTable({ articles }: ArticleTableProps) {
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="border-b border-neutral-200 bg-neutral-50">
-            <th className="px-4 py-3 font-medium text-neutral-600">Title</th>
+            <th className="px-4 py-3 font-medium text-neutral-600">タイトル</th>
             <th className="px-4 py-3 font-medium text-neutral-600">
-              Category
+              カテゴリ
             </th>
             <th className="px-4 py-3 font-medium text-neutral-600">
-              Compliance
+              コンプライアンス
             </th>
-            <th className="px-4 py-3 font-medium text-neutral-600">Status</th>
-            <th className="px-4 py-3 font-medium text-neutral-600">Date</th>
-            <th className="px-4 py-3 font-medium text-neutral-600">Actions</th>
+            <th className="px-4 py-3 font-medium text-neutral-600">ステータス</th>
+            <th className="px-4 py-3 font-medium text-neutral-600">日付</th>
+            <th className="px-4 py-3 font-medium text-neutral-600">操作</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-neutral-100">
@@ -65,9 +65,9 @@ export function ArticleTable({ articles }: ArticleTableProps) {
                 </td>
                 <td className="px-4 py-3">
                   <span
-                    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium capitalize ${statusStyle.bg} ${statusStyle.text}`}
+                    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusStyle.bg} ${statusStyle.text}`}
                   >
-                    {article.status}
+                    {statusStyle.label}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-neutral-500">
@@ -78,7 +78,7 @@ export function ArticleTable({ articles }: ArticleTableProps) {
                     href={`/admin/articles/${article.id}`}
                     className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
                   >
-                    Review
+                    レビュー
                   </Link>
                 </td>
               </tr>

@@ -307,31 +307,31 @@ async function RevenueContent() {
       {/* Summary cards */}
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Total Revenue"
+          title="売上合計"
           value={
             hasActualData
               ? `\u00A5${totalRevenue.toLocaleString()}`
               : "データなし"
           }
-          subtitle="Last 30 days"
+          subtitle="過去30日"
           variant="success"
         />
         <StatCard
-          title="Total Clicks"
+          title="クリック合計"
           value={
             hasActualData ? totalClicks.toLocaleString() : "データなし"
           }
-          subtitle="Last 30 days"
+          subtitle="過去30日"
         />
         <StatCard
-          title="Total Conversions"
+          title="CV合計"
           value={hasActualData ? totalConversions : "データなし"}
-          subtitle="Last 30 days"
+          subtitle="過去30日"
         />
         <StatCard
-          title="Overall CVR"
+          title="全体CVR"
           value={hasActualData ? `${overallCvr}%` : "データなし"}
-          subtitle="Click to conversion"
+          subtitle="クリック→CV率"
         />
       </div>
 
@@ -339,7 +339,7 @@ async function RevenueContent() {
       {hasData && (
         <div className="mb-6">
           <h2 className="mb-3 text-lg font-semibold text-neutral-800">
-            Revenue by ASP
+            ASP別売上
           </h2>
           <RevenueChart summaries={summaries} />
         </div>
@@ -349,7 +349,7 @@ async function RevenueContent() {
       {hasData && (
         <>
           <h2 className="mb-3 text-lg font-semibold text-neutral-800">
-            Revenue Details
+            売上詳細
           </h2>
           <RevenueTable summaries={summaries} />
         </>
@@ -365,13 +365,13 @@ async function RevenueContent() {
 export default function AdminRevenuePage() {
   return (
     <>
-      <AdminHeader title="Revenue" breadcrumbs={[{ label: "Revenue" }]} />
+      <AdminHeader title="収益" breadcrumbs={[{ label: "収益" }]} />
 
       <Suspense
         fallback={
           <div className="flex items-center justify-center py-12">
             <span className="text-sm text-neutral-500">
-              Loading revenue data...
+              売上データを読み込み中...
             </span>
           </div>
         }

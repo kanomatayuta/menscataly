@@ -22,7 +22,7 @@ export function AdminHeader({ title, breadcrumbs }: AdminHeaderProps) {
                 href="/admin"
                 className="hover:text-neutral-700 hover:underline"
               >
-                Admin
+                管理画面
               </Link>
             </li>
             {breadcrumbs.map((crumb, index) => (

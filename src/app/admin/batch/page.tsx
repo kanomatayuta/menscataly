@@ -27,6 +27,21 @@ const PRIORITY_LABELS: Record<KeywordPriority, { label: string; color: string }>
   low: { label: "低", color: "bg-neutral-100 text-neutral-600" },
 };
 
+const TONE_LABELS: Record<string, string> = {
+  informative: "情報提供",
+  comparison: "比較",
+  friendly: "親しみやすい",
+  professional: "専門的",
+};
+
+const BATCH_STATUS_LABELS: Record<string, string> = {
+  completed: "完了",
+  failed: "失敗",
+  running: "実行中",
+  queued: "待機中",
+  cancelled: "キャンセル",
+};
+
 const COST_PER_ARTICLE_USD = 0.28;
 
 // ------------------------------------------------------------------
@@ -610,8 +625,8 @@ export default function AdminBatchPage() {
                         <span>
                           目標: {kw.targetLength.toLocaleString()}文字
                         </span>
-                        <span className="capitalize">
-                          {kw.tone}
+                        <span>
+                          {TONE_LABELS[kw.tone] ?? kw.tone}
                         </span>
                       </div>
                     </div>
@@ -852,9 +867,9 @@ export default function AdminBatchPage() {
                           {job.id}
                         </span>
                         <span
-                          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium capitalize ${style.bg} ${style.text}`}
+                          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${style.bg} ${style.text}`}
                         >
-                          {job.status === "completed" ? "完了" : job.status === "failed" ? "失敗" : job.status}
+                          {BATCH_STATUS_LABELS[job.status] ?? job.status}
                         </span>
                       </div>
                       <p className="mt-0.5 text-xs text-neutral-500">

@@ -75,7 +75,7 @@ const MOCK_RUNS: PipelineRun[] = [
 
 const MOCK_LATEST_STEPS: StepLog[] = [
   {
-    stepName: "Trend Analysis",
+    stepName: "トレンド分析",
     status: "success",
     startedAt: "2026-03-03T06:00:00+09:00",
     completedAt: "2026-03-03T06:05:00+09:00",
@@ -84,7 +84,7 @@ const MOCK_LATEST_STEPS: StepLog[] = [
     metadata: { keywordsFound: 5 },
   },
   {
-    stepName: "Content Generation",
+    stepName: "コンテンツ生成",
     status: "success",
     startedAt: "2026-03-03T06:05:00+09:00",
     completedAt: "2026-03-03T06:18:00+09:00",
@@ -93,7 +93,7 @@ const MOCK_LATEST_STEPS: StepLog[] = [
     metadata: { articlesGenerated: 2 },
   },
   {
-    stepName: "Compliance Check",
+    stepName: "コンプライアンスチェック",
     status: "success",
     startedAt: "2026-03-03T06:18:00+09:00",
     completedAt: "2026-03-03T06:20:00+09:00",
@@ -102,7 +102,7 @@ const MOCK_LATEST_STEPS: StepLog[] = [
     metadata: { avgScore: 94.5 },
   },
   {
-    stepName: "Image Generation",
+    stepName: "画像生成",
     status: "success",
     startedAt: "2026-03-03T06:20:00+09:00",
     completedAt: "2026-03-03T06:25:00+09:00",
@@ -111,7 +111,7 @@ const MOCK_LATEST_STEPS: StepLog[] = [
     metadata: { imagesGenerated: 4 },
   },
   {
-    stepName: "Publish to microCMS",
+    stepName: "microCMS公開",
     status: "success",
     startedAt: "2026-03-03T06:25:00+09:00",
     completedAt: "2026-03-03T06:30:00+09:00",
@@ -222,8 +222,8 @@ export default function AdminPipelinePage() {
     return (
       <>
         <AdminHeader
-          title="Pipeline"
-          breadcrumbs={[{ label: "Pipeline" }]}
+          title="パイプライン"
+          breadcrumbs={[{ label: "パイプライン" }]}
         />
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
@@ -242,8 +242,8 @@ export default function AdminPipelinePage() {
     return (
       <>
         <AdminHeader
-          title="Pipeline"
-          breadcrumbs={[{ label: "Pipeline" }]}
+          title="パイプライン"
+          breadcrumbs={[{ label: "パイプライン" }]}
         />
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
@@ -275,30 +275,30 @@ export default function AdminPipelinePage() {
   return (
     <>
       <AdminHeader
-        title="Pipeline"
-        breadcrumbs={[{ label: "Pipeline" }]}
+        title="パイプライン"
+        breadcrumbs={[{ label: "パイプライン" }]}
       />
 
       <div className="mb-6 flex items-center justify-between">
         <p className="text-sm text-neutral-500">
-          Pipeline execution history and manual trigger
+          パイプライン実行履歴と手動トリガー
         </p>
         <PipelineTriggerButton />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Run history */}
+        {/* 実行履歴 */}
         <div className="lg:col-span-2">
           <h2 className="mb-3 text-lg font-semibold text-neutral-800">
-            Run History
+            実行履歴
           </h2>
           <PipelineRunTable runs={runs} />
         </div>
 
-        {/* Latest run steps */}
+        {/* 最新実行ステップ */}
         <div>
           <h2 className="mb-3 text-lg font-semibold text-neutral-800">
-            Latest Run Steps
+            最新実行ステップ
           </h2>
           <PipelineStepTimeline steps={latestSteps} />
         </div>

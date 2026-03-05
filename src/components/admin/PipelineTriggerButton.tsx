@@ -21,12 +21,12 @@ export function PipelineTriggerButton() {
       });
 
       if (res.ok) {
-        setMessage("Pipeline triggered successfully");
+        setMessage("パイプラインを実行しました");
       } else {
-        setMessage(`Failed to trigger pipeline (${res.status})`);
+        setMessage(`パイプラインの実行に失敗しました (${res.status})`);
       }
     } catch {
-      setMessage("Network error. Please try again.");
+      setMessage("ネットワークエラーが発生しました。再度お試しください。");
     } finally {
       setIsTriggering(false);
     }
@@ -43,7 +43,7 @@ export function PipelineTriggerButton() {
         disabled={isTriggering}
         className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
       >
-        {isTriggering ? "Triggering..." : "Trigger Pipeline"}
+        {isTriggering ? "実行中..." : "パイプライン実行"}
       </button>
     </div>
   );

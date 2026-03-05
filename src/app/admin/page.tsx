@@ -13,7 +13,7 @@ import { fetchDashboardData } from "@/lib/admin/dashboard-data";
  */
 function getDefaultPipelineData() {
   // 静的なフォールバック値（new Date() はプリレンダリング制約でリスクがあるため固定値）
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const days = ['月', '火', '水', '木', '金', '土', '日'];
   return days.map((day, i) => ({
     date: day,
     successRate: 90 + (i % 3) * 2.5,
@@ -33,20 +33,20 @@ async function DashboardStats() {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <StatCard
-        title="Total Articles"
+        title="記事数"
         value={articles.total}
-        subtitle={`${articles.published} published, ${articles.draft} drafts`}
+        subtitle={`${articles.published} 公開済み, ${articles.draft} 下書き`}
       />
       <StatCard
-        title="Revenue (30d)"
+        title="売上 (30日)"
         value={`¥${revenue.monthlyTotalJpy.toLocaleString()}`}
-        subtitle={`${revenue.byAsp.reduce((sum, a) => sum + a.monthlyConversions, 0)} conversions`}
+        subtitle={`${revenue.byAsp.reduce((sum, a) => sum + a.monthlyConversions, 0)} コンバージョン`}
         variant="success"
       />
       <StatCard
-        title="Avg Compliance"
+        title="平均コンプライアンス"
         value={`${articles.avgComplianceScore}%`}
-        subtitle="Target: 95%"
+        subtitle="目標: 95%"
         variant={
           articles.avgComplianceScore >= 95
             ? "success"
@@ -56,9 +56,9 @@ async function DashboardStats() {
         }
       />
       <StatCard
-        title="AI Cost (30d)"
+        title="AI費用 (30日)"
         value={`$${costs.monthlyTotalUsd.toFixed(2)}`}
-        subtitle={`$${costs.articleAvgUsd.toFixed(2)} per article`}
+        subtitle={`$${costs.articleAvgUsd.toFixed(2)} 記事あたり`}
       />
     </div>
   );
@@ -73,7 +73,7 @@ async function DashboardPipelineAndAlerts() {
       {/* Pipeline status */}
       <div>
         <h2 className="mb-3 text-lg font-semibold text-neutral-800">
-          Pipeline
+          パイプライン
         </h2>
         <PipelineStatusCard
           status={pipeline.status}
@@ -82,7 +82,7 @@ async function DashboardPipelineAndAlerts() {
         />
         <div className="mt-4">
           <h3 className="mb-2 text-sm font-medium text-neutral-600">
-            Success Rate (7 days)
+            成功率 (7日間)
           </h3>
           <PipelineSuccessChart data={getDefaultPipelineData()} />
         </div>
@@ -91,7 +91,7 @@ async function DashboardPipelineAndAlerts() {
       {/* Alerts */}
       <div>
         <h2 className="mb-3 text-lg font-semibold text-neutral-800">
-          Active Alerts
+          アクティブアラート
         </h2>
         <AlertsList alerts={alerts} />
       </div>
@@ -109,23 +109,23 @@ async function DashboardCosts() {
   return (
     <div className="mt-6">
       <h2 className="mb-3 text-lg font-semibold text-neutral-800">
-        Cost Breakdown (30d)
+        コスト内訳 (30日)
       </h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
-          title="Article Generation"
+          title="記事生成"
           value={`$${estimatedArticleCost.toFixed(2)}`}
           subtitle={`${costs.monthlyTotalUsd > 0 ? ((estimatedArticleCost / costs.monthlyTotalUsd) * 100).toFixed(0) : 0}% of total`}
         />
         <StatCard
-          title="Image Generation"
+          title="画像生成"
           value={`$${estimatedImageCost.toFixed(2)}`}
           subtitle={`${costs.monthlyTotalUsd > 0 ? ((estimatedImageCost / costs.monthlyTotalUsd) * 100).toFixed(0) : 0}% of total`}
         />
         <StatCard
-          title="Pending Review"
+          title="レビュー待ち"
           value={articles.pendingReview}
-          subtitle="Articles awaiting review"
+          subtitle="レビュー待機中の記事"
           variant={articles.pendingReview > 5 ? "warning" : "default"}
         />
       </div>
@@ -140,12 +140,12 @@ async function DashboardCosts() {
 export default function AdminDashboardPage() {
   return (
     <>
-      <AdminHeader title="Dashboard" />
+      <AdminHeader title="ダッシュボード" />
 
       <Suspense
         fallback={
           <div className="flex items-center justify-center py-12">
-            <span className="text-sm text-neutral-500">Loading stats...</span>
+            <span className="text-sm text-neutral-500">統計情報を読み込み中...</span>
           </div>
         }
       >
@@ -156,7 +156,7 @@ export default function AdminDashboardPage() {
         fallback={
           <div className="flex items-center justify-center py-12">
             <span className="text-sm text-neutral-500">
-              Loading pipeline and alerts...
+              パイプラインとアラートを読み込み中...
             </span>
           </div>
         }
@@ -167,7 +167,7 @@ export default function AdminDashboardPage() {
       <Suspense
         fallback={
           <div className="flex items-center justify-center py-12">
-            <span className="text-sm text-neutral-500">Loading costs...</span>
+            <span className="text-sm text-neutral-500">コストを読み込み中...</span>
           </div>
         }
       >

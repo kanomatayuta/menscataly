@@ -14,6 +14,14 @@ export function BatchProgressBar({
   const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
   const failedPercentage = total > 0 ? Math.round((failed / total) * 100) : 0;
 
+  const STATUS_LABELS: Record<string, string> = {
+    running: "実行中",
+    completed: "完了",
+    failed: "失敗",
+    cancelled: "キャンセル",
+    queued: "待機中",
+  };
+
   let barColor: string;
   let statusColor: string;
   switch (status) {
@@ -38,13 +46,13 @@ export function BatchProgressBar({
   return (
     <div className="rounded-lg border border-neutral-200 bg-white p-5">
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-sm font-medium text-neutral-700">Progress</span>
-        <span className={`text-sm font-semibold capitalize ${statusColor}`}>
-          {status}
+        <span className="text-sm font-medium text-neutral-700">進捗</span>
+        <span className={`text-sm font-semibold ${statusColor}`}>
+          {STATUS_LABELS[status] ?? status}
         </span>
       </div>
 
-      {/* Progress bar */}
+      {/* プログレスバー */}
       <div className="mb-2 h-3 w-full overflow-hidden rounded-full bg-neutral-100">
         <div className="flex h-full">
           <div
@@ -60,13 +68,13 @@ export function BatchProgressBar({
         </div>
       </div>
 
-      {/* Stats */}
+      {/* 統計 */}
       <div className="flex items-center justify-between text-xs text-neutral-500">
         <span>
-          {completed} / {total} completed
+          {completed} / {total} 完了
         </span>
         {failed > 0 && (
-          <span className="text-red-600">{failed} failed</span>
+          <span className="text-red-600">{failed} 失敗</span>
         )}
         <span>{percentage}%</span>
       </div>

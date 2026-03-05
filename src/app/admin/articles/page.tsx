@@ -107,7 +107,7 @@ async function ArticlesContent() {
   return (
     <>
       <div className="mb-4 flex items-center justify-between">
-        <p className="text-sm text-neutral-500">{total} articles total</p>
+        <p className="text-sm text-neutral-500">{total} 記事</p>
       </div>
 
       <ArticleTable articles={articles} />
@@ -122,13 +122,13 @@ async function ArticlesContent() {
 export default function AdminArticlesPage() {
   return (
     <>
-      <AdminHeader title="Articles" breadcrumbs={[{ label: "Articles" }]} />
+      <AdminHeader title="記事一覧" breadcrumbs={[{ label: "記事一覧" }]} />
 
       <Suspense
         fallback={
           <div className="flex items-center justify-center py-12">
             <span className="text-sm text-neutral-500">
-              Loading articles...
+              記事を読み込み中...
             </span>
           </div>
         }

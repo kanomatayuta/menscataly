@@ -22,20 +22,34 @@ const STATUS_STYLES: Record<PipelineStatus, { bg: string; text: string }> = {
   partial: { bg: "bg-amber-100", text: "text-amber-700" },
 };
 
+const STATUS_LABELS: Record<PipelineStatus, string> = {
+  idle: "待機中",
+  running: "実行中",
+  success: "成功",
+  failed: "失敗",
+  partial: "一部失敗",
+};
+
+const TYPE_LABELS: Record<PipelineType, string> = {
+  daily: "デイリー",
+  manual: "手動",
+  pdca: "PDCA",
+};
+
 function formatDuration(ms: number | null): string {
   if (ms === null) return "-";
   const seconds = Math.round(ms / 1000);
-  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 60) return `${seconds}秒`;
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
-  return `${minutes}m ${remainingSeconds}s`;
+  return `${minutes}分 ${remainingSeconds}秒`;
 }
 
 export function PipelineRunTable({ runs }: PipelineRunTableProps) {
   if (runs.length === 0) {
     return (
       <div className="rounded-lg border border-neutral-200 bg-white p-8 text-center">
-        <p className="text-sm text-neutral-500">No pipeline runs found</p>
+        <p className="text-sm text-neutral-500">実行履歴がありません</p>
       </div>
     );
   }
@@ -45,14 +59,14 @@ export function PipelineRunTable({ runs }: PipelineRunTableProps) {
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="border-b border-neutral-200 bg-neutral-50">
-            <th className="px-4 py-3 font-medium text-neutral-600">Run ID</th>
-            <th className="px-4 py-3 font-medium text-neutral-600">Type</th>
-            <th className="px-4 py-3 font-medium text-neutral-600">Status</th>
-            <th className="px-4 py-3 font-medium text-neutral-600">Started</th>
+            <th className="px-4 py-3 font-medium text-neutral-600">実行ID</th>
+            <th className="px-4 py-3 font-medium text-neutral-600">種別</th>
+            <th className="px-4 py-3 font-medium text-neutral-600">ステータス</th>
+            <th className="px-4 py-3 font-medium text-neutral-600">開始時刻</th>
             <th className="px-4 py-3 font-medium text-neutral-600">
-              Duration
+              所要時間
             </th>
-            <th className="px-4 py-3 font-medium text-neutral-600">Error</th>
+            <th className="px-4 py-3 font-medium text-neutral-600">エラー</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-neutral-100">
@@ -63,14 +77,14 @@ export function PipelineRunTable({ runs }: PipelineRunTableProps) {
                 <td className="px-4 py-3 font-mono text-xs text-neutral-700">
                   {run.id.slice(0, 8)}
                 </td>
-                <td className="px-4 py-3 capitalize text-neutral-600">
-                  {run.type}
+                <td className="px-4 py-3 text-neutral-600">
+                  {TYPE_LABELS[run.type] ?? run.type}
                 </td>
                 <td className="px-4 py-3">
                   <span
-                    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium capitalize ${style.bg} ${style.text}`}
+                    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${style.bg} ${style.text}`}
                   >
-                    {run.status}
+                    {STATUS_LABELS[run.status] ?? run.status}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-neutral-500">

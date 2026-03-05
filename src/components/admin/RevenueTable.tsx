@@ -8,7 +8,7 @@ export function RevenueTable({ summaries }: RevenueTableProps) {
   if (summaries.length === 0) {
     return (
       <div className="rounded-lg border border-neutral-200 bg-white p-8 text-center">
-        <p className="text-sm text-neutral-500">No revenue data available</p>
+        <p className="text-sm text-neutral-500">売上データがありません</p>
       </div>
     );
   }
@@ -34,13 +34,13 @@ export function RevenueTable({ summaries }: RevenueTableProps) {
           <tr className="border-b border-neutral-200 bg-neutral-50">
             <th className="px-4 py-3 font-medium text-neutral-600">ASP</th>
             <th className="px-4 py-3 text-right font-medium text-neutral-600">
-              Clicks
+              クリック数
             </th>
             <th className="px-4 py-3 text-right font-medium text-neutral-600">
-              Conversions
+              CV数
             </th>
             <th className="px-4 py-3 text-right font-medium text-neutral-600">
-              Revenue
+              売上
             </th>
             <th className="px-4 py-3 text-right font-medium text-neutral-600">
               CVR
@@ -70,7 +70,7 @@ export function RevenueTable({ summaries }: RevenueTableProps) {
         </tbody>
         <tfoot>
           <tr className="border-t-2 border-neutral-200 bg-neutral-50 font-semibold">
-            <td className="px-4 py-3 text-neutral-900">Total</td>
+            <td className="px-4 py-3 text-neutral-900">合計</td>
             <td className="px-4 py-3 text-right text-neutral-900">
               {totals.clicks.toLocaleString()}
             </td>

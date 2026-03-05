@@ -7,7 +7,7 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 const NAV_ITEMS = [
   {
-    label: "Dashboard",
+    label: "ダッシュボード",
     href: "/admin",
     icon: (
       <svg
@@ -27,7 +27,7 @@ const NAV_ITEMS = [
     ),
   },
   {
-    label: "Articles",
+    label: "記事管理",
     href: "/admin/articles",
     icon: (
       <svg
@@ -47,7 +47,7 @@ const NAV_ITEMS = [
     ),
   },
   {
-    label: "Pipeline",
+    label: "パイプライン",
     href: "/admin/pipeline",
     icon: (
       <svg
@@ -67,7 +67,7 @@ const NAV_ITEMS = [
     ),
   },
   {
-    label: "Revenue",
+    label: "収益",
     href: "/admin/revenue",
     icon: (
       <svg
@@ -87,7 +87,7 @@ const NAV_ITEMS = [
     ),
   },
   {
-    label: "Batch",
+    label: "バッチ生成",
     href: "/admin/batch",
     icon: (
       <svg
@@ -107,7 +107,7 @@ const NAV_ITEMS = [
     ),
   },
   {
-    label: "ASP",
+    label: "ASP管理",
     href: "/admin/asp",
     icon: (
       <svg

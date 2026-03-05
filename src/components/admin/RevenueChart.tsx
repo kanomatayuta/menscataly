@@ -37,7 +37,7 @@ export function RevenueChart({ summaries }: RevenueChartProps) {
   if (summaries.length === 0) {
     return (
       <div className="rounded-lg border border-neutral-200 bg-white p-8 text-center">
-        <p className="text-sm text-neutral-500">No revenue data to display</p>
+        <p className="text-sm text-neutral-500">表示する売上データがありません</p>
       </div>
     );
   }
@@ -70,7 +70,7 @@ export function RevenueChart({ summaries }: RevenueChartProps) {
           <Tooltip
             formatter={(value: number) => [
               `¥${value.toLocaleString()}`,
-              "Revenue",
+              "売上",
             ]}
             contentStyle={{
               backgroundColor: "white",
