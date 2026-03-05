@@ -44,6 +44,9 @@ interface ProgramFormData {
   cookieDuration: number;
   isActive: boolean;
   landingPageUrl: string;
+  priority: number;
+  recommendedAnchors: string;
+  conversionCondition: string;
 }
 
 const EMPTY_FORM: ProgramFormData = {
@@ -60,6 +63,9 @@ const EMPTY_FORM: ProgramFormData = {
   cookieDuration: 30,
   isActive: true,
   landingPageUrl: "",
+  priority: 3,
+  recommendedAnchors: "",
+  conversionCondition: "",
 };
 
 // ------------------------------------------------------------------
@@ -292,6 +298,47 @@ function ProgramModal({
             </div>
           </div>
 
+          {/* Priority + Conversion Condition */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-neutral-600">優先度 (1=最高 〜 5=最低)</label>
+              <select
+                value={form.priority}
+                onChange={(e) => onChange({ priority: Number(e.target.value) })}
+                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+              >
+                <option value={1}>1 — 最優先</option>
+                <option value={2}>2 — 高</option>
+                <option value={3}>3 — 標準</option>
+                <option value={4}>4 — 低</option>
+                <option value={5}>5 — 最低</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-neutral-600">成果条件</label>
+              <input
+                type="text"
+                value={form.conversionCondition}
+                onChange={(e) => onChange({ conversionCondition: e.target.value })}
+                placeholder="例: 初回来院完了"
+                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Recommended Anchors */}
+          <div>
+            <label className="mb-1 block text-xs font-medium text-neutral-600">推奨アンカーテキスト (カンマ区切り)</label>
+            <input
+              type="text"
+              value={form.recommendedAnchors}
+              onChange={(e) => onChange({ recommendedAnchors: e.target.value })}
+              placeholder="例: 公式サイト, 詳細を見る, 無料カウンセリング"
+              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+            />
+            <p className="mt-1 text-xs text-neutral-400">記事内でアフィリエイトリンクを挿入する際に使用されるテキスト</p>
+          </div>
+
           {/* Toggles */}
           <div className="flex items-center gap-6">
             <label className="flex items-center gap-2 text-sm text-neutral-700">
@@ -411,6 +458,9 @@ export default function AdminAspPage() {
       cookieDuration: program.cookieDuration ?? 30,
       isActive: program.isActive,
       landingPageUrl: program.landingPageUrl ?? "",
+      priority: program.priority ?? 3,
+      recommendedAnchors: (program.recommendedAnchors ?? []).join(", "),
+      conversionCondition: program.conversionCondition ?? "",
     });
     setModalTitle("プログラム編集");
     setModalOpen(true);
@@ -421,10 +471,17 @@ export default function AdminAspPage() {
     setIsSaving(true);
     setUpdateError(null);
     try {
+      // recommendedAnchors をカンマ区切り文字列→配列に変換
+      const payload = {
+        ...form,
+        recommendedAnchors: form.recommendedAnchors
+          ? form.recommendedAnchors.split(",").map((s) => s.trim()).filter(Boolean)
+          : [],
+      };
       if (editingId) {
-        await apiUpdateProgram(editingId, { ...form });
+        await apiUpdateProgram(editingId, { ...payload });
       } else {
-        await apiCreateProgram(form);
+        await apiCreateProgram(payload as unknown as ProgramFormData);
       }
       setModalOpen(false);
       await loadPrograms();
@@ -641,7 +698,9 @@ export default function AdminAspPage() {
               <th className="px-4 py-3 font-medium text-neutral-600">プログラム名</th>
               <th className="px-4 py-3 font-medium text-neutral-600">ASP</th>
               <th className="px-4 py-3 font-medium text-neutral-600">カテゴリ</th>
+              <th className="px-4 py-3 font-medium text-neutral-600">優先度</th>
               <th className="px-4 py-3 font-medium text-neutral-600">報酬</th>
+              <th className="px-4 py-3 font-medium text-neutral-600">成果条件</th>
               <th className="px-4 py-3 font-medium text-neutral-600">承認率</th>
               <th className="px-4 py-3 font-medium text-neutral-600">EPC</th>
               <th className="px-4 py-3 font-medium text-neutral-600">ITP</th>
@@ -670,7 +729,16 @@ export default function AdminAspPage() {
                     <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${aspColor}`}>{ASP_DISPLAY_NAMES[program.aspName]}</span>
                   </td>
                   <td className="px-4 py-3 text-neutral-600">{CATEGORY_LABELS[program.category]}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-bold ${
+                      (program.priority ?? 3) <= 1 ? "bg-red-100 text-red-700" :
+                      (program.priority ?? 3) <= 2 ? "bg-orange-100 text-orange-700" :
+                      (program.priority ?? 3) <= 3 ? "bg-neutral-100 text-neutral-700" :
+                      "bg-neutral-50 text-neutral-400"
+                    }`}>{program.priority ?? 3}</span>
+                  </td>
                   <td className="px-4 py-3 font-medium text-neutral-900">{program.rewardAmount.toLocaleString()}円</td>
+                  <td className="max-w-[120px] truncate px-4 py-3 text-xs text-neutral-500">{program.conversionCondition || "-"}</td>
                   <td className="px-4 py-3">
                     {program.approvalRate != null ? (
                       <span className={`text-sm font-medium ${program.approvalRate >= 80 ? "text-green-700" : program.approvalRate >= 60 ? "text-yellow-700" : "text-red-700"}`}>{program.approvalRate}%</span>
@@ -712,36 +780,120 @@ export default function AdminAspPage() {
 
       {/* Category mapping section */}
       <div className="mt-8">
-        <h2 className="mb-4 text-lg font-semibold text-neutral-800">カテゴリ別マッピング設定</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <h2 className="mb-2 text-lg font-semibold text-neutral-800">カテゴリ別マッピング設定</h2>
+        <p className="mb-4 text-xs text-neutral-500">
+          各カテゴリの記事にどのASPプログラムを優先的にリンク注入するかを管理します。優先度が高い(数値が小さい)プログラムが先に挿入されます。
+        </p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {(Object.keys(CATEGORY_LABELS) as ContentCategory[])
             .filter((cat) => cat !== "column")
             .map((category) => {
               const categoryPrograms = programs.filter((p) => p.category === category && p.isActive);
               const avgApproval = categoryPrograms.length > 0 ? Math.round(categoryPrograms.reduce((sum, p) => sum + (p.approvalRate ?? 0), 0) / categoryPrograms.length) : 0;
               const totalReward = categoryPrograms.reduce((sum, p) => sum + p.rewardAmount, 0);
+              const sorted = [...categoryPrograms].sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99));
 
               return (
-                <div key={category} className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
-                  <div className="mb-3 flex items-center justify-between">
+                <div key={category} className="rounded-lg border border-neutral-200 bg-white shadow-sm">
+                  {/* Card header */}
+                  <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-3">
                     <h3 className="text-sm font-semibold text-neutral-800">{CATEGORY_LABELS[category]}</h3>
-                    <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600">{categoryPrograms.length}件</span>
+                    <div className="flex items-center gap-3">
+                      <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600">{categoryPrograms.length}件</span>
+                      <span className={`text-xs font-medium ${avgApproval >= 80 ? "text-green-600" : avgApproval >= 60 ? "text-yellow-600" : "text-red-600"}`}>承認率 {avgApproval}%</span>
+                      <span className="text-xs text-neutral-500">合計 {totalReward.toLocaleString()}円</span>
+                    </div>
                   </div>
-                  <dl className="space-y-2 text-sm">
-                    <div className="flex justify-between"><dt className="text-neutral-500">有効プログラム</dt><dd className="font-medium text-neutral-900">{categoryPrograms.length}件</dd></div>
-                    <div className="flex justify-between"><dt className="text-neutral-500">平均承認率</dt><dd className={`font-medium ${avgApproval >= 80 ? "text-green-700" : avgApproval >= 60 ? "text-yellow-700" : "text-red-700"}`}>{avgApproval}%</dd></div>
-                    <div className="flex justify-between"><dt className="text-neutral-500">合計報酬</dt><dd className="font-medium text-neutral-900">{totalReward.toLocaleString()}円</dd></div>
-                    <div className="flex justify-between"><dt className="text-neutral-500">ITP対応率</dt><dd className="font-medium text-blue-700">{categoryPrograms.length > 0 ? Math.round((categoryPrograms.filter((p) => p.itpSupport).length / categoryPrograms.length) * 100) : 0}%</dd></div>
-                  </dl>
-                  <div className="mt-3 border-t border-neutral-100 pt-3">
-                    <ul className="space-y-1">
-                      {categoryPrograms.sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99)).map((p) => (
-                        <li key={p.id} className="flex items-center justify-between text-xs">
-                          <span className="truncate text-neutral-600">{p.programName}</span>
-                          <span className="ml-2 shrink-0 font-medium text-neutral-800">{p.rewardAmount.toLocaleString()}円</span>
-                        </li>
+
+                  {/* Program list with priority */}
+                  {sorted.length === 0 ? (
+                    <div className="px-5 py-6 text-center text-xs text-neutral-400">
+                      このカテゴリには有効なプログラムがありません
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-neutral-50">
+                      {sorted.map((p, idx) => (
+                        <div key={p.id} className="flex items-center gap-3 px-5 py-2.5">
+                          {/* Priority badge */}
+                          <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                            idx === 0 ? "bg-amber-100 text-amber-700" :
+                            idx === 1 ? "bg-neutral-200 text-neutral-600" :
+                            idx === 2 ? "bg-orange-100 text-orange-600" :
+                            "bg-neutral-50 text-neutral-400"
+                          }`}>{idx + 1}</span>
+
+                          {/* Program info */}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="truncate text-sm font-medium text-neutral-800">{p.programName}</span>
+                              <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                                ({
+                                  afb: "bg-purple-50 text-purple-600",
+                                  a8: "bg-orange-50 text-orange-600",
+                                  accesstrade: "bg-cyan-50 text-cyan-600",
+                                  valuecommerce: "bg-emerald-50 text-emerald-600",
+                                  felmat: "bg-pink-50 text-pink-600",
+                                  moshimo: "bg-teal-50 text-teal-600",
+                                } as Record<string, string>)[p.aspName] ?? "bg-neutral-50 text-neutral-500"
+                              }`}>{ASP_DISPLAY_NAMES[p.aspName]}</span>
+                            </div>
+                            {/* Recommended anchors */}
+                            {p.recommendedAnchors && p.recommendedAnchors.length > 0 && (
+                              <div className="mt-0.5 flex flex-wrap gap-1">
+                                {p.recommendedAnchors.slice(0, 3).map((anchor, i) => (
+                                  <span key={i} className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-600">
+                                    {anchor}
+                                  </span>
+                                ))}
+                                {p.recommendedAnchors.length > 3 && (
+                                  <span className="text-[10px] text-neutral-400">+{p.recommendedAnchors.length - 3}</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Reward + priority selector */}
+                          <div className="flex shrink-0 items-center gap-3">
+                            <span className="text-sm font-semibold text-neutral-800">{p.rewardAmount.toLocaleString()}円</span>
+                            <select
+                              value={p.priority ?? 3}
+                              onChange={async (e) => {
+                                const newPriority = Number(e.target.value);
+                                setPrograms((prev) => prev.map((prog) => prog.id === p.id ? { ...prog, priority: newPriority } : prog));
+                                try {
+                                  await apiUpdateProgram(p.id, { priority: newPriority });
+                                } catch {
+                                  setPrograms((prev) => prev.map((prog) => prog.id === p.id ? { ...prog, priority: p.priority } : prog));
+                                  setUpdateError("優先度の更新に失敗しました");
+                                }
+                              }}
+                              className="rounded border border-neutral-200 px-1.5 py-1 text-xs text-neutral-600 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 focus:outline-none"
+                              title="優先度を変更"
+                            >
+                              <option value={1}>P1</option>
+                              <option value={2}>P2</option>
+                              <option value={3}>P3</option>
+                              <option value={4}>P4</option>
+                              <option value={5}>P5</option>
+                            </select>
+                            <button
+                              type="button"
+                              onClick={() => handleEdit(p)}
+                              className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-blue-600"
+                              title="編集"
+                            >
+                              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                            </button>
+                          </div>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
+                  )}
+
+                  {/* ITP summary */}
+                  <div className="flex items-center justify-between border-t border-neutral-100 px-5 py-2 text-xs text-neutral-500">
+                    <span>ITP対応: {categoryPrograms.filter((p) => p.itpSupport).length}/{categoryPrograms.length}</span>
+                    <span>最大リンク挿入: 3本/記事</span>
                   </div>
                 </div>
               );
