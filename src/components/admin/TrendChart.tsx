@@ -44,8 +44,8 @@ export function TrendChart({ data }: TrendChartProps) {
   const filtered = data.slice(-period);
 
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
-      <div className="mb-4 flex items-center justify-between">
+    <div className="rounded-lg border border-neutral-200 bg-white px-2 py-4 shadow-sm">
+      <div className="mb-4 flex items-center justify-between px-2">
         <h3 className="text-sm font-semibold text-neutral-700">トレンド</h3>
         <div className="flex gap-1">
           {PERIODS.map((p) => (
@@ -74,7 +74,7 @@ export function TrendChart({ data }: TrendChartProps) {
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={filtered} margin={{ top: 10, right: 30, left: 20, bottom: 5 }}>
+          <LineChart data={filtered} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis
               dataKey="date"
