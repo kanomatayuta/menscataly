@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Noto_Sans_JP } from "next/font/google";
 import "./globals.css";
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
 import { GA4Script } from "@/components/analytics/GA4Script";
 import { A8LinkManager } from "@/components/tracking/A8LinkManager";
 
@@ -85,11 +83,7 @@ export default function RootLayout({
       <body className="flex min-h-screen flex-col antialiased">
         <GA4Script />
         <A8LinkManager />
-        <Header />
-        <main id="main-content" className="flex-1">
-          {children}
-        </main>
-        <Footer />
+        {children}
       </body>
     </html>
   );
