@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { createSupabaseServerClient } from "@/lib/supabase/client";
 import { AdminLayoutShell } from "./AdminLayoutShell";
 
 export const metadata: Metadata = {
@@ -14,34 +15,27 @@ export const metadata: Metadata = {
   },
 };
 
-/**
- * 管理者レイアウト
- * サーバーサイドで認証チェックを行い、未認証の場合はログインページにリダイレクトする。
- * （ミドルウェアでの認証チェックに加えた二重防御）
- *
- * ログインページの場合は AdminLayoutShell（サイドバー）なしで描画する。
- */
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // ミドルウェアが設定した x-admin-pathname を読み取る
   const headersList = await headers();
-  const pathname = headersList.get("x-admin-pathname") || "";
+  const pathname = headersList.get("x-admin-pathname") ?? "";
 
-  // ログインページはサイドバーなしでそのまま表示
-  const isLoginPage = pathname === "/admin/login";
-
-  if (isLoginPage) {
+  // ログインページはセッション検証不要 (レイアウトシェルも不要)
+  if (pathname === "/admin/login") {
     return <>{children}</>;
   }
 
-  // サーバーサイド認証チェック（ミドルウェアの二重防御）
-  const cookieStore = await cookies();
-  const adminToken = cookieStore.get("admin-token")?.value;
-  const adminApiKey = process.env.ADMIN_API_KEY;
+  // Supabase Auth セッション検証
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!adminToken || !adminApiKey || adminToken !== adminApiKey) {
+  if (!user) {
     redirect("/admin/login");
   }
 

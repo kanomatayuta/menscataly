@@ -1,291 +1,166 @@
 /**
  * Admin Auth API Route Tests
- * POST /api/admin/auth — ログイン (Cookie 発行)
- * DELETE /api/admin/auth — ログアウト (Cookie 削除)
- *
- * テスト対象の振る舞い:
- * - POST: 有効な API Key → 200 + admin-token Cookie (httpOnly, secure, sameSite: strict)
- * - POST: 無効な API Key → 401
- * - POST: API Key 未送信 → 400
- * - DELETE: admin-token Cookie を削除して 200 を返す
+ * Supabase Auth によるメール/パスワード認証テスト
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { NextRequest } from 'next/server'
 
 // ==============================================================
-// 環境変数スタブ
+// Supabase SSR モック
 // ==============================================================
 
-vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', '')
-vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', '')
+const mockSignInWithPassword = vi.fn()
+const mockSignOut = vi.fn()
+
+vi.mock('@supabase/ssr', () => ({
+  createServerClient: vi.fn(() => ({
+    auth: {
+      signInWithPassword: mockSignInWithPassword,
+      signOut: mockSignOut,
+    },
+  })),
+}))
+
+import { POST, DELETE } from '@/app/api/admin/auth/route'
 
 // ==============================================================
-// テスト
+// ヘルパー
 // ==============================================================
 
-describe('POST /api/admin/auth', () => {
-  const ORIGINAL_ENV = process.env
+function createJsonRequest(
+  body: Record<string, unknown>,
+  method = 'POST'
+): NextRequest {
+  return new NextRequest('http://localhost:3000/api/admin/auth', {
+    method,
+    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
 
+function createDeleteRequest(): NextRequest {
+  return new NextRequest('http://localhost:3000/api/admin/auth', {
+    method: 'DELETE',
+  })
+}
+
+// ==============================================================
+// POST (ログイン) テスト
+// ==============================================================
+
+describe('POST /api/admin/auth (ログイン)', () => {
   beforeEach(() => {
-    vi.resetModules()
-    process.env = { ...ORIGINAL_ENV }
-    process.env.ADMIN_API_KEY = 'test-admin-secret-key-123'
+    vi.clearAllMocks()
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co'
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key'
   })
 
-  afterEach(() => {
-    process.env = ORIGINAL_ENV
-  })
-
-  /**
-   * API ルートを動的にインポートする
-   */
-  async function importRoute() {
-    const mod = await import('@/app/api/admin/auth/route')
-    return mod
-  }
-
-  // ============================================================
-  // 有効な API Key で認証成功
-  // ============================================================
-
-  it('有効な API Key で POST すると 200 を返すこと', async () => {
-    const { POST } = await importRoute()
-    const req = new Request('http://localhost/api/admin/auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ apiKey: 'test-admin-secret-key-123' }),
+  it('正しいメール/パスワードでログインできること', async () => {
+    mockSignInWithPassword.mockResolvedValue({
+      data: {
+        user: { id: 'user-123', email: 'admin@example.com' },
+        session: { access_token: 'token-123' },
+      },
+      error: null,
     })
 
-    const response = await POST(req)
-    expect(response.status).toBe(200)
+    const req = createJsonRequest({
+      email: 'admin@example.com',
+      password: 'secure-password',
+    })
+    const res = await POST(req)
 
-    const data = await response.json()
-    expect(data.success).toBe(true)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.success).toBe(true)
+    expect(mockSignInWithPassword).toHaveBeenCalledWith({
+      email: 'admin@example.com',
+      password: 'secure-password',
+    })
   })
 
-  it('有効な API Key で POST すると admin-token Cookie が設定されること', async () => {
-    const { POST } = await importRoute()
-    const req = new Request('http://localhost/api/admin/auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ apiKey: 'test-admin-secret-key-123' }),
+  it('不正な認証情報で 401 を返すこと', async () => {
+    mockSignInWithPassword.mockResolvedValue({
+      data: { user: null, session: null },
+      error: { message: 'Invalid login credentials' },
     })
 
-    const response = await POST(req)
-    const setCookieHeader = response.headers.get('set-cookie') ?? ''
+    const req = createJsonRequest({
+      email: 'admin@example.com',
+      password: 'wrong-password',
+    })
+    const res = await POST(req)
 
-    // admin-token Cookie が設定されていること
-    expect(setCookieHeader).toContain('admin-token')
+    expect(res.status).toBe(401)
+    const body = await res.json()
+    expect(body.error).toBe('Invalid login credentials')
   })
 
-  it('admin-token Cookie が httpOnly であること', async () => {
-    const { POST } = await importRoute()
-    const req = new Request('http://localhost/api/admin/auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ apiKey: 'test-admin-secret-key-123' }),
+  it('メールアドレスが未提供の場合 400 を返すこと', async () => {
+    const req = createJsonRequest({
+      password: 'some-password',
     })
+    const res = await POST(req)
 
-    const response = await POST(req)
-    const setCookieHeader = (response.headers.get('set-cookie') ?? '').toLowerCase()
-
-    expect(setCookieHeader).toContain('httponly')
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toBe('Email and password are required')
   })
 
-  it('admin-token Cookie の sameSite が strict であること', async () => {
-    const { POST } = await importRoute()
-    const req = new Request('http://localhost/api/admin/auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ apiKey: 'test-admin-secret-key-123' }),
+  it('パスワードが未提供の場合 400 を返すこと', async () => {
+    const req = createJsonRequest({
+      email: 'admin@example.com',
     })
+    const res = await POST(req)
 
-    const response = await POST(req)
-    const setCookieHeader = (response.headers.get('set-cookie') ?? '').toLowerCase()
-
-    expect(setCookieHeader).toContain('samesite=strict')
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toBe('Email and password are required')
   })
 
-  it('admin-token Cookie が Secure フラグを持つこと (本番環境想定)', async () => {
-    process.env.NODE_ENV = 'production'
+  it('メールとパスワードが両方未提供の場合 400 を返すこと', async () => {
+    const req = createJsonRequest({})
+    const res = await POST(req)
 
-    const { POST } = await importRoute()
-    const req = new Request('http://localhost/api/admin/auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ apiKey: 'test-admin-secret-key-123' }),
-    })
-
-    const response = await POST(req)
-    const setCookieHeader = (response.headers.get('set-cookie') ?? '').toLowerCase()
-
-    // 本番環境では Secure フラグが設定される
-    expect(setCookieHeader).toContain('secure')
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toBe('Email and password are required')
   })
 
-  // ============================================================
-  // 無効な API Key で 401
-  // ============================================================
-
-  it('無効な API Key で POST すると 401 を返すこと', async () => {
-    const { POST } = await importRoute()
-    const req = new Request('http://localhost/api/admin/auth', {
+  it('不正なリクエストボディで 400 を返すこと', async () => {
+    const req = new NextRequest('http://localhost:3000/api/admin/auth', {
       method: 'POST',
+      body: 'invalid-json',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ apiKey: 'wrong-key' }),
     })
+    const res = await POST(req)
 
-    const response = await POST(req)
-    expect(response.status).toBe(401)
-
-    const data = await response.json()
-    expect(data.error).toBeDefined()
-  })
-
-  it('空文字列の API Key で POST すると 400 を返すこと', async () => {
-    const { POST } = await importRoute()
-    const req = new Request('http://localhost/api/admin/auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ apiKey: '' }),
-    })
-
-    const response = await POST(req)
-    // 空文字列は missing として扱われるため 400
-    expect(response.status).toBe(400)
-  })
-
-  // ============================================================
-  // API Key 未送信で 400
-  // ============================================================
-
-  it('API Key 未送信で POST すると 400 を返すこと', async () => {
-    const { POST } = await importRoute()
-    const req = new Request('http://localhost/api/admin/auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    })
-
-    const response = await POST(req)
-    expect(response.status).toBe(400)
-
-    const data = await response.json()
-    expect(data.error).toBeDefined()
-  })
-
-  it('不正な JSON ボディで POST すると 400 を返すこと', async () => {
-    const { POST } = await importRoute()
-    const req = new Request('http://localhost/api/admin/auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: 'not-valid-json',
-    })
-
-    const response = await POST(req)
-    expect(response.status).toBe(400)
-  })
-
-  // ============================================================
-  // ADMIN_API_KEY 未設定
-  // ============================================================
-
-  it('ADMIN_API_KEY が未設定の場合 POST すると 500 を返すこと', async () => {
-    delete process.env.ADMIN_API_KEY
-
-    const { POST } = await importRoute()
-    const req = new Request('http://localhost/api/admin/auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ apiKey: 'any-key' }),
-    })
-
-    const response = await POST(req)
-    // ADMIN_API_KEY 未設定はサーバー設定エラー (500) または 403
-    expect([403, 500]).toContain(response.status)
-  })
-
-  // ============================================================
-  // タイミング攻撃耐性
-  // ============================================================
-
-  it('長さの異なるキーでも安全に拒否すること', async () => {
-    const { POST } = await importRoute()
-    const req = new Request('http://localhost/api/admin/auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ apiKey: 'x' }),
-    })
-
-    const response = await POST(req)
-    expect(response.status).toBe(401)
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toBe('Invalid request body')
   })
 })
 
 // ==============================================================
-// DELETE /api/admin/auth — ログアウト
+// DELETE (ログアウト) テスト
 // ==============================================================
 
-describe('DELETE /api/admin/auth', () => {
-  const ORIGINAL_ENV = process.env
-
+describe('DELETE /api/admin/auth (ログアウト)', () => {
   beforeEach(() => {
-    vi.resetModules()
-    process.env = { ...ORIGINAL_ENV }
-    process.env.ADMIN_API_KEY = 'test-admin-secret-key-123'
+    vi.clearAllMocks()
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co'
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key'
+    mockSignOut.mockResolvedValue({ error: null })
   })
 
-  afterEach(() => {
-    process.env = ORIGINAL_ENV
-  })
+  it('ログアウトが成功すること', async () => {
+    const req = createDeleteRequest()
+    const res = await DELETE(req)
 
-  async function importRoute() {
-    const mod = await import('@/app/api/admin/auth/route')
-    return mod
-  }
-
-  it('DELETE で 200 を返すこと', async () => {
-    const { DELETE } = await importRoute()
-    const req = new Request('http://localhost/api/admin/auth', {
-      method: 'DELETE',
-    })
-
-    const response = await DELETE(req)
-    expect(response.status).toBe(200)
-
-    const data = await response.json()
-    expect(data.success).toBe(true)
-  })
-
-  it('DELETE で admin-token Cookie がクリアされること', async () => {
-    const { DELETE } = await importRoute()
-    const req = new Request('http://localhost/api/admin/auth', {
-      method: 'DELETE',
-    })
-
-    const response = await DELETE(req)
-    const setCookieHeader = response.headers.get('set-cookie') ?? ''
-
-    // Cookie 削除は Max-Age=0 または expires 過去日付で行われる
-    expect(setCookieHeader).toContain('admin-token')
-    // Cookie を削除するために Max-Age=0 が設定されること
-    const isCleared =
-      setCookieHeader.includes('Max-Age=0') ||
-      setCookieHeader.includes('max-age=0') ||
-      setCookieHeader.includes('expires=Thu, 01 Jan 1970')
-    expect(isCleared).toBe(true)
-  })
-
-  it('DELETE のレスポンスが正しい JSON 形式であること', async () => {
-    const { DELETE } = await importRoute()
-    const req = new Request('http://localhost/api/admin/auth', {
-      method: 'DELETE',
-    })
-
-    const response = await DELETE(req)
-    const data = await response.json()
-
-    expect(data).toHaveProperty('success')
-    expect(data.success).toBe(true)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.success).toBe(true)
+    expect(mockSignOut).toHaveBeenCalled()
   })
 })

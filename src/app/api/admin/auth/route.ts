@@ -1,70 +1,74 @@
 /**
- * 管理者認証API
- * POST: ログイン（APIキー検証 → admin-token Cookie設定）
- * DELETE: ログアウト（admin-token Cookie削除）
+ * 管理者認証 API Route
+ * Supabase Auth を使用したメール/パスワード認証
+ *
+ * POST: ログイン (signInWithPassword)
+ * DELETE: ログアウト (signOut)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import crypto from 'crypto'
+import { createServerClient as createSSRServerClient } from '@supabase/ssr'
+import { writeAdminAuditLog, extractIpFromRequest } from '@/lib/admin/audit-log'
 
-/** Cookie名 */
-const ADMIN_TOKEN_COOKIE = 'admin-token'
-
-/**
- * タイミングセーフな文字列比較
- */
-function timingSafeCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) {
-    const bufA = Buffer.from(a)
-    crypto.timingSafeEqual(bufA, bufA)
-    return false
-  }
-  return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b))
-}
-
-/**
- * POST /api/admin/auth — ログイン
- * Body: { apiKey: string }
- * 成功時: admin-token Cookie を設定し 200 を返す
- * 失敗時: 401 を返す
- */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body = await request.json()
-    const { apiKey } = body as { apiKey?: string }
+    const { email, password } = body as { email?: string; password?: string }
 
-    if (!apiKey || typeof apiKey !== 'string') {
+    if (!email || !password) {
       return NextResponse.json(
-        { error: 'API key is required' },
+        { error: 'Email and password are required' },
         { status: 400 }
       )
     }
 
-    const adminApiKey = process.env.ADMIN_API_KEY
+    let response = NextResponse.json({ success: true })
+    const supabase = createSSRServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              response.cookies.set(name, value, options)
+            })
+          },
+        },
+      }
+    )
 
-    if (!adminApiKey) {
-      console.error('[AdminAuth] ADMIN_API_KEY is not configured')
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      )
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    if (error) {
+      writeAdminAuditLog({
+        event_type: 'login_failure',
+        actor: email,
+        ip_address: extractIpFromRequest(request),
+        user_agent: request.headers.get('user-agent') ?? undefined,
+        request_path: '/api/admin/auth',
+        request_method: 'POST',
+        success: false,
+        failure_reason: error.message,
+        http_status: 401,
+      })
+      return NextResponse.json({ error: error.message }, { status: 401 })
     }
 
-    if (!timingSafeCompare(apiKey, adminApiKey)) {
-      return NextResponse.json(
-        { error: 'Invalid API key' },
-        { status: 401 }
-      )
-    }
-
-    // 認証成功 → Cookie設定
-    const response = NextResponse.json({ success: true })
-    response.cookies.set(ADMIN_TOKEN_COOKIE, apiKey, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/admin',
-      maxAge: 60 * 60 * 24, // 24時間
+    writeAdminAuditLog({
+      event_type: 'login_success',
+      actor: email,
+      ip_address: extractIpFromRequest(request),
+      user_agent: request.headers.get('user-agent') ?? undefined,
+      request_path: '/api/admin/auth',
+      request_method: 'POST',
+      success: true,
+      http_status: 200,
     })
 
     return response
@@ -76,18 +80,35 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 }
 
-/**
- * DELETE /api/admin/auth — ログアウト
- * admin-token Cookie を削除する
- */
-export async function DELETE(): Promise<NextResponse> {
-  const response = NextResponse.json({ success: true })
-  response.cookies.set(ADMIN_TOKEN_COOKIE, '', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    path: '/admin',
-    maxAge: 0, // 即座に期限切れ
+export async function DELETE(request: NextRequest): Promise<NextResponse> {
+  let response = NextResponse.json({ success: true })
+  const supabase = createSSRServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options)
+          })
+        },
+      },
+    }
+  )
+  await supabase.auth.signOut()
+
+  writeAdminAuditLog({
+    event_type: 'logout',
+    ip_address: extractIpFromRequest(request),
+    user_agent: request.headers.get('user-agent') ?? undefined,
+    request_path: '/api/admin/auth',
+    request_method: 'DELETE',
+    success: true,
+    http_status: 200,
   })
+
   return response
 }

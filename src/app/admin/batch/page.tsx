@@ -275,11 +275,7 @@ export default function AdminBatchPage() {
   // Polling
   const pollProgress = useCallback(async (jobId: string) => {
     try {
-      const res = await fetch(`/api/admin/batch/${jobId}/progress`, {
-        headers: {
-          Authorization: `Bearer ${sessionStorage.getItem("adminApiKey") ?? ""}`,
-        },
-      });
+      const res = await fetch(`/api/admin/batch/${jobId}/progress`);
       if (res.ok) {
         const data = await res.json();
         setActiveJob({
@@ -333,7 +329,6 @@ export default function AdminBatchPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${sessionStorage.getItem("adminApiKey") ?? ""}`,
         },
         body: JSON.stringify({
           keywordIds: Array.from(selectedKeywordIds),

@@ -15,11 +15,6 @@ export function PipelineTriggerButton() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${
-            typeof window !== "undefined"
-              ? sessionStorage.getItem("adminApiKey") ?? ""
-              : ""
-          }`,
         },
         body: JSON.stringify({ type: "manual" }),
       });

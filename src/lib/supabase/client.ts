@@ -1,5 +1,5 @@
 // Supabase クライアント
-// 依存: @supabase/supabase-js v2
+// 依存: @supabase/supabase-js v2, @supabase/ssr
 //
 // 環境変数:
 //   NEXT_PUBLIC_SUPABASE_URL       — Supabase プロジェクトURL
@@ -7,6 +7,8 @@
 //   SUPABASE_SERVICE_ROLE_KEY      — サービスロールキー (RLSバイパス)
 
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { createServerClient as createSSRServerClient, createBrowserClient as createSSRBrowserClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 import type { Database, ArticleInsert, ArticleUpdate, ArticleRow } from '@/types/database'
 
 // ============================================================
@@ -45,6 +47,48 @@ export function createServerSupabaseClient() {
 
 // 後方互換エイリアス
 export const createServerClient = createServerSupabaseClient
+
+// ============================================================
+// SSR対応クライアント (Supabase Auth / Cookie管理)
+// Server Components, Route Handlers, Server Actions で使用
+// ============================================================
+
+/**
+ * SSR対応サーバークライアント (anon key — Cookie管理付き)
+ * Server Components, Route Handlers, Server Actions で使用
+ * Supabase Auth セッション管理に必要
+ */
+export async function createSupabaseServerClient() {
+  const cookieStore = await cookies()
+  return createSSRServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options)
+          })
+        },
+      },
+    }
+  )
+}
+
+/**
+ * SSR対応ブラウザクライアント (anon key — Cookie管理付き)
+ * Client Components で使用
+ * Supabase Auth セッション管理に必要
+ */
+export function createSupabaseBrowserClient() {
+  return createSSRBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
 
 // ============================================================
 // 型エイリアス

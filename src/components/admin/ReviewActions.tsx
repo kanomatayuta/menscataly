@@ -29,11 +29,6 @@ export function ReviewActions({ articleId, currentStatus, onStatusChange }: Revi
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${
-            typeof window !== "undefined"
-              ? sessionStorage.getItem("adminApiKey") ?? ""
-              : ""
-          }`,
         },
         body: JSON.stringify({
           status: action,

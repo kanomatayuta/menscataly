@@ -1,10 +1,26 @@
 /**
  * ミドルウェア Unit Tests
- * ITP Cookie設定・ASPパラメータ検出・ヘッダー注入のテスト
+ * - ITP Cookie設定・ASPパラメータ検出・ヘッダー注入のテスト
+ * - Supabase Auth 管理ページ認証テスト
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
+
+// ==============================================================
+// Supabase SSR モック
+// ==============================================================
+
+const mockGetUser = vi.fn()
+
+vi.mock('@supabase/ssr', () => ({
+  createServerClient: vi.fn(() => ({
+    auth: {
+      getUser: mockGetUser,
+    },
+  })),
+}))
+
 import { middleware, generateItpScriptTags, getItpScriptConfigs, config } from '@/middleware'
 
 // ==============================================================
@@ -40,19 +56,28 @@ function createMockRequest(
 // ==============================================================
 
 describe('middleware', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    // デフォルト: 未認証
+    mockGetUser.mockResolvedValue({ data: { user: null } })
+    // 環境変数設定
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co'
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key'
+  })
+
   describe('パスマッチング', () => {
-    it('記事ページ以外ではCookieを設定しないこと', () => {
+    it('記事ページ以外ではCookieを設定しないこと', async () => {
       const req = createMockRequest('/', { a8mat: 'test-value' })
-      const res = middleware(req)
+      const res = await middleware(req)
 
       // Cookie が設定されていないことを確認
       const setCookieHeader = res.headers.get('set-cookie')
       expect(setCookieHeader).toBeNull()
     })
 
-    it('/articles/xxx パスではミドルウェアが動作すること', () => {
+    it('/articles/xxx パスではミドルウェアが動作すること', async () => {
       const req = createMockRequest('/articles/aga-basics', { a8mat: 'test-id' })
-      const res = middleware(req)
+      const res = await middleware(req)
 
       // Cookie が設定されることを確認
       const setCookieHeader = res.headers.get('set-cookie')
@@ -60,21 +85,89 @@ describe('middleware', () => {
       expect(setCookieHeader).toContain('_mc_aff')
     })
 
-    it('/articles パス（末尾スラッシュなし）ではスキップされること', () => {
+    it('/articles パス（末尾スラッシュなし）ではスキップされること', async () => {
       // ARTICLE_PATH_REGEX = /^\/articles\/.+/ なので /articles だけではマッチしない
       const req = createMockRequest('/articles', { a8mat: 'test-value' })
-      const res = middleware(req)
+      const res = await middleware(req)
 
       const setCookieHeader = res.headers.get('set-cookie')
       expect(setCookieHeader).toBeNull()
     })
 
-    it('管理ページ /admin/xxx ではスキップされること', () => {
+    it('管理ページ /admin/xxx では ITP Cookie を設定しないこと', async () => {
       const req = createMockRequest('/admin/dashboard', { a8mat: 'test-value' })
-      const res = middleware(req)
+      const res = await middleware(req)
 
-      const setCookieHeader = res.headers.get('set-cookie')
-      expect(setCookieHeader).toBeNull()
+      const setCookieHeader = res.headers.get('set-cookie') ?? ''
+      expect(setCookieHeader).not.toContain('_mc_aff')
+    })
+  })
+
+  // ==============================================================
+  // 管理ページ認証テスト (Supabase Auth)
+  // ==============================================================
+
+  describe('管理ページ認証 (Supabase Auth)', () => {
+    it('未認証ユーザーが /admin にアクセスすると /admin/login にリダイレクトされること', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: null } })
+
+      const req = createMockRequest('/admin')
+      const res = await middleware(req)
+
+      expect(res.status).toBe(307)
+      const location = res.headers.get('location')
+      expect(location).toContain('/admin/login')
+      expect(location).toContain('from=%2Fadmin')
+    })
+
+    it('未認証ユーザーが /admin/articles にアクセスするとリダイレクトされること', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: null } })
+
+      const req = createMockRequest('/admin/articles')
+      const res = await middleware(req)
+
+      expect(res.status).toBe(307)
+      const location = res.headers.get('location')
+      expect(location).toContain('/admin/login')
+      expect(location).toContain('from=%2Fadmin%2Farticles')
+    })
+
+    it('/admin/login ページはそのまま通過すること', async () => {
+      const req = createMockRequest('/admin/login')
+      const res = await middleware(req)
+
+      // リダイレクトされないこと
+      expect(res.status).toBe(200)
+      expect(res.headers.get('x-admin-pathname')).toBe('/admin/login')
+    })
+
+    it('認証済みユーザーが /admin にアクセスできること', async () => {
+      mockGetUser.mockResolvedValue({
+        data: {
+          user: { id: 'user-123', email: 'admin@example.com' },
+        },
+      })
+
+      const req = createMockRequest('/admin')
+      const res = await middleware(req)
+
+      // リダイレクトされないこと
+      expect(res.status).toBe(200)
+      expect(res.headers.get('x-admin-pathname')).toBe('/admin')
+    })
+
+    it('認証済みユーザーが /admin/dashboard にアクセスできること', async () => {
+      mockGetUser.mockResolvedValue({
+        data: {
+          user: { id: 'user-123', email: 'admin@example.com' },
+        },
+      })
+
+      const req = createMockRequest('/admin/dashboard')
+      const res = await middleware(req)
+
+      expect(res.status).toBe(200)
+      expect(res.headers.get('x-admin-pathname')).toBe('/admin/dashboard')
     })
   })
 
@@ -83,9 +176,9 @@ describe('middleware', () => {
   // ==============================================================
 
   describe('ASPパラメータ検出', () => {
-    it('a8mat パラメータを検出して Cookie に保存すること', () => {
+    it('a8mat パラメータを検出して Cookie に保存すること', async () => {
       const req = createMockRequest('/articles/aga-guide', { a8mat: 'a8-tracking-id' })
-      const res = middleware(req)
+      const res = await middleware(req)
 
       const setCookieHeader = res.headers.get('set-cookie') ?? ''
       expect(setCookieHeader).toContain('_mc_aff')
@@ -103,9 +196,9 @@ describe('middleware', () => {
       }
     })
 
-    it('afb_ref パラメータを検出すること', () => {
+    it('afb_ref パラメータを検出すること', async () => {
       const req = createMockRequest('/articles/ed-guide', { afb_ref: 'afb-id-123' })
-      const res = middleware(req)
+      const res = await middleware(req)
 
       const setCookieHeader = res.headers.get('set-cookie') ?? ''
       const cookieMatch = setCookieHeader.match(/_mc_aff=([^;]+)/)
@@ -116,9 +209,9 @@ describe('middleware', () => {
       }
     })
 
-    it('at_ref パラメータを検出すること', () => {
+    it('at_ref パラメータを検出すること', async () => {
       const req = createMockRequest('/articles/skincare', { at_ref: 'at-id' })
-      const res = middleware(req)
+      const res = await middleware(req)
 
       const setCookieHeader = res.headers.get('set-cookie') ?? ''
       const cookieMatch = setCookieHeader.match(/_mc_aff=([^;]+)/)
@@ -129,9 +222,9 @@ describe('middleware', () => {
       }
     })
 
-    it('vc_ref パラメータを検出すること', () => {
+    it('vc_ref パラメータを検出すること', async () => {
       const req = createMockRequest('/articles/hair-removal', { vc_ref: 'vc-id' })
-      const res = middleware(req)
+      const res = await middleware(req)
 
       const setCookieHeader = res.headers.get('set-cookie') ?? ''
       const cookieMatch = setCookieHeader.match(/_mc_aff=([^;]+)/)
@@ -142,9 +235,9 @@ describe('middleware', () => {
       }
     })
 
-    it('fm_ref パラメータを検出すること', () => {
+    it('fm_ref パラメータを検出すること', async () => {
       const req = createMockRequest('/articles/supplement', { fm_ref: 'fm-id' })
-      const res = middleware(req)
+      const res = await middleware(req)
 
       const setCookieHeader = res.headers.get('set-cookie') ?? ''
       const cookieMatch = setCookieHeader.match(/_mc_aff=([^;]+)/)
@@ -155,9 +248,9 @@ describe('middleware', () => {
       }
     })
 
-    it('moshimo_ref パラメータを検出すること', () => {
+    it('moshimo_ref パラメータを検出すること', async () => {
       const req = createMockRequest('/articles/comparison', { moshimo_ref: 'moshi-id' })
-      const res = middleware(req)
+      const res = await middleware(req)
 
       const setCookieHeader = res.headers.get('set-cookie') ?? ''
       const cookieMatch = setCookieHeader.match(/_mc_aff=([^;]+)/)
@@ -168,9 +261,9 @@ describe('middleware', () => {
       }
     })
 
-    it('asp_ref (汎用ASPパラメータ) を検出すること', () => {
+    it('asp_ref (汎用ASPパラメータ) を検出すること', async () => {
       const req = createMockRequest('/articles/test', { asp_ref: 'generic-id' })
-      const res = middleware(req)
+      const res = await middleware(req)
 
       const setCookieHeader = res.headers.get('set-cookie') ?? ''
       const cookieMatch = setCookieHeader.match(/_mc_aff=([^;]+)/)
@@ -181,9 +274,9 @@ describe('middleware', () => {
       }
     })
 
-    it('utm_source パラメータを検出すること', () => {
+    it('utm_source パラメータを検出すること', async () => {
       const req = createMockRequest('/articles/test', { utm_source: 'partner' })
-      const res = middleware(req)
+      const res = await middleware(req)
 
       const setCookieHeader = res.headers.get('set-cookie') ?? ''
       const cookieMatch = setCookieHeader.match(/_mc_aff=([^;]+)/)
@@ -194,12 +287,12 @@ describe('middleware', () => {
       }
     })
 
-    it('複数のASPパラメータを同時に検出すること', () => {
+    it('複数のASPパラメータを同時に検出すること', async () => {
       const req = createMockRequest('/articles/multi', {
         a8mat: 'a8-id',
         afb_ref: 'afb-id',
       })
-      const res = middleware(req)
+      const res = await middleware(req)
 
       const setCookieHeader = res.headers.get('set-cookie') ?? ''
       const cookieMatch = setCookieHeader.match(/_mc_aff=([^;]+)/)
@@ -213,21 +306,21 @@ describe('middleware', () => {
       }
     })
 
-    it('ASPパラメータがない場合Cookieを設定しないこと', () => {
+    it('ASPパラメータがない場合Cookieを設定しないこと', async () => {
       const req = createMockRequest('/articles/no-params')
-      const res = middleware(req)
+      const res = await middleware(req)
 
       const setCookieHeader = res.headers.get('set-cookie')
       expect(setCookieHeader).toBeNull()
     })
 
-    it('無関係なパラメータはASPとして検出されないこと', () => {
+    it('無関係なパラメータはASPとして検出されないこと', async () => {
       const req = createMockRequest('/articles/test', {
         page: '2',
         sort: 'date',
         foo: 'bar',
       })
-      const res = middleware(req)
+      const res = await middleware(req)
 
       const setCookieHeader = res.headers.get('set-cookie')
       expect(setCookieHeader).toBeNull()
@@ -239,9 +332,9 @@ describe('middleware', () => {
   // ==============================================================
 
   describe('Cookie 設定 (ITP対策)', () => {
-    it('Cookie にトラッキングデータが含まれること', () => {
+    it('Cookie にトラッキングデータが含まれること', async () => {
       const req = createMockRequest('/articles/test', { a8mat: 'test-id' })
-      const res = middleware(req)
+      const res = await middleware(req)
 
       const setCookieHeader = res.headers.get('set-cookie') ?? ''
       const cookieMatch = setCookieHeader.match(/_mc_aff=([^;]+)/)
@@ -254,26 +347,26 @@ describe('middleware', () => {
       }
     })
 
-    it('Cookie のmaxAgeが7日 (604800秒) であること', () => {
+    it('Cookie のmaxAgeが7日 (604800秒) であること', async () => {
       const req = createMockRequest('/articles/test', { a8mat: 'test-id' })
-      const res = middleware(req)
+      const res = await middleware(req)
 
       const setCookieHeader = res.headers.get('set-cookie') ?? ''
       // 7日 = 7 * 24 * 60 * 60 = 604800
       expect(setCookieHeader).toContain('Max-Age=604800')
     })
 
-    it('Cookie のPathが / であること', () => {
+    it('Cookie のPathが / であること', async () => {
       const req = createMockRequest('/articles/test', { a8mat: 'test-id' })
-      const res = middleware(req)
+      const res = await middleware(req)
 
       const setCookieHeader = res.headers.get('set-cookie') ?? ''
       expect(setCookieHeader).toContain('Path=/')
     })
 
-    it('Cookie のSameSiteがLaxであること', () => {
+    it('Cookie のSameSiteがLaxであること', async () => {
       const req = createMockRequest('/articles/test', { a8mat: 'test-id' })
-      const res = middleware(req)
+      const res = await middleware(req)
 
       const setCookieHeader = res.headers.get('set-cookie') ?? ''
       // Next.js may output SameSite in lowercase
@@ -286,21 +379,21 @@ describe('middleware', () => {
   // ==============================================================
 
   describe('カスタムヘッダー', () => {
-    it('ASP検出時に X-Active-ASPs ヘッダーが設定されること', () => {
+    it('ASP検出時に X-Active-ASPs ヘッダーが設定されること', async () => {
       const req = createMockRequest('/articles/test', { a8mat: 'test-id' })
-      const res = middleware(req)
+      const res = await middleware(req)
 
       const activeAsps = res.headers.get('X-Active-ASPs')
       expect(activeAsps).toBeDefined()
       expect(activeAsps).toContain('a8')
     })
 
-    it('複数ASP検出時に X-Active-ASPs がカンマ区切りであること', () => {
+    it('複数ASP検出時に X-Active-ASPs がカンマ区切りであること', async () => {
       const req = createMockRequest('/articles/test', {
         a8mat: 'a8-id',
         afb_ref: 'afb-id',
       })
-      const res = middleware(req)
+      const res = await middleware(req)
 
       const activeAsps = res.headers.get('X-Active-ASPs')
       expect(activeAsps).toBeDefined()
@@ -308,32 +401,32 @@ describe('middleware', () => {
       expect(activeAsps).toContain('afb')
     })
 
-    it('ITPスクリプトURL用に X-ITP-Scripts ヘッダーが設定されること', () => {
+    it('ITPスクリプトURL用に X-ITP-Scripts ヘッダーが設定されること', async () => {
       const req = createMockRequest('/articles/test', { a8mat: 'test-id' })
-      const res = middleware(req)
+      const res = await middleware(req)
 
       const itpScripts = res.headers.get('X-ITP-Scripts')
       expect(itpScripts).toBeDefined()
       expect(itpScripts).toContain('a8sales.js')
     })
 
-    it('afb検出時にafb ITPスクリプトURLが含まれること', () => {
+    it('afb検出時にafb ITPスクリプトURLが含まれること', async () => {
       const req = createMockRequest('/articles/test', { afb_ref: 'afb-id' })
-      const res = middleware(req)
+      const res = await middleware(req)
 
       const itpScripts = res.headers.get('X-ITP-Scripts')
       expect(itpScripts).toContain('t.afi-b.com/ta.js')
     })
 
-    it('ASPパラメータなしの場合ヘッダーが設定されないこと', () => {
+    it('ASPパラメータなしの場合ヘッダーが設定されないこと', async () => {
       const req = createMockRequest('/articles/test')
-      const res = middleware(req)
+      const res = await middleware(req)
 
       expect(res.headers.get('X-Active-ASPs')).toBeNull()
       expect(res.headers.get('X-ITP-Scripts')).toBeNull()
     })
 
-    it('既存Cookie のASPデータがヘッダーに反映されること', () => {
+    it('既存Cookie のASPデータがヘッダーに反映されること', async () => {
       const existingTracking = JSON.stringify({
         asps: [
           { aspName: 'afb', paramName: 'afb_ref', paramValue: 'old-id' },
@@ -348,13 +441,13 @@ describe('middleware', () => {
         {},
         { _mc_aff: existingTracking }
       )
-      const res = middleware(req)
+      const res = await middleware(req)
 
       const activeAsps = res.headers.get('X-Active-ASPs')
       expect(activeAsps).toContain('afb')
     })
 
-    it('既存CookieのASPと新規検出ASPが両方ヘッダーに含まれること', () => {
+    it('既存CookieのASPと新規検出ASPが両方ヘッダーに含まれること', async () => {
       const existingTracking = JSON.stringify({
         asps: [
           { aspName: 'afb', paramName: 'afb_ref', paramValue: 'old-id' },
@@ -369,21 +462,21 @@ describe('middleware', () => {
         { a8mat: 'new-a8-id' },
         { _mc_aff: existingTracking }
       )
-      const res = middleware(req)
+      const res = await middleware(req)
 
       const activeAsps = res.headers.get('X-Active-ASPs')
       expect(activeAsps).toContain('afb')
       expect(activeAsps).toContain('a8')
     })
 
-    it('既存Cookieが不正なJSONの場合でもエラーにならないこと', () => {
+    it('既存Cookieが不正なJSONの場合でもエラーにならないこと', async () => {
       const req = createMockRequest(
         '/articles/test',
         { a8mat: 'test-id' },
         { _mc_aff: 'invalid-json{{{' }
       )
       // エラーが発生しないことを確認
-      const res = middleware(req)
+      const res = await middleware(req)
       expect(res.headers.get('X-Active-ASPs')).toContain('a8')
     })
   })
@@ -508,6 +601,10 @@ describe('getItpScriptConfigs', () => {
 describe('ミドルウェア config', () => {
   it('matcher が /articles/:path* を含むこと', () => {
     expect(config.matcher).toContain('/articles/:path*')
+  })
+
+  it('matcher が /admin/:path* を含むこと', () => {
+    expect(config.matcher).toContain('/admin/:path*')
   })
 
   it('matcher 配列が空でないこと', () => {

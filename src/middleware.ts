@@ -1,13 +1,7 @@
 /**
  * Next.js ミドルウェア
- * - 管理者ルート認証保護 (/admin/*)
  * - ASP ITPトラッキングスクリプト自動注入
  * - ファーストパーティ Cookie アフィリエイトトラッキング (Safari/Firefox ITP対策)
- *
- * 管理者ルート (/admin/*) にアクセスした場合:
- *   1. /admin/login はそのまま通す
- *   2. それ以外は admin-token Cookie を検証
- *   3. 未認証の場合は /admin/login にリダイレクト
  *
  * 記事ページ (/articles/*) にアクセスした場合:
  *   1. アフィリエイトクリックパラメータ (utm_source, asp_ref, a8mat 等) を検出
@@ -16,22 +10,20 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { createServerClient as createSSRServerClient } from '@supabase/ssr'
 
 // ============================================================
 // 設定定数
 // ============================================================
 
-/** 管理者認証 Cookie 名 */
-const ADMIN_TOKEN_COOKIE = 'admin-token'
-
-/** 管理者ルートのパスパターン */
-const ADMIN_PATH_REGEX = /^\/admin(\/.*)?$/
-
-/** ログインページのパス */
-const ADMIN_LOGIN_PATH = '/admin/login'
-
 /** トラッキング Cookie 名 */
 const TRACKING_COOKIE_NAME = '_mc_aff'
+
+/** 管理ページのパスパターン */
+const ADMIN_PATH_REGEX = /^\/admin(\/|$)/
+
+/** 管理ログインページのパス */
+const ADMIN_LOGIN_PATH = '/admin/login'
 
 /** Cookie 有効期限 (日数) — ITP制限下でも1st party cookieは7日間保持 */
 const COOKIE_MAX_AGE_DAYS = 7
@@ -83,61 +75,56 @@ const ITP_SCRIPT_MAP: Record<string, { url: string; attributes: Record<string, s
 // ミドルウェア本体
 // ============================================================
 
-/**
- * admin-token Cookie を検証する
- * Edge Runtime では crypto.timingSafeEqual が使えないため、
- * 定数時間比較をピュアJSで実装する
- */
-function verifyAdminToken(token: string, expected: string): boolean {
-  if (token.length !== expected.length) {
-    // 長さが異なる場合でもダミー比較を実行して定数時間にする
-    let result = 1
-    for (let i = 0; i < expected.length; i++) {
-      result |= expected.charCodeAt(i) ^ expected.charCodeAt(i)
-    }
-    return result === 0 // 常に false
-  }
-  let result = 0
-  for (let i = 0; i < token.length; i++) {
-    result |= token.charCodeAt(i) ^ expected.charCodeAt(i)
-  }
-  return result === 0
-}
-
-export function middleware(request: NextRequest): NextResponse {
+export async function middleware(request: NextRequest): Promise<NextResponse> {
   const { pathname, searchParams } = request.nextUrl
 
-  // --------------------------------------------------------
-  // 管理者ルート認証チェック
-  // --------------------------------------------------------
+  // ============================================================
+  // 管理ページ: Supabase Auth セッション検証
+  // ============================================================
   if (ADMIN_PATH_REGEX.test(pathname)) {
-    // /admin/login はそのまま通す（認証不要）
+    // ログインページはそのまま通す
     if (pathname === ADMIN_LOGIN_PATH) {
       const response = NextResponse.next()
       response.headers.set('x-admin-pathname', pathname)
       return response
     }
 
-    const adminApiKey = process.env.ADMIN_API_KEY
+    // Create Supabase client for middleware (Edge Runtime compatible)
+    let supabaseResponse = NextResponse.next({ request })
+    const supabase = createSSRServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+            supabaseResponse = NextResponse.next({ request })
+            cookiesToSet.forEach(({ name, value, options }) => {
+              supabaseResponse.cookies.set(name, value, options)
+            })
+          },
+        },
+      }
+    )
 
-    // admin-token Cookie を検証
-    const token = request.cookies.get(ADMIN_TOKEN_COOKIE)?.value
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!token || !adminApiKey || !verifyAdminToken(token, adminApiKey)) {
-      // 未認証 → ログインページにリダイレクト
+    if (!user) {
       const loginUrl = new URL(ADMIN_LOGIN_PATH, request.url)
       loginUrl.searchParams.set('from', pathname)
       return NextResponse.redirect(loginUrl)
     }
 
-    const response = NextResponse.next()
-    response.headers.set('x-admin-pathname', pathname)
-    return response
+    supabaseResponse.headers.set('x-admin-pathname', pathname)
+    return supabaseResponse
   }
 
-  // --------------------------------------------------------
-  // 記事ページ: ITPトラッキング処理
-  // --------------------------------------------------------
+  // ============================================================
+  // 記事ページ: ITP トラッキング
+  // ============================================================
   const response = NextResponse.next()
 
   // 記事ページ以外はスキップ
@@ -288,9 +275,9 @@ export function getItpScriptConfigs(aspNames: string[]): Array<{
 
 export const config = {
   matcher: [
-    // 管理者ルート (認証保護)
-    '/admin/:path*',
     // 記事ページ (ITPトラッキング)
     '/articles/:path*',
+    // 管理ページ (Supabase Auth)
+    '/admin/:path*',
   ],
 }
