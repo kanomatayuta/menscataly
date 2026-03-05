@@ -89,7 +89,7 @@ function AffiliateCtrValue({ affiliateClicks, pageviews }: { affiliateClicks: nu
 export function ArticleTable({ articles, analytics }: ArticleTableProps) {
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-  const [showDetails, setShowDetails] = useState(false);
+  const [showDetails, setShowDetails] = useState(true);
 
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {

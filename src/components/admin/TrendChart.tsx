@@ -11,7 +11,6 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import type { Props as LegendProps } from "recharts/types/component/DefaultLegendContent";
 import type { TrendDataPoint } from "@/types/admin";
 
 interface TrendChartProps {
@@ -34,56 +33,15 @@ const LINE_LABELS: Record<string, string> = {
 };
 
 function getDefaultPeriod(dataLength: number): Period {
-  if (dataLength < 7) return 7;
-  if (dataLength < 30) return 30;
+  if (dataLength <= 7) return 7;
+  if (dataLength <= 30) return 30;
   return 30;
 }
 
 export function TrendChart({ data }: TrendChartProps) {
   const [period, setPeriod] = useState<Period>(() => getDefaultPeriod(data.length));
-  const [visibleLines, setVisibleLines] = useState({
-    pageviews: true,
-    searchClicks: false,
-    affiliateClicks: true,
-    conversions: false,
-  });
 
   const filtered = data.slice(-period);
-
-  function handleLegendClick(dataKey: string) {
-    const key = dataKey as keyof typeof visibleLines;
-    if (key in visibleLines) {
-      setVisibleLines((prev) => ({ ...prev, [key]: !prev[key] }));
-    }
-  }
-
-  function renderLegend(props: LegendProps) {
-    const { payload } = props;
-    if (!payload) return null;
-    return (
-      <ul className="flex justify-center gap-4 pt-2">
-        {payload.map((entry) => {
-          const rawKey = typeof entry.dataKey === "string" ? entry.dataKey : "";
-          const key = rawKey as keyof typeof visibleLines;
-          const active = key in visibleLines ? visibleLines[key] : true;
-          return (
-            <li
-              key={key}
-              onClick={() => handleLegendClick(rawKey)}
-              className="flex cursor-pointer select-none items-center gap-1 text-xs transition-opacity"
-              style={{ opacity: active ? 1 : 0.3 }}
-            >
-              <span
-                className="inline-block h-2 w-4 rounded-sm"
-                style={{ backgroundColor: entry.color }}
-              />
-              <span className="text-neutral-600">{LINE_LABELS[rawKey] ?? rawKey}</span>
-            </li>
-          );
-        })}
-      </ul>
-    );
-  }
 
   return (
     <div className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
@@ -148,51 +106,50 @@ export function TrendChart({ data }: TrendChartProps) {
                 return [value.toLocaleString("ja-JP"), LINE_LABELS[name] ?? name];
               }}
             />
-            <Legend content={renderLegend} />
-            {visibleLines.pageviews && (
-              <Line
-                yAxisId="left"
-                type="monotone"
-                dataKey="pageviews"
-                stroke="#3b82f6"
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 4 }}
-              />
-            )}
-            {visibleLines.searchClicks && (
-              <Line
-                yAxisId="left"
-                type="monotone"
-                dataKey="searchClicks"
-                stroke="#10b981"
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 4 }}
-              />
-            )}
-            {visibleLines.affiliateClicks && (
-              <Line
-                yAxisId="left"
-                type="monotone"
-                dataKey="affiliateClicks"
-                stroke="#8b5cf6"
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 4 }}
-              />
-            )}
-            {visibleLines.conversions && (
-              <Line
-                yAxisId="right"
-                type="monotone"
-                dataKey="conversions"
-                stroke="#f59e0b"
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 4 }}
-              />
-            )}
+            <Legend
+              formatter={(value: string) => LINE_LABELS[value] ?? value}
+              wrapperStyle={{ fontSize: "12px" }}
+            />
+            <Line
+              yAxisId="left"
+              type="monotone"
+              dataKey="pageviews"
+              name="pageviews"
+              stroke="#3b82f6"
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4 }}
+            />
+            <Line
+              yAxisId="left"
+              type="monotone"
+              dataKey="searchClicks"
+              name="searchClicks"
+              stroke="#10b981"
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4 }}
+            />
+            <Line
+              yAxisId="left"
+              type="monotone"
+              dataKey="affiliateClicks"
+              name="affiliateClicks"
+              stroke="#8b5cf6"
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4 }}
+            />
+            <Line
+              yAxisId="right"
+              type="monotone"
+              dataKey="conversions"
+              name="conversions"
+              stroke="#f59e0b"
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4 }}
+            />
           </LineChart>
         </ResponsiveContainer>
       )}
