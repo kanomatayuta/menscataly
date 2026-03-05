@@ -7,7 +7,6 @@ import { ComplianceScoreBadge } from "./ComplianceScoreBadge";
 import { ComplianceBreakdown } from "./ComplianceBreakdown";
 import { ReviewActions } from "./ReviewActions";
 import { ReviewCommentHistory } from "./ReviewCommentHistory";
-import { StatusBadge } from "./StatusBadge";
 import type {
   AffiliateLinkPerformance,
   ReviewStatus,
@@ -23,7 +22,6 @@ import type { AspProgram } from "@/types/asp-config";
 type TabKey = "analytics" | "preview";
 
 interface ArticleDetailTabsProps {
-  // Article info
   article: {
     id: string;
     title: string;
@@ -41,7 +39,6 @@ interface ArticleDetailTabsProps {
     articleId?: string;
     contentId?: string;
   };
-  // Analytics data
   analytics: {
     pv30d: number;
     affiliateClicks: number;
@@ -51,7 +48,6 @@ interface ArticleDetailTabsProps {
     affiliateLinks: AffiliateLinkPerformance[];
     aspPrograms: AspProgram[];
   };
-  // Category label
   categoryLabel: string;
 }
 
@@ -133,7 +129,7 @@ export function ArticleDetailTabs({
 }
 
 // ------------------------------------------------------------------
-// Analytics Tab
+// Analytics Tab — optimized layout
 // ------------------------------------------------------------------
 
 function AnalyticsTab({
@@ -145,161 +141,129 @@ function AnalyticsTab({
   analytics: ArticleDetailTabsProps["analytics"];
   categoryLabel: string;
 }) {
+  const hasAnalyticsData = analytics.pv30d > 0 || analytics.pvTrend.length > 0;
+  const hasAffiliateLinks = analytics.affiliateLinks.length > 0;
+  const hasReviewHistory = article.reviewHistory.length > 0;
+  const isPublished = article.status === "published";
+  const hasAspPrograms = analytics.aspPrograms.length > 0;
+
   return (
-    <>
-      {/* PV chart + affiliate links (summary cards are above tabs) */}
-      <div className="mb-6">
+    <div className="space-y-6">
+      {/* Row 1: Article info + Compliance side by side */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Article meta card */}
+        <div className="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-4 text-sm font-semibold text-neutral-900 leading-snug">
+            {article.title}
+          </h2>
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+            <MetaItem label="カテゴリ" value={categoryLabel} />
+            <MetaItem label="スラッグ" value={article.slug} mono />
+            <MetaItem label="著者" value={article.authorName} />
+            <MetaItem
+              label="生成日時"
+              value={new Date(article.generatedAt).toLocaleString("ja-JP")}
+            />
+            <MetaItem label="microCMS ID" value={article.microcmsId ?? "未公開"} mono />
+            {article.reviewedAt && (
+              <MetaItem
+                label="レビュー日時"
+                value={new Date(article.reviewedAt).toLocaleString("ja-JP")}
+              />
+            )}
+          </dl>
+        </div>
+
+        {/* Compliance breakdown */}
+        <ComplianceBreakdown
+          breakdown={article.complianceBreakdown}
+          overall={article.complianceScore}
+        />
+      </div>
+
+      {/* Row 2: PV chart (only if data exists) */}
+      {hasAnalyticsData && (
         <ArticleDetailStats
           pv30d={analytics.pv30d}
           affiliateClicks={analytics.affiliateClicks}
           conversions={analytics.conversions}
           revenue={analytics.revenue}
           pvTrend={analytics.pvTrend}
+          affiliateLinks={[]}
+          aspPrograms={[]}
+          hideSummaryCards
+        />
+      )}
+
+      {/* Row 3: Affiliate links (only if data exists) */}
+      {hasAffiliateLinks && (
+        <ArticleDetailStats
+          pv30d={0}
+          affiliateClicks={0}
+          conversions={0}
+          revenue={0}
+          pvTrend={[]}
           affiliateLinks={analytics.affiliateLinks}
           aspPrograms={[]}
           hideSummaryCards
         />
-      </div>
+      )}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Left column (2col) */}
-        <div className="space-y-6 lg:col-span-2">
-          {/* Article meta info */}
-          <div className="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-neutral-900">
-                {article.title}
-              </h2>
-              <StatusBadge status={article.status} size="md" />
-            </div>
+      {/* Row 4: ASP programs — full width */}
+      {hasAspPrograms && (
+        <ArticleDetailStats
+          pv30d={0}
+          affiliateClicks={0}
+          conversions={0}
+          revenue={0}
+          pvTrend={[]}
+          affiliateLinks={[]}
+          aspPrograms={analytics.aspPrograms}
+        />
+      )}
 
-            <dl className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <dt className="font-medium text-neutral-500">カテゴリ</dt>
-                <dd className="mt-0.5 text-neutral-900">{categoryLabel}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-neutral-500">スラッグ</dt>
-                <dd className="mt-0.5 font-mono text-xs text-neutral-700">
-                  {article.slug}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium text-neutral-500">著者</dt>
-                <dd className="mt-0.5 text-neutral-900">{article.authorName}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-neutral-500">生成日時</dt>
-                <dd className="mt-0.5 text-neutral-900">
-                  {new Date(article.generatedAt).toLocaleString("ja-JP")}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium text-neutral-500">コンプラスコア</dt>
-                <dd className="mt-1">
-                  <ComplianceScoreBadge score={article.complianceScore} />
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium text-neutral-500">microCMS ID</dt>
-                <dd className="mt-0.5 font-mono text-xs text-neutral-700">
-                  {article.microcmsId ?? "未公開"}
-                </dd>
-              </div>
-              {article.reviewedAt && (
-                <div>
-                  <dt className="font-medium text-neutral-500">レビュー日時</dt>
-                  <dd className="mt-0.5 text-neutral-900">
-                    {new Date(article.reviewedAt).toLocaleString("ja-JP")}
-                  </dd>
-                </div>
-              )}
-              {article.reviewedBy && (
-                <div>
-                  <dt className="font-medium text-neutral-500">レビュー担当</dt>
-                  <dd className="mt-0.5 text-neutral-900">{article.reviewedBy}</dd>
-                </div>
-              )}
-            </dl>
-          </div>
-
-          {/* Compliance breakdown */}
-          <ComplianceBreakdown
-            breakdown={article.complianceBreakdown}
-            overall={article.complianceScore}
-          />
-
-          {/* Review comment history */}
-          <ReviewCommentHistory comments={article.reviewHistory} />
-        </div>
-
-        {/* Right column */}
-        <div className="space-y-6">
-          <ReviewActions
-            articleId={article.id}
-            currentStatus={article.status}
-          />
-
-          {/* ASP Programs */}
-          {analytics.aspPrograms.length > 0 && (
-            <ArticleDetailStats
-              pv30d={0}
-              affiliateClicks={0}
-              conversions={0}
-              revenue={0}
-              pvTrend={[]}
-              affiliateLinks={[]}
-              aspPrograms={analytics.aspPrograms}
+      {/* Row 4: Review section (only if not published-terminal or has history) */}
+      {(!isPublished || hasReviewHistory) && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {!isPublished && (
+            <ReviewActions
+              articleId={article.id}
+              currentStatus={article.status}
             />
           )}
-
-          {/* Quick info card */}
-          <div className="rounded-lg border border-neutral-200 bg-white p-5">
-            <h3 className="mb-3 text-sm font-semibold text-neutral-800">
-              クイック情報
-            </h3>
-            <dl className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <dt className="text-neutral-500">記事ID</dt>
-                <dd className="font-mono text-xs text-neutral-700">
-                  {article.articleId ?? article.id}
-                </dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-neutral-500">コンテンツID</dt>
-                <dd className="font-mono text-xs text-neutral-700">
-                  {article.contentId ?? article.id}
-                </dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-neutral-500">薬機法</dt>
-                <dd className="font-mono text-xs">
-                  <ComplianceScoreBadge score={article.complianceBreakdown.yakkinhou} />
-                </dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-neutral-500">景表法</dt>
-                <dd className="font-mono text-xs">
-                  <ComplianceScoreBadge score={article.complianceBreakdown.keihinhou} />
-                </dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-neutral-500">ステマ</dt>
-                <dd className="font-mono text-xs">
-                  <ComplianceScoreBadge score={article.complianceBreakdown.sutema} />
-                </dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-neutral-500">E-E-A-T</dt>
-                <dd className="font-mono text-xs">
-                  <ComplianceScoreBadge score={article.complianceBreakdown.eeat} />
-                </dd>
-              </div>
-            </dl>
-          </div>
+          {hasReviewHistory && (
+            <ReviewCommentHistory comments={article.reviewHistory} />
+          )}
         </div>
-      </div>
-    </>
+      )}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------
+// Helper: compact meta item
+// ------------------------------------------------------------------
+
+function MetaItem({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  return (
+    <div>
+      <dt className="text-xs font-medium text-neutral-400">{label}</dt>
+      <dd
+        className={`mt-0.5 text-sm text-neutral-800 ${
+          mono ? "font-mono text-xs text-neutral-600" : ""
+        }`}
+      >
+        {value}
+      </dd>
+    </div>
   );
 }
 

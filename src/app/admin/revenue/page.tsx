@@ -1,10 +1,38 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { AdminHeader } from "@/components/admin/AdminHeader";
-import { StatCard } from "@/components/admin/StatCard";
 import { RevenueTable } from "@/components/admin/RevenueTable";
 import { RevenueChart } from "@/components/admin/RevenueChart";
+import { CsvUploadForm } from "@/components/admin/CsvUploadForm";
 import type { RevenueSummary } from "@/types/admin";
+
+// ------------------------------------------------------------------
+// MetricPill — compact inline stat display
+// ------------------------------------------------------------------
+
+function MetricPill({
+  icon,
+  label,
+  value,
+  bg,
+  text,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  bg: string;
+  text: string;
+}) {
+  return (
+    <div className={`flex items-center gap-2 rounded-lg px-3 py-2 ${bg}`}>
+      <span className={`${text} opacity-60`}>{icon}</span>
+      <div className="min-w-0">
+        <p className={`text-[10px] font-medium uppercase tracking-wider ${text} opacity-50`}>{label}</p>
+        <p className={`text-lg font-bold leading-tight tabular-nums ${text}`}>{value}</p>
+      </div>
+    </div>
+  );
+}
 
 // ------------------------------------------------------------------
 // モックデータ (Supabase 未設定時フォールバック)
@@ -295,8 +323,11 @@ async function RevenueContent() {
     <>
       {/* データなしの場合はインフォバナーを表示 */}
       {!hasActualData && (
-        <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
-          <p className="text-sm text-blue-800">
+        <div className="mb-4 flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2">
+          <svg className="h-4 w-4 shrink-0 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
+          </svg>
+          <p className="text-xs text-blue-700">
             {hasData
               ? "まだアフィリエイトリンクのクリック・コンバージョンデータがありません。affiliate_links テーブルにデータが蓄積されると自動的に反映されます。"
               : "ASPプログラムが登録されていません。Supabase の asp_programs テーブルにデータを投入してください。"}
@@ -304,56 +335,82 @@ async function RevenueContent() {
         </div>
       )}
 
-      {/* Summary cards */}
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="売上合計"
-          value={
-            hasActualData
-              ? `\u00A5${totalRevenue.toLocaleString()}`
-              : "データなし"
+      {/* Compact summary bar */}
+      <div className="mb-6 flex flex-wrap items-stretch gap-3">
+        <MetricPill
+          icon={
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+            </svg>
           }
-          subtitle="過去30日"
-          variant="success"
+          label="売上合計"
+          value={`\u00A5${totalRevenue.toLocaleString()}`}
+          bg="bg-green-50"
+          text="text-green-700"
         />
-        <StatCard
-          title="クリック合計"
-          value={
-            hasActualData ? totalClicks.toLocaleString() : "データなし"
+        <MetricPill
+          icon={
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5" />
+            </svg>
           }
-          subtitle="過去30日"
+          label="クリック合計"
+          value={totalClicks.toLocaleString()}
+          bg="bg-blue-50"
+          text="text-blue-700"
         />
-        <StatCard
-          title="CV合計"
-          value={hasActualData ? totalConversions : "データなし"}
-          subtitle="過去30日"
+        <MetricPill
+          icon={
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          }
+          label="CV合計"
+          value={totalConversions.toLocaleString()}
+          bg="bg-purple-50"
+          text="text-purple-700"
         />
-        <StatCard
-          title="全体CVR"
-          value={hasActualData ? `${overallCvr}%` : "データなし"}
-          subtitle="クリック→CV率"
+        <MetricPill
+          icon={
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16 8l2 2-8 8H6v-4l8-8zM12.5 4.5l3 3" />
+            </svg>
+          }
+          label="全体CVR"
+          value={`${overallCvr}%`}
+          bg="bg-neutral-100"
+          text="text-neutral-700"
         />
       </div>
 
-      {/* Revenue chart */}
+      {/* Revenue chart card */}
       {hasData && (
-        <div className="mb-6">
-          <h2 className="mb-3 text-lg font-semibold text-neutral-800">
-            ASP別売上
-          </h2>
-          <RevenueChart summaries={summaries} />
+        <div className="mb-6 rounded-lg border border-neutral-200 bg-white shadow-sm">
+          <div className="border-b border-neutral-100 px-5 py-3">
+            <h2 className="text-sm font-semibold text-neutral-800">ASP別売上</h2>
+          </div>
+          <div className="p-4">
+            <RevenueChart summaries={summaries} />
+          </div>
         </div>
       )}
 
-      {/* Revenue table */}
+      {/* Revenue table card */}
       {hasData && (
-        <>
-          <h2 className="mb-3 text-lg font-semibold text-neutral-800">
-            売上詳細
-          </h2>
-          <RevenueTable summaries={summaries} />
-        </>
+        <div className="rounded-lg border border-neutral-200 bg-white shadow-sm">
+          <div className="border-b border-neutral-100 px-5 py-3">
+            <h2 className="text-sm font-semibold text-neutral-800">売上詳細</h2>
+          </div>
+          <div className="p-4">
+            <RevenueTable summaries={summaries} />
+          </div>
+        </div>
       )}
+
+      {/* CSV Upload */}
+      <div className="mt-6">
+        <CsvUploadForm />
+      </div>
     </>
   );
 }

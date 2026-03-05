@@ -3,7 +3,6 @@ import { connection } from "next/server";
 import { headers } from "next/headers";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { StatusBadge } from "@/components/admin/StatusBadge";
-import { StatCard } from "@/components/admin/StatCard";
 import { ArticleDetailTabs } from "@/components/admin/ArticleDetailTabs";
 import type { ArticleReviewDetail, AffiliateLinkPerformance } from "@/types/admin";
 import type { ContentCategory } from "@/types/content";
@@ -387,6 +386,62 @@ async function fetchArticleAnalytics(
 }
 
 // ------------------------------------------------------------------
+// Summary metric pill
+// ------------------------------------------------------------------
+
+function MetricPill({
+  icon,
+  label,
+  value,
+  bg,
+  text,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  bg: string;
+  text: string;
+}) {
+  return (
+    <div className={`flex items-center gap-2 rounded-lg px-3 py-2 ${bg}`}>
+      <span className={`${text} opacity-60`}>{icon}</span>
+      <div className="min-w-0">
+        <p className={`text-[10px] font-medium uppercase tracking-wider ${text} opacity-50`}>{label}</p>
+        <p className={`text-lg font-bold leading-tight tabular-nums ${text}`}>{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function ComplianceRing({ score }: { score: number }) {
+  const r = 18;
+  const c = 2 * Math.PI * r;
+  const offset = c - (score / 100) * c;
+  const color = score >= 95 ? "#22c55e" : score >= 80 ? "#eab308" : "#ef4444";
+  return (
+    <div className="flex items-center gap-2 rounded-lg bg-neutral-50 px-3 py-2">
+      <svg width="44" height="44" viewBox="0 0 44 44" className="shrink-0">
+        <circle cx="22" cy="22" r={r} fill="none" stroke="#e5e5e5" strokeWidth="4" />
+        <circle
+          cx="22" cy="22" r={r} fill="none"
+          stroke={color} strokeWidth="4" strokeLinecap="round"
+          strokeDasharray={c} strokeDashoffset={offset}
+          transform="rotate(-90 22 22)"
+        />
+        <text x="22" y="23" textAnchor="middle" dominantBaseline="central"
+          className="text-[11px] font-bold" fill={color}>
+          {score}
+        </text>
+      </svg>
+      <div className="min-w-0">
+        <p className="text-[10px] font-medium uppercase tracking-wider text-neutral-400">コンプラ</p>
+        <p className="text-xs text-neutral-500">スコア</p>
+      </div>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------
 // Dynamic content component (inside Suspense)
 // ------------------------------------------------------------------
 
@@ -439,25 +494,55 @@ async function ArticleDetailContent({
         ]}
       />
 
-      {/* Status + Summary cards — always visible above tabs */}
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
-        {/* Status badge card */}
-        <div className="flex items-center rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
-          <div>
-            <p className="text-sm font-medium text-neutral-500">ステータス</p>
-            <div className="mt-1">
-              <StatusBadge status={article.status} size="md" />
-            </div>
-          </div>
+      {/* Summary metric pills */}
+      <div className="mb-6 flex flex-wrap items-stretch gap-3">
+        {/* Status */}
+        <div className="flex items-center rounded-lg bg-white px-4 py-2 shadow-sm ring-1 ring-neutral-200">
+          <StatusBadge status={article.status} size="md" />
         </div>
-        <StatCard title="PV (30日)" value={fmt(analytics.pv30d)} variant="blue" />
-        <StatCard title="広告CL" value={fmt(analytics.affiliateClicks)} variant="purple" />
-        <StatCard title="CV" value={fmt(analytics.conversions)} variant="default" />
-        <StatCard
-          title="収益"
-          value={`¥${fmt(analytics.revenue)}`}
-          variant={analytics.revenue > 0 ? "success" : "warning"}
+
+        {/* PV */}
+        <MetricPill
+          icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>}
+          label="PV (30日)"
+          value={fmt(analytics.pv30d)}
+          bg="bg-blue-50"
+          text="text-blue-700"
         />
+
+        {/* Affiliate clicks */}
+        <MetricPill
+          icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5" /></svg>}
+          label="広告CL"
+          value={fmt(analytics.affiliateClicks)}
+          bg="bg-purple-50"
+          text="text-purple-700"
+        />
+
+        {/* CV — only if > 0 */}
+        {analytics.conversions > 0 && (
+          <MetricPill
+            icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+            label="CV"
+            value={fmt(analytics.conversions)}
+            bg="bg-emerald-50"
+            text="text-emerald-700"
+          />
+        )}
+
+        {/* Revenue — only if > 0 */}
+        {analytics.revenue > 0 && (
+          <MetricPill
+            icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+            label="収益"
+            value={`¥${fmt(analytics.revenue)}`}
+            bg="bg-green-50"
+            text="text-green-700"
+          />
+        )}
+
+        {/* Compliance ring */}
+        <ComplianceRing score={article.complianceScore} />
       </div>
 
       {/* Tab-based content: 詳細分析 / プレビュー */}
