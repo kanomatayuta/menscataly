@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { validateAdminAuth, getAuthErrorStatus } from '@/lib/admin/auth'
-import { ASP_SEED_DATA, type AspProgramSeed } from '@/lib/asp/seed'
+import { type AspProgramSeed } from '@/lib/asp/seed'
 import { mapRowToProgram } from '@/lib/asp/helpers'
 import type { AspProgramRow } from '@/types/database'
 
@@ -14,7 +14,7 @@ import type { AspProgramRow } from '@/types/database'
 // インメモリストア (Supabase未設定時のフォールバック)
 // ============================================================
 
-let inMemoryPrograms: AspProgramSeed[] = [...ASP_SEED_DATA]
+let inMemoryPrograms: AspProgramSeed[] = []
 
 /** インメモリストアを取得する (テスト用にexport) */
 export function getInMemoryPrograms(): AspProgramSeed[] {
@@ -23,7 +23,7 @@ export function getInMemoryPrograms(): AspProgramSeed[] {
 
 /** インメモリストアをリセットする (テスト用) */
 export function resetInMemoryPrograms(): void {
-  inMemoryPrograms = [...ASP_SEED_DATA]
+  inMemoryPrograms = []
 }
 
 // ============================================================
@@ -86,10 +86,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     if (error) {
       console.error('[admin/asp] Query error:', error.message)
-      return NextResponse.json(
-        { error: 'Failed to query ASP programs' },
-        { status: 500 }
-      )
+      // テーブル未作成等の場合はインメモリにフォールバック
+      let programs = inMemoryPrograms as AspProgramSeed[]
+      if (aspName) programs = programs.filter((p) => p.aspName === aspName)
+      if (category) programs = programs.filter((p) => p.category === category)
+      if (activeOnly) programs = programs.filter((p) => p.isActive)
+      return NextResponse.json({
+        programs: programs.slice(offset, offset + limit),
+        total: programs.length,
+      })
     }
 
     const programs = (data ?? []).map(mapRowToProgram)
@@ -97,10 +102,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ programs, total: count ?? 0 })
   } catch (err) {
     console.error('[admin/asp] Error:', err)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    // Supabase接続失敗時もインメモリにフォールバック
+    let programs = inMemoryPrograms as AspProgramSeed[]
+    if (aspName) programs = programs.filter((p) => p.aspName === aspName)
+    if (category) programs = programs.filter((p) => p.category === category)
+    if (activeOnly) programs = programs.filter((p) => p.isActive)
+    return NextResponse.json({
+      programs: programs.slice(offset, offset + limit),
+      total: programs.length,
+    })
   }
 }
 

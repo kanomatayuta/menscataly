@@ -17,6 +17,33 @@ vi.mock('@/lib/admin/auth', () => ({
 
 import { validateAdminAuth } from '@/lib/admin/auth'
 
+/** テスト用にインメモリストアへシードデータを投入するヘルパー */
+async function seedTestProgram(
+  POST: (req: Request) => Promise<Response>,
+  overrides: Record<string, unknown> = {},
+) {
+  const body = {
+    aspName: 'afb',
+    programName: 'テストシードプログラム',
+    programId: `seed-${Date.now()}`,
+    category: 'aga',
+    affiliateUrl: 'https://example.com/aff',
+    rewardAmount: 5000,
+    rewardType: 'fixed',
+    conversionCondition: '初回購入',
+    landingPageUrl: 'https://example.com/lp',
+    isActive: true,
+    ...overrides,
+  }
+  const req = new Request('http://localhost/api/admin/asp', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }) as any
+  await POST(req)
+  return body
+}
+
 describe('ASP CRUD API', () => {
   let GET: typeof import('@/app/api/admin/asp/route').GET
   let POST: typeof import('@/app/api/admin/asp/route').POST
@@ -32,7 +59,7 @@ describe('ASP CRUD API', () => {
     POST = aspRoute.POST
     resetInMemoryPrograms = aspRoute.resetInMemoryPrograms
 
-    // インメモリストアをシードデータにリセット
+    // インメモリストアを空にリセット
     resetInMemoryPrograms()
   })
 
@@ -57,6 +84,9 @@ describe('ASP CRUD API', () => {
     })
 
     it('プログラム一覧を返すこと', async () => {
+      // テスト用データを投入
+      await seedTestProgram(POST)
+
       const req = new Request('http://localhost/api/admin/asp') as any
       const response = await GET(req)
       const data = await response.json()
@@ -67,6 +97,8 @@ describe('ASP CRUD API', () => {
     })
 
     it('各プログラムに必須フィールドが含まれること', async () => {
+      await seedTestProgram(POST)
+
       const req = new Request('http://localhost/api/admin/asp') as any
       const response = await GET(req)
       const data = await response.json()
@@ -83,6 +115,9 @@ describe('ASP CRUD API', () => {
     })
 
     it('ASP名でフィルタできること', async () => {
+      await seedTestProgram(POST, { aspName: 'afb', category: 'aga' })
+      await seedTestProgram(POST, { aspName: 'a8', category: 'aga', programId: 'seed-a8' })
+
       const req = new Request('http://localhost/api/admin/asp?asp=afb') as any
       const response = await GET(req)
       const data = await response.json()
@@ -94,6 +129,9 @@ describe('ASP CRUD API', () => {
     })
 
     it('カテゴリでフィルタできること', async () => {
+      await seedTestProgram(POST, { aspName: 'afb', category: 'aga' })
+      await seedTestProgram(POST, { aspName: 'afb', category: 'ed', programId: 'seed-ed' })
+
       const req = new Request('http://localhost/api/admin/asp?category=aga') as any
       const response = await GET(req)
       const data = await response.json()

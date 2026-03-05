@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { AdminHeader } from "@/components/admin/AdminHeader";
@@ -8,7 +8,7 @@ import { StatusBadge } from "@/components/admin/StatusBadge";
 import type { ReviewStatus } from "@/types/admin";
 
 // ------------------------------------------------------------------
-// Mock article data for preview
+// Preview article type
 // ------------------------------------------------------------------
 
 interface PreviewArticle {
@@ -25,6 +25,10 @@ interface PreviewArticle {
   htmlContent: string;
   jsonLd: Record<string, unknown>;
 }
+
+// ------------------------------------------------------------------
+// Mock data (Supabase未設定時のフォールバック)
+// ------------------------------------------------------------------
 
 const MOCK_PREVIEW_ARTICLES: Record<string, PreviewArticle> = {
   "rev-1": {
@@ -154,6 +158,57 @@ const MOCK_PREVIEW_ARTICLES: Record<string, PreviewArticle> = {
 };
 
 // ------------------------------------------------------------------
+// Convert API response (ArticleReviewDetail) to PreviewArticle
+// ------------------------------------------------------------------
+
+interface ApiArticleDetail {
+  id: string;
+  title: string;
+  slug: string;
+  category: string;
+  status: ReviewStatus;
+  authorName: string;
+  generatedAt: string;
+  reviewedAt?: string | null;
+  seoTitle?: string;
+  seoDescription?: string;
+  htmlContent?: string;
+  content?: string;
+  jsonLd?: Record<string, unknown>;
+}
+
+function toPreviewArticle(data: ApiArticleDetail): PreviewArticle {
+  const CATEGORY_LABELS: Record<string, string> = {
+    aga: "AGA治療",
+    "hair-removal": "医療脱毛",
+    skincare: "スキンケア",
+    ed: "ED治療",
+    column: "コラム",
+  };
+
+  return {
+    id: data.id,
+    title: data.title,
+    slug: data.slug,
+    category: CATEGORY_LABELS[data.category] ?? data.category,
+    status: data.status,
+    authorName: data.authorName,
+    publishedAt: data.generatedAt,
+    updatedAt: data.reviewedAt ?? data.generatedAt,
+    seoTitle: data.seoTitle ?? data.title,
+    seoDescription: data.seoDescription ?? "",
+    htmlContent: data.htmlContent ?? data.content ?? "",
+    jsonLd: data.jsonLd ?? {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      headline: data.title,
+      author: { "@type": "Organization", name: data.authorName },
+      datePublished: data.generatedAt,
+    },
+  };
+}
+
+// ------------------------------------------------------------------
 // Preview viewport sizes
 // ------------------------------------------------------------------
 
@@ -178,12 +233,102 @@ const VIEWPORT_LABELS: Record<ViewportMode, string> = {
 export default function ArticlePreviewPage() {
   const params = useParams();
   const id = params.id as string;
-  const article = MOCK_PREVIEW_ARTICLES[id];
 
+  const [article, setArticle] = useState<PreviewArticle | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [viewport, setViewport] = useState<ViewportMode>("desktop");
   const [showJsonLd, setShowJsonLd] = useState(false);
 
-  if (!article) {
+  useEffect(() => {
+    if (!id) return;
+
+    async function fetchArticle() {
+      setIsLoading(true);
+      setNotFound(false);
+
+      try {
+        const res = await fetch(`/api/admin/articles/${encodeURIComponent(id)}`, {
+          credentials: "include",
+        });
+
+        if (res.status === 404) {
+          // APIで見つからなければモックにフォールバック
+          const mock = MOCK_PREVIEW_ARTICLES[id];
+          if (mock) {
+            setArticle(mock);
+          } else {
+            setNotFound(true);
+          }
+          return;
+        }
+
+        if (!res.ok) {
+          // APIエラー時はモックにフォールバック
+          const mock = MOCK_PREVIEW_ARTICLES[id];
+          if (mock) {
+            setArticle(mock);
+          } else {
+            setNotFound(true);
+          }
+          return;
+        }
+
+        const data = await res.json() as { article: ApiArticleDetail };
+        if (!data.article) {
+          const mock = MOCK_PREVIEW_ARTICLES[id];
+          if (mock) {
+            setArticle(mock);
+          } else {
+            setNotFound(true);
+          }
+          return;
+        }
+
+        setArticle(toPreviewArticle(data.article));
+      } catch {
+        // ネットワークエラー時はモックにフォールバック
+        const mock = MOCK_PREVIEW_ARTICLES[id];
+        if (mock) {
+          setArticle(mock);
+        } else {
+          setNotFound(true);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchArticle();
+  }, [id]);
+
+  // ------------------------------------------------------------------
+  // Loading state
+  // ------------------------------------------------------------------
+  if (isLoading) {
+    return (
+      <>
+        <AdminHeader
+          title="記事プレビュー"
+          breadcrumbs={[
+            { label: "記事一覧", href: "/admin/articles" },
+            { label: "読み込み中..." },
+          ]}
+        />
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center">
+            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-neutral-300 border-t-blue-600" />
+            <p className="text-sm text-neutral-500">プレビューを読み込み中...</p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // ------------------------------------------------------------------
+  // Not found state
+  // ------------------------------------------------------------------
+  if (notFound || !article) {
     return (
       <>
         <AdminHeader

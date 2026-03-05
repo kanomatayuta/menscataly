@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { ComplianceScoreBadge } from "@/components/admin/ComplianceScoreBadge";
 import { ComplianceBreakdown } from "@/components/admin/ComplianceBreakdown";
@@ -9,7 +10,7 @@ import { StatusBadge, StatusWorkflow } from "@/components/admin/StatusBadge";
 import type { ArticleReviewDetail } from "@/types/admin";
 
 // ------------------------------------------------------------------
-// Mock data
+// Mock data (Supabase未設定時のフォールバック)
 // ------------------------------------------------------------------
 
 const MOCK_ARTICLES: Record<string, ArticleReviewDetail> = {
@@ -187,6 +188,57 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 // ------------------------------------------------------------------
+// Data fetching — API → Supabase → mock fallback
+// ------------------------------------------------------------------
+
+async function fetchArticleDetail(id: string): Promise<ArticleReviewDetail | null> {
+  // Supabase未設定時はモックにフォールバック
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    return MOCK_ARTICLES[id] ?? null;
+  }
+
+  try {
+    // 内部APIルート経由でデータを取得
+    // Server Component から同一オリジンの API Route を呼ぶ
+    const headersList = await headers();
+    const host = headersList.get("host") ?? "localhost:3000";
+    const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
+    const apiKey = process.env.ADMIN_API_KEY ?? process.env.PIPELINE_API_KEY ?? "";
+
+    const res = await fetch(
+      `${protocol}://${host}/api/admin/articles/${encodeURIComponent(id)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      }
+    );
+
+    if (res.status === 404) {
+      return null;
+    }
+
+    if (!res.ok) {
+      console.error(`[admin/articles/${id}] API error: HTTP ${res.status}`);
+      // APIエラー時はモックにフォールバック
+      return MOCK_ARTICLES[id] ?? null;
+    }
+
+    const data = await res.json() as { article: ArticleReviewDetail };
+    return data.article ?? null;
+  } catch (err) {
+    console.error(`[admin/articles/${id}] Fetch error:`, err);
+    // ネットワークエラー時はモックにフォールバック
+    return MOCK_ARTICLES[id] ?? null;
+  }
+}
+
+// ------------------------------------------------------------------
 // Dynamic content component (inside Suspense)
 // ------------------------------------------------------------------
 
@@ -196,7 +248,7 @@ async function ArticleDetailContent({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const article = MOCK_ARTICLES[id];
+  const article = await fetchArticleDetail(id);
 
   if (!article) {
     return (

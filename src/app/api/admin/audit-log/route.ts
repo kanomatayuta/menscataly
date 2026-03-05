@@ -1,18 +1,14 @@
 /**
  * /api/admin/audit-log
- * GET: 監査ログ一覧取得 (フィルタ・ページネーション付き)
+ * GET: 管理者認証監査ログ一覧取得 (フィルタ・ページネーション付き)
+ *
+ * テーブル: admin_audit_log (Migration 005)
+ * カラム: id, event_type, actor, ip_address, user_agent, request_path,
+ *         request_method, success, failure_reason, http_status, metadata, created_at
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { validateAdminAuth } from '@/lib/admin/auth'
-
-// ============================================================
-// ilike エスケープ (SQL インジェクション防止)
-// ============================================================
-
-function escapeIlike(str: string): string {
-  return str.replace(/[%_\\]/g, '\\$&')
-}
 
 // ============================================================
 // GET: 監査ログ一覧取得
@@ -28,9 +24,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const limitNum = Math.min(parseInt(searchParams.get('limit') ?? '50', 10), 200)
   const offsetNum = Math.max(parseInt(searchParams.get('offset') ?? '0', 10), 0)
-  const tableName = searchParams.get('table') ?? undefined
-  const operation = searchParams.get('operation') ?? undefined
-  const search = searchParams.get('q') ?? undefined
+  const eventType = searchParams.get('event_type') ?? undefined
+  const fromDate = searchParams.get('from') ?? undefined
+  const toDate = searchParams.get('to') ?? undefined
+  const successParam = searchParams.get('success') ?? undefined
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -48,21 +45,24 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const { createServerSupabaseClient } = await import('@/lib/supabase/client')
     const supabase = createServerSupabaseClient()
 
-    // Supabase クエリ構築
+    // Supabase クエリ構築: admin_audit_log テーブル
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let query = (supabase as any)
-      .from('audit_log')
+      .from('admin_audit_log')
       .select('*', { count: 'exact' })
 
     // フィルタ適用
-    if (tableName) {
-      query = query.eq('table_name', tableName)
+    if (eventType) {
+      query = query.eq('event_type', eventType)
     }
-    if (operation) {
-      query = query.eq('operation', operation.toUpperCase())
+    if (fromDate) {
+      query = query.gte('created_at', `${fromDate}T00:00:00+09:00`)
     }
-    if (search) {
-      query = query.ilike('changed_by', `%${escapeIlike(search)}%`)
+    if (toDate) {
+      query = query.lte('created_at', `${toDate}T23:59:59+09:00`)
+    }
+    if (successParam === 'false') {
+      query = query.eq('success', false)
     }
 
     // ソート (新しい順)
@@ -81,8 +81,22 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       )
     }
 
+    // DB カラム名 → フロントエンド用にマッピング
+    const entries = (data ?? []).map((row: Record<string, unknown>) => ({
+      id: row.id,
+      created_at: row.created_at,
+      event_type: row.event_type,
+      actor: row.actor,
+      ip_address: row.ip_address ? String(row.ip_address) : null,
+      user_agent: row.user_agent,
+      path: row.request_path,
+      status_code: row.http_status,
+      failure_reason: row.failure_reason,
+      success: row.success,
+    }))
+
     return NextResponse.json({
-      data: data ?? [],
+      data: entries,
       total: count ?? 0,
       limit: limitNum,
       offset: offsetNum,

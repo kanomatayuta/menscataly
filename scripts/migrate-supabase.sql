@@ -876,5 +876,94 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================
--- Done — v2.1 (Migration 005: admin_audit_log applied)
+-- 16. Migration 006: article_review_comments + asp_programs columns
+-- ============================================================
+
+INSERT INTO schema_migrations (version, description) VALUES
+  ('006', 'article_review_comments テーブル + asp_programs priority/conversion_condition カラム追加')
+ON CONFLICT (version) DO NOTHING;
+
+-- article_review_comments: レビューコメント履歴テーブル
+-- (article_review_queue の article_id を FK として参照)
+CREATE TABLE IF NOT EXISTS article_review_comments (
+  id          TEXT        PRIMARY KEY,
+  article_id  UUID        NOT NULL,
+  author      TEXT        NOT NULL DEFAULT 'admin',
+  content     TEXT        NOT NULL,
+  action      TEXT        NOT NULL CHECK (action IN ('approve', 'reject', 'revision', 'comment')),
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+COMMENT ON TABLE article_review_comments IS '記事レビューコメント履歴 (approve/reject/revision/comment)';
+
+CREATE INDEX IF NOT EXISTS idx_article_review_comments_article_id
+  ON article_review_comments(article_id);
+CREATE INDEX IF NOT EXISTS idx_article_review_comments_created_at
+  ON article_review_comments(created_at DESC);
+
+ALTER TABLE article_review_comments ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE policyname = 'service_role_all_article_review_comments'
+      AND tablename = 'article_review_comments'
+  ) THEN
+    CREATE POLICY "service_role_all_article_review_comments"
+      ON article_review_comments FOR ALL TO service_role USING (true);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE policyname = 'authenticated_select_article_review_comments'
+      AND tablename = 'article_review_comments'
+  ) THEN
+    CREATE POLICY "authenticated_select_article_review_comments"
+      ON article_review_comments FOR SELECT TO authenticated USING (true);
+  END IF;
+END $$;
+
+-- asp_programs: priority カラム追加 (GET /api/admin/asp が .order('priority') を使用)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'asp_programs' AND column_name = 'priority'
+  ) THEN
+    ALTER TABLE asp_programs ADD COLUMN priority SMALLINT NOT NULL DEFAULT 3;
+  END IF;
+END $$;
+COMMENT ON COLUMN asp_programs.priority IS '表示優先度 (1=最高〜5=最低, DEFAULT 3)';
+
+-- asp_programs: conversion_condition カラム追加 (POST /api/admin/asp が挿入に使用)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'asp_programs' AND column_name = 'conversion_condition'
+  ) THEN
+    ALTER TABLE asp_programs ADD COLUMN conversion_condition TEXT;
+  END IF;
+END $$;
+COMMENT ON COLUMN asp_programs.conversion_condition IS 'コンバージョン条件 (例: 初回購入, 会員登録)';
+
+-- asp_programs: notes カラム追加 (POST /api/admin/asp が挿入に使用、未存在の場合)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'asp_programs' AND column_name = 'notes'
+  ) THEN
+    ALTER TABLE asp_programs ADD COLUMN notes TEXT;
+  END IF;
+END $$;
+COMMENT ON COLUMN asp_programs.notes IS '備考・メモ';
+
+-- priority インデックス追加 (ORDER BY priority クエリの高速化)
+CREATE INDEX IF NOT EXISTS idx_asp_programs_priority
+  ON asp_programs(priority ASC);
+
+-- ============================================================
+-- Done — v2.2 (Migration 006: article_review_comments + asp_programs columns)
 -- ============================================================

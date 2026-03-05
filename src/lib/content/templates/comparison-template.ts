@@ -612,7 +612,7 @@ export function generateComparisonJsonLd(
       '@type': 'Organization',
       name: 'メンズカタリ',
       url: baseUrl,
-      logo: { '@type': 'ImageObject', url: `${baseUrl}/logo.png` },
+      logo: { '@type': 'ImageObject', url: `${baseUrl}/logo.svg` },
     },
     about: clinicRatings.map((cr) => ({
       '@type': 'MedicalClinic',

@@ -6,6 +6,8 @@ import { BatchProgressBar } from "@/components/admin/BatchProgressBar";
 import type { BatchJobStatus } from "@/types/admin";
 import type { KeywordTarget, KeywordPriority } from "@/types/batch-generation";
 import type { ContentCategory } from "@/types/content";
+import type { KeywordEntry } from "@/lib/content/keyword-research";
+import type { BatchJobItem } from "@/app/api/admin/batch-jobs/route";
 
 // ------------------------------------------------------------------
 // Constants
@@ -28,7 +30,7 @@ const PRIORITY_LABELS: Record<KeywordPriority, { label: string; color: string }>
 const COST_PER_ARTICLE_USD = 0.28;
 
 // ------------------------------------------------------------------
-// Mock keywords pool
+// Mock data (Supabase/API未設定時のフォールバック)
 // ------------------------------------------------------------------
 
 const MOCK_KEYWORDS: KeywordTarget[] = [
@@ -154,10 +156,6 @@ const MOCK_KEYWORDS: KeywordTarget[] = [
   },
 ];
 
-// ------------------------------------------------------------------
-// Mock history data
-// ------------------------------------------------------------------
-
 interface BatchHistoryItem {
   id: string;
   status: BatchJobStatus;
@@ -207,10 +205,60 @@ const MOCK_HISTORY: BatchHistoryItem[] = [
 ];
 
 // ------------------------------------------------------------------
+// Helpers
+// ------------------------------------------------------------------
+
+/**
+ * KeywordEntry (API返却形式) を KeywordTarget に変換する
+ */
+function entryToTarget(entry: KeywordEntry): KeywordTarget {
+  const difficulty = entry.difficulty ?? 50;
+  let priority: KeywordPriority = "medium";
+  if (difficulty >= 70) priority = "high";
+  else if (difficulty <= 30) priority = "low";
+
+  return {
+    id: entry.id,
+    keyword: entry.keyword,
+    subKeywords: entry.relatedKeywords ?? [],
+    category: entry.category,
+    targetAudience: "20〜40代男性",
+    tone: "informative",
+    targetLength: 3000,
+    priority,
+    estimatedVolume: entry.searchVolume,
+    competitionScore: difficulty,
+  };
+}
+
+/**
+ * BatchJobItem (API返却形式) を BatchHistoryItem に変換する
+ */
+function jobItemToHistory(item: BatchJobItem): BatchHistoryItem {
+  return {
+    id: item.id,
+    status: item.status,
+    totalKeywords: item.totalKeywords,
+    completedCount: item.completedCount,
+    failedCount: item.failedCount,
+    startedAt: item.startedAt,
+    completedAt: item.completedAt,
+    totalCostUsd: item.totalCostUsd,
+    keywords: [],
+  };
+}
+
+// ------------------------------------------------------------------
 // Page component
 // ------------------------------------------------------------------
 
 export default function AdminBatchPage() {
+  // Data state
+  const [keywords, setKeywords] = useState<KeywordTarget[]>(MOCK_KEYWORDS);
+  const [history, setHistory] = useState<BatchHistoryItem[]>(MOCK_HISTORY);
+  const [isLoadingKeywords, setIsLoadingKeywords] = useState(true);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+
   // Keyword selection state
   const [selectedKeywordIds, setSelectedKeywordIds] = useState<Set<string>>(new Set());
   const [categoryFilter, setCategoryFilter] = useState<ContentCategory | "all">("all");
@@ -239,19 +287,77 @@ export default function AdminBatchPage() {
   // Expanded history
   const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
 
-  // Filtered keywords
-  const filteredKeywords = MOCK_KEYWORDS.filter((kw) => {
+  // ------------------------------------------------------------------
+  // Data fetching
+  // ------------------------------------------------------------------
+
+  const loadKeywords = useCallback(async () => {
+    setIsLoadingKeywords(true);
+    try {
+      const res = await fetch("/api/admin/keywords?limit=200&sortBy=volume&sortOrder=desc", {
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const entries: KeywordEntry[] = data.keywords ?? [];
+        if (entries.length > 0) {
+          setKeywords(entries.map(entryToTarget));
+        }
+        // entries が空の場合はモックデータのまま
+      }
+      // API 認証エラーや失敗の場合はモックデータのまま
+    } catch {
+      // ネットワークエラーの場合はモックデータのまま
+    } finally {
+      setIsLoadingKeywords(false);
+    }
+  }, []);
+
+  const loadHistory = useCallback(async () => {
+    setIsLoadingHistory(true);
+    try {
+      const res = await fetch("/api/admin/batch-jobs?limit=20", {
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const jobs: BatchJobItem[] = data.jobs ?? [];
+        if (jobs.length > 0) {
+          setHistory(jobs.map(jobItemToHistory));
+        }
+        // jobs が空の場合はモックデータのまま
+      }
+      // API 認証エラーや失敗の場合はモックデータのまま
+    } catch {
+      // ネットワークエラーの場合はモックデータのまま
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadKeywords();
+    loadHistory();
+  }, [loadKeywords, loadHistory]);
+
+  // ------------------------------------------------------------------
+  // Derived state
+  // ------------------------------------------------------------------
+
+  const filteredKeywords = keywords.filter((kw) => {
     if (categoryFilter !== "all" && kw.category !== categoryFilter) return false;
     if (priorityFilter !== "all" && kw.priority !== priorityFilter) return false;
     if (searchQuery && !kw.keyword.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
 
-  // Cost estimate
   const estimatedCostUsd = selectedKeywordIds.size * COST_PER_ARTICLE_USD;
   const estimatedCostJpy = Math.round(estimatedCostUsd * 150);
 
+  // ------------------------------------------------------------------
   // Select/deselect helpers
+  // ------------------------------------------------------------------
+
   const toggleKeyword = (id: string) => {
     setSelectedKeywordIds((prev) => {
       const next = new Set(prev);
@@ -272,10 +378,13 @@ export default function AdminBatchPage() {
     setSelectedKeywordIds(new Set());
   };
 
+  // ------------------------------------------------------------------
   // Polling
+  // ------------------------------------------------------------------
+
   const pollProgress = useCallback(async (jobId: string) => {
     try {
-      const res = await fetch(`/api/admin/batch/${jobId}/progress`);
+      const res = await fetch(`/api/batch/status/${jobId}`);
       if (res.ok) {
         const data = await res.json();
         setActiveJob({
@@ -291,12 +400,14 @@ export default function AdminBatchPage() {
         if (data.status === "running" || data.status === "queued") {
           return true;
         }
+        // ジョブ完了後に履歴を再取得
+        await loadHistory();
       }
     } catch {
       // Polling failed
     }
     return false;
-  }, []);
+  }, [loadHistory]);
 
   useEffect(() => {
     if (!activeJob || (activeJob.status !== "running" && activeJob.status !== "queued")) {
@@ -313,6 +424,10 @@ export default function AdminBatchPage() {
     return () => clearInterval(interval);
   }, [activeJob, pollProgress]);
 
+  // ------------------------------------------------------------------
+  // Form submit
+  // ------------------------------------------------------------------
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormMessage("");
@@ -324,14 +439,17 @@ export default function AdminBatchPage() {
 
     setIsSubmitting(true);
 
+    // 選択されたキーワードの詳細を取得してバッチリクエストを作成
+    const selectedKeywords = keywords.filter((kw) => selectedKeywordIds.has(kw.id));
+
     try {
-      const res = await fetch("/api/admin/batch", {
+      const res = await fetch("/api/batch/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          keywordIds: Array.from(selectedKeywordIds),
+          keywords: selectedKeywords,
           maxConcurrent,
           complianceThreshold,
           dryRun,
@@ -364,6 +482,10 @@ export default function AdminBatchPage() {
     }
   };
 
+  // ------------------------------------------------------------------
+  // Render
+  // ------------------------------------------------------------------
+
   return (
     <>
       <AdminHeader
@@ -380,6 +502,9 @@ export default function AdminBatchPage() {
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-neutral-800">
                   キーワード選択
+                  {isLoadingKeywords && (
+                    <span className="ml-2 inline-block h-3 w-3 animate-spin rounded-full border border-neutral-300 border-t-blue-600 align-middle" />
+                  )}
                 </h2>
                 <div className="flex items-center gap-2">
                   <button
@@ -670,10 +795,13 @@ export default function AdminBatchPage() {
       <div className="mt-8">
         <h2 className="mb-4 text-lg font-semibold text-neutral-800">
           生成履歴
+          {isLoadingHistory && (
+            <span className="ml-2 inline-block h-3 w-3 animate-spin rounded-full border border-neutral-300 border-t-blue-600 align-middle" />
+          )}
         </h2>
 
         <div className="space-y-4">
-          {MOCK_HISTORY.map((job) => {
+          {history.map((job) => {
             const isExpanded = expandedHistoryId === job.id;
             const statusStyles: Record<string, { bg: string; text: string; border: string }> = {
               completed: { bg: "bg-green-100", text: "text-green-700", border: "border-green-200" },

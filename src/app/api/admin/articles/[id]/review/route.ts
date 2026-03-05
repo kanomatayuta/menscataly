@@ -84,6 +84,16 @@ export async function GET(
       .order('created_at', { ascending: false })
 
     if (error) {
+      // テーブルが存在しない場合 (42P01: undefined_table) は空配列にフォールバック
+      const pgCode = (error as { code?: string }).code
+      if (pgCode === '42P01' || error.message?.includes('does not exist')) {
+        console.warn('[admin/articles/review] article_review_comments table not found, returning empty array')
+        return NextResponse.json({
+          articleId: id,
+          reviews: [],
+          total: 0,
+        })
+      }
       console.error('[admin/articles/review] GET error:', error.message)
       return NextResponse.json(
         { error: 'Failed to query review history' },

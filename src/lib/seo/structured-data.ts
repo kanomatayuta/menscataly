@@ -25,7 +25,7 @@ const PUBLISHER = {
   url: BASE_URL,
   logo: {
     "@type": "ImageObject" as const,
-    url: `${BASE_URL}/logo.png`,
+    url: `${BASE_URL}/logo.svg`,
   },
 };
 

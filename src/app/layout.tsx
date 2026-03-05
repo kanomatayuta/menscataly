@@ -46,7 +46,7 @@ export const metadata: Metadata = {
       "メンズカタリは、AGA・ED・脱毛・スキンケアなどメンズ医療・美容に関する正確な情報をお届けする総合メディアです。",
     images: [
       {
-        url: "/og-image.png",
+        url: "/opengraph-image",
         width: 1200,
         height: 630,
         alt: "メンズカタリ",
@@ -58,7 +58,7 @@ export const metadata: Metadata = {
     title: "メンズカタリ | メンズ医療・美容の総合メディア",
     description:
       "メンズカタリは、AGA・ED・脱毛・スキンケアなどメンズ医療・美容に関する正確な情報をお届けする総合メディアです。",
-    images: ["/og-image.png"],
+    images: ["/opengraph-image"],
   },
   robots: {
     index: true,

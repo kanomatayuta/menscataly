@@ -18,7 +18,7 @@ export default function AboutPage() {
     "@type": "Organization",
     name: "メンズカタリ",
     url: "https://menscataly.com",
-    logo: "https://menscataly.com/logo.png",
+    logo: "https://menscataly.com/logo.svg",
     description:
       "メンズカタリは、AGA・ED・脱毛・スキンケアなどメンズ医療・美容に関する正確な情報をお届けする総合メディアです。",
     contactPoint: {
