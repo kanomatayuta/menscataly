@@ -126,13 +126,13 @@ describe('fetchGA4DailyMetrics', () => {
     expect(data).toEqual([])
   })
 
-  it('SDK未インストール時は空配列を返す', async () => {
+  it('不正な秘密鍵の場合は空配列を返す', async () => {
     vi.stubEnv('GA4_PROPERTY_ID', '123456')
     vi.stubEnv('GOOGLE_SERVICE_ACCOUNT_EMAIL', 'test@test.iam.gserviceaccount.com')
     vi.stubEnv('GOOGLE_PRIVATE_KEY', 'fake-key')
     vi.stubEnv('GOOGLE_PROJECT_ID', 'test-project')
 
-    // SDK not installed → createGA4Client returns null → empty array
+    // Invalid key → JWT sign fails → caught → empty array
     const data = await fetchGA4DailyMetrics('yesterday')
     expect(data).toEqual([])
   })

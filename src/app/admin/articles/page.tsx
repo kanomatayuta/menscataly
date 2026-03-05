@@ -49,10 +49,58 @@ async function fetchArticlesData(): Promise<ArticlesResponse> {
 }
 
 // ------------------------------------------------------------------
-// Analytics fetching (Supabase からPV・クリック・CV・収益)
+// Analytics fetching (GA4 API直接 → Supabase フォールバック)
 // ------------------------------------------------------------------
 
-async function fetchAnalyticsData(): Promise<Map<string, ArticleAnalytics>> {
+async function fetchAnalyticsFromGA4(
+  articles: ArticleReviewItem[]
+): Promise<Map<string, ArticleAnalytics>> {
+  const map = new Map<string, ArticleAnalytics>();
+
+  try {
+    await connection(); // PPR: Date.now() 使用前に必須
+    const { fetchGA4DailyMetrics, extractSlugFromPath } = await import("@/lib/analytics/ga4-client");
+
+    // 過去30日分を取得
+    const ga4Data = await fetchGA4DailyMetrics("30daysAgo");
+
+    if (ga4Data.length === 0) return map;
+
+    // slug → article マッピング
+    const slugToArticle = new Map<string, ArticleReviewItem>();
+    for (const a of articles) {
+      slugToArticle.set(a.slug, a);
+    }
+
+    for (const row of ga4Data) {
+      const slug = extractSlugFromPath(row.pagePath);
+      if (!slug) continue;
+
+      const article = slugToArticle.get(slug);
+      if (!article) continue;
+
+      let entry = map.get(article.id);
+      if (!entry) {
+        entry = { articleId: article.id, pageviews: 0, clicks: 0, conversions: 0, revenue: 0 };
+        map.set(article.id, entry);
+      }
+      entry.pageviews += row.pageviews;
+    }
+  } catch (err) {
+    console.error("[admin/articles] GA4 direct fetch error:", err);
+  }
+
+  return map;
+}
+
+async function fetchAnalyticsData(
+  articles: ArticleReviewItem[] = []
+): Promise<Map<string, ArticleAnalytics>> {
+  // まず GA4 API から直接取得を試みる
+  const ga4Map = await fetchAnalyticsFromGA4(articles);
+  if (ga4Map.size > 0) return ga4Map;
+
+  // GA4 が使えない場合は Supabase フォールバック
   const map = new Map<string, ArticleAnalytics>();
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -113,10 +161,44 @@ async function fetchAnalyticsData(): Promise<Map<string, ArticleAnalytics>> {
 }
 
 // ------------------------------------------------------------------
-// Trend data fetching (日別集計)
+// Trend data fetching (GA4 API直接 → Supabase フォールバック)
 // ------------------------------------------------------------------
 
 async function fetchTrendData(days: number): Promise<TrendDataPoint[]> {
+  // まず GA4 API から直接取得を試みる
+  try {
+    await connection(); // PPR: Date.now() 使用前に必須
+    const { fetchGA4DailyMetrics } = await import("@/lib/analytics/ga4-client");
+    const ga4Data = await fetchGA4DailyMetrics(`${days}daysAgo`);
+
+    if (ga4Data.length > 0) {
+      const byDate = new Map<string, TrendDataPoint>();
+      for (const row of ga4Data) {
+        let point = byDate.get(row.date);
+        if (!point) {
+          const dateObj = new Date(row.date);
+          point = {
+            date: `${dateObj.getMonth() + 1}/${dateObj.getDate()}`,
+            pageviews: 0,
+            clicks: 0,
+            conversions: 0,
+          };
+          byDate.set(row.date, point);
+        }
+        point.pageviews += row.pageviews;
+        point.clicks += row.sessions; // sessions をクリック近似値として使用
+      }
+
+      // 日付順でソート
+      return [...byDate.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([, v]) => v);
+    }
+  } catch (err) {
+    console.error("[admin/articles] GA4 trend fetch error:", err);
+  }
+
+  // Supabase フォールバック
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !serviceRoleKey) return [];
@@ -138,7 +220,6 @@ async function fetchTrendData(days: number): Promise<TrendDataPoint[]> {
 
     if (!data) return [];
 
-    // Group by date
     const byDate = new Map<string, TrendDataPoint>();
     for (const row of data) {
       const d = row.date as string;
@@ -249,7 +330,8 @@ function TableSkeleton() {
 // ------------------------------------------------------------------
 
 async function ArticlesSummarySection() {
-  const analytics = await fetchAnalyticsData();
+  const { articles } = await fetchArticlesData();
+  const analytics = await fetchAnalyticsData(articles);
   const values = [...analytics.values()];
   const totalPageviews = values.reduce((s, a) => s + a.pageviews, 0);
   const totalClicks = values.reduce((s, a) => s + a.clicks, 0);
@@ -272,19 +354,15 @@ async function TrendChartSection() {
 }
 
 async function RankingSection() {
-  const [{ articles }, analytics] = await Promise.all([
-    fetchArticlesData(),
-    fetchAnalyticsData(),
-  ]);
+  const { articles } = await fetchArticlesData();
+  const analytics = await fetchAnalyticsData(articles);
   const rankings = buildRankingData(articles, analytics);
   return <ArticleRanking rankings={rankings} />;
 }
 
 async function ArticlesTableSection() {
-  const [{ articles, total }, analytics] = await Promise.all([
-    fetchArticlesData(),
-    fetchAnalyticsData(),
-  ]);
+  const { articles, total } = await fetchArticlesData();
+  const analytics = await fetchAnalyticsData(articles);
 
   return (
     <>
