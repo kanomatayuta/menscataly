@@ -785,9 +785,7 @@ export default function AdminAspPage() {
           各カテゴリの記事にどのASPプログラムを優先的にリンク注入するかを管理します。優先度が高い(数値が小さい)プログラムが先に挿入されます。
         </p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {(Object.keys(CATEGORY_LABELS) as ContentCategory[])
-            .filter((cat) => cat !== "column")
-            .map((category) => {
+          {(Object.keys(CATEGORY_LABELS) as ContentCategory[]).map((category) => {
               const categoryPrograms = programs.filter((p) => p.category === category && p.isActive);
               const avgApproval = categoryPrograms.length > 0 ? Math.round(categoryPrograms.reduce((sum, p) => sum + (p.approvalRate ?? 0), 0) / categoryPrograms.length) : 0;
               const totalReward = categoryPrograms.reduce((sum, p) => sum + p.rewardAmount, 0);
