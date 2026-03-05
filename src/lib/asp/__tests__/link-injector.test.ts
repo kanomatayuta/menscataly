@@ -19,33 +19,66 @@ const mockAgaPrograms: AspProgram[] = [
     aspName: 'afb',
     programName: 'AGAスキンクリニック',
     category: 'aga',
-    affiliateUrl: 'https://t.afi-b.com/visit.php?guid=ON&a=aga-skin-001',
     epc: 85.5,
     approvalRate: 72,
     itpSupport: true,
     recommendedAnchors: ['AGAスキンクリニック 公式サイト', 'AGA治療の無料カウンセリング', 'AGA治療を始める'],
+    adCreatives: [
+      {
+        id: 'cr-afb-aga-001',
+        type: 'text',
+        label: 'テキスト',
+        affiliateUrl: 'https://t.afi-b.com/visit.php?guid=ON&a=aga-skin-001',
+        anchorText: '',
+        isActive: true,
+        useForInjection: true,
+        useForBanner: false,
+      },
+    ],
   }),
   createMockAspProgram({
     id: 'a8-aga-001',
     aspName: 'a8',
     programName: 'Dクリニック',
     category: 'aga',
-    affiliateUrl: 'https://px.a8.net/svt/ejp?a8mat=aga-dclinic-001',
     epc: 70.2,
     approvalRate: 65,
     itpSupport: false,
     recommendedAnchors: ['Dクリニック 公式サイト', '薄毛治療の専門医に相談', 'AGA治療実績No.1クリニック'],
+    adCreatives: [
+      {
+        id: 'cr-a8-aga-001',
+        type: 'text',
+        label: 'テキスト',
+        affiliateUrl: 'https://px.a8.net/svt/ejp?a8mat=aga-dclinic-001',
+        anchorText: '',
+        isActive: true,
+        useForInjection: true,
+        useForBanner: false,
+      },
+    ],
   }),
   createMockAspProgram({
     id: 'at-aga-001',
     aspName: 'accesstrade',
     programName: '銀座総合美容クリニック AGA',
     category: 'aga',
-    affiliateUrl: 'https://h.accesstrade.net/sp/cc?rk=ginza-aga-001',
     epc: 95.0,
     approvalRate: 60,
     itpSupport: true,
     recommendedAnchors: ['銀座総合美容クリニック', 'AGA治療の専門院', '薄毛治療の無料相談'],
+    adCreatives: [
+      {
+        id: 'cr-at-aga-001',
+        type: 'text',
+        label: 'テキスト',
+        affiliateUrl: 'https://h.accesstrade.net/sp/cc?rk=ginza-aga-001',
+        anchorText: '',
+        isActive: true,
+        useForInjection: true,
+        useForBanner: false,
+      },
+    ],
   }),
 ]
 
@@ -371,8 +404,19 @@ describe('XSS protection', () => {
       createMockAspProgram({
         id: 'xss-test-001',
         programName: 'XSSテストクリニック',
-        affiliateUrl: 'https://example.com/test?a=1&b=2"onclick="alert(1)',
         recommendedAnchors: ['XSSテストクリニック 公式サイト'],
+        adCreatives: [
+          {
+            id: 'cr-xss-001',
+            type: 'text',
+            label: 'テキスト',
+            affiliateUrl: 'https://example.com/test?a=1&b=2"onclick="alert(1)',
+            anchorText: 'XSSテストクリニック 公式サイト',
+            isActive: true,
+            useForInjection: true,
+            useForBanner: false,
+          },
+        ],
       }),
     ])
 
@@ -394,8 +438,19 @@ describe('XSS protection', () => {
       createMockAspProgram({
         id: 'xss-test-002',
         programName: 'タグテストクリニック',
-        affiliateUrl: 'https://example.com/test?x=<script>alert(1)</script>',
         recommendedAnchors: ['タグテストクリニック 公式サイト'],
+        adCreatives: [
+          {
+            id: 'cr-xss-002',
+            type: 'text',
+            label: 'テキスト',
+            affiliateUrl: 'https://example.com/test?x=<script>alert(1)</script>',
+            anchorText: 'タグテストクリニック 公式サイト',
+            isActive: true,
+            useForInjection: true,
+            useForBanner: false,
+          },
+        ],
       }),
     ])
 
@@ -464,6 +519,22 @@ describe('generateAffiliateSection', () => {
     const result = await generateAffiliateSection('nonexistent' as any)
     expect(result).toBe('')
   })
+
+  it('should return empty string when programs have no adCreatives', async () => {
+    const { selectBestPrograms } = await import('@/lib/asp/selector')
+    const mockedSelect = vi.mocked(selectBestPrograms)
+    mockedSelect.mockResolvedValueOnce([
+      createMockAspProgram({
+        id: 'no-creative-001',
+        programName: 'クリエイティブなしプログラム',
+        recommendedAnchors: ['テスト公式サイト'],
+        // adCreatives なし
+      }),
+    ])
+
+    const result = await generateAffiliateSection('aga')
+    expect(result).toBe('')
+  })
 })
 
 // ============================================================
@@ -471,30 +542,25 @@ describe('generateAffiliateSection', () => {
 // ============================================================
 
 describe('resolveTextCreatives', () => {
-  it('should return program.affiliateUrl when no adCreatives', () => {
+  it('should return empty array when no adCreatives', () => {
     const program = createMockAspProgram({
-      affiliateUrl: 'https://example.com/default',
       recommendedAnchors: ['テスト公式サイト'],
     })
+    // adCreatives がないので空配列
     const result = resolveTextCreatives(program)
-    expect(result).toHaveLength(1)
-    expect(result[0].affiliateUrl).toBe('https://example.com/default')
-    expect(result[0].anchors).toEqual(['テスト公式サイト'])
+    expect(result).toHaveLength(0)
   })
 
-  it('should return program.affiliateUrl when adCreatives is empty', () => {
+  it('should return empty array when adCreatives is empty', () => {
     const program = createMockAspProgram({
-      affiliateUrl: 'https://example.com/default',
       adCreatives: [],
     })
     const result = resolveTextCreatives(program)
-    expect(result).toHaveLength(1)
-    expect(result[0].affiliateUrl).toBe('https://example.com/default')
+    expect(result).toHaveLength(0)
   })
 
   it('should use text creative URLs when useForInjection=true', () => {
     const program = createMockAspProgram({
-      affiliateUrl: 'https://example.com/default',
       adCreatives: [
         {
           id: 'cr-1',
@@ -514,9 +580,8 @@ describe('resolveTextCreatives', () => {
     expect(result[0].anchors).toEqual(['カスタムアンカー'])
   })
 
-  it('should skip inactive creatives', () => {
+  it('should return empty array when only inactive creatives exist', () => {
     const program = createMockAspProgram({
-      affiliateUrl: 'https://example.com/default',
       adCreatives: [
         {
           id: 'cr-1',
@@ -531,22 +596,19 @@ describe('resolveTextCreatives', () => {
       ],
     })
     const result = resolveTextCreatives(program)
-    // Should fallback to default
-    expect(result).toHaveLength(1)
-    expect(result[0].affiliateUrl).toBe('https://example.com/default')
+    // adCreatives はあるが有効なテキストクリエイティブがないので空配列
+    expect(result).toHaveLength(0)
   })
 
-  it('should skip banner creatives', () => {
+  it('should return empty array when only banner creatives exist', () => {
     const program = createMockAspProgram({
-      affiliateUrl: 'https://example.com/default',
       adCreatives: [
         {
           id: 'cr-1',
           type: 'banner',
           label: 'バナー',
           affiliateUrl: 'https://example.com/banner-url',
-          imageUrl: 'https://img.example.com/banner.png',
-          bannerSize: '300x250',
+          rawHtml: '<a href="https://example.com/banner-url"><img src="https://img.example.com/banner.png" /></a>',
           isActive: true,
           useForInjection: false,
           useForBanner: true,
@@ -554,14 +616,12 @@ describe('resolveTextCreatives', () => {
       ],
     })
     const result = resolveTextCreatives(program)
-    // Should fallback to default
-    expect(result).toHaveLength(1)
-    expect(result[0].affiliateUrl).toBe('https://example.com/default')
+    // バナーのみなのでテキストクリエイティブは空配列
+    expect(result).toHaveLength(0)
   })
 
   it('should use recommendedAnchors when creative has no anchorText', () => {
     const program = createMockAspProgram({
-      affiliateUrl: 'https://example.com/default',
       recommendedAnchors: ['推奨アンカー1', '推奨アンカー2'],
       adCreatives: [
         {
@@ -579,6 +639,27 @@ describe('resolveTextCreatives', () => {
     const result = resolveTextCreatives(program)
     expect(result[0].anchors).toEqual(['推奨アンカー1', '推奨アンカー2'])
   })
+
+  it('should include rawHtml when present on creative', () => {
+    const program = createMockAspProgram({
+      recommendedAnchors: ['テスト'],
+      adCreatives: [
+        {
+          id: 'cr-1',
+          type: 'text',
+          label: 'テキスト1',
+          rawHtml: '<a href="https://example.com/raw">テスト</a>',
+          anchorText: 'テスト',
+          isActive: true,
+          useForInjection: true,
+          useForBanner: false,
+        },
+      ],
+    })
+    const result = resolveTextCreatives(program)
+    expect(result).toHaveLength(1)
+    expect(result[0].rawHtml).toBe('<a href="https://example.com/raw">テスト</a>')
+  })
 })
 
 // ============================================================
@@ -586,28 +667,19 @@ describe('resolveTextCreatives', () => {
 // ============================================================
 
 describe('generateBannerHtml', () => {
-  it('should generate banner HTML with correct attributes', () => {
+  it('should return rawHtml when banner creative has rawHtml', () => {
     const creative: AdCreative = {
       id: 'cr-banner-1',
       type: 'banner',
       label: '300x250 バナー',
       affiliateUrl: 'https://example.com/banner-click',
-      imageUrl: 'https://img.example.com/banner.png',
-      bannerSize: '300x250',
-      altText: 'テストバナー',
+      rawHtml: '<a href="https://example.com/banner-click" rel="sponsored"><img src="https://img.example.com/banner.png" width="300" height="250" alt="テストバナー" /></a>',
       isActive: true,
       useForInjection: false,
       useForBanner: true,
     }
     const result = generateBannerHtml(creative, 'a8', 'prog-001', 'aga')
-    expect(result).toContain('href="https://example.com/banner-click"')
-    expect(result).toContain('src="https://img.example.com/banner.png"')
-    expect(result).toContain('alt="テストバナー"')
-    expect(result).toContain('width="300"')
-    expect(result).toContain('height="250"')
-    expect(result).toContain('rel="sponsored noopener"')
-    expect(result).toContain('data-asp="a8"')
-    expect(result).toContain('loading="lazy"')
+    expect(result).toBe(creative.rawHtml)
   })
 
   it('should return empty string for non-banner creative', () => {
@@ -624,38 +696,35 @@ describe('generateBannerHtml', () => {
     expect(result).toBe('')
   })
 
-  it('should omit size attributes for custom banner size', () => {
+  it('should return empty string for banner creative without rawHtml', () => {
     const creative: AdCreative = {
       id: 'cr-banner-2',
       type: 'banner',
-      label: 'カスタムバナー',
+      label: 'rawHtml無しバナー',
       affiliateUrl: 'https://example.com/',
-      imageUrl: 'https://img.example.com/custom.png',
-      bannerSize: 'custom',
-      altText: 'カスタム',
       isActive: true,
       useForInjection: false,
       useForBanner: true,
     }
     const result = generateBannerHtml(creative, 'a8', 'prog-001', 'aga')
-    expect(result).not.toContain('width=')
-    expect(result).not.toContain('height=')
+    expect(result).toBe('')
   })
 
-  it('should use label as alt when altText is missing', () => {
+  it('should preserve tracking pixel in rawHtml', () => {
+    const rawHtmlWithPixel = '<a href="https://example.com/click"><img src="https://img.example.com/banner.png" alt="バナー" /></a><img src="https://example.com/tracking-pixel" width="1" height="1" />'
     const creative: AdCreative = {
       id: 'cr-banner-3',
       type: 'banner',
-      label: 'フォールバックalt',
+      label: 'トラッキングピクセル付きバナー',
       affiliateUrl: 'https://example.com/',
-      imageUrl: 'https://img.example.com/test.png',
-      bannerSize: '728x90',
+      rawHtml: rawHtmlWithPixel,
       isActive: true,
       useForInjection: false,
       useForBanner: true,
     }
     const result = generateBannerHtml(creative, 'a8', 'prog-001', 'aga')
-    expect(result).toContain('alt="フォールバックalt"')
+    expect(result).toBe(rawHtmlWithPixel)
+    expect(result).toContain('tracking-pixel')
   })
 })
 
@@ -689,9 +758,7 @@ describe('generateBannerSection', () => {
             type: 'banner',
             label: '300x250',
             affiliateUrl: 'https://example.com/banner-click',
-            imageUrl: 'https://img.example.com/banner.png',
-            bannerSize: '300x250',
-            altText: 'テストバナー',
+            rawHtml: '<a href="https://example.com/banner-click" rel="sponsored"><img src="https://img.example.com/banner.png" width="300" height="250" alt="テストバナー" /></a>',
             isActive: true,
             useForInjection: false,
             useForBanner: true,
@@ -726,7 +793,6 @@ describe('injectAffiliateLinksByCategory — with adCreatives', () => {
         aspName: 'a8',
         programName: 'クリエイティブテスト',
         programId: 'prog-cr-001',
-        affiliateUrl: 'https://example.com/default',
         recommendedAnchors: ['クリエイティブテスト 公式サイト'],
         adCreatives: [
           {
@@ -746,30 +812,27 @@ describe('injectAffiliateLinksByCategory — with adCreatives', () => {
     const content = '<p>クリエイティブテスト 公式サイトはこちらです。</p>'
     const result = await injectAffiliateLinksByCategory(content, 'aga')
 
-    // Creative URL should be used instead of default
+    // Creative URL should be used
     expect(result).toContain('href="https://example.com/creative-url"')
-    expect(result).not.toContain('href="https://example.com/default"')
   })
 
-  it('should fallback to default URL when no active text creatives', async () => {
+  it('should not inject links when no active text creatives exist', async () => {
     const { selectBestPrograms } = await import('@/lib/asp/selector')
     const mockedSelect = vi.mocked(selectBestPrograms)
     mockedSelect.mockResolvedValueOnce([
       createMockAspProgram({
-        id: 'fallback-test-001',
+        id: 'no-text-cr-001',
         aspName: 'a8',
-        programName: 'フォールバックテスト',
+        programName: 'バナーのみテスト',
         programId: 'prog-fb-001',
-        affiliateUrl: 'https://example.com/default-url',
-        recommendedAnchors: ['フォールバックテスト 公式サイト'],
+        recommendedAnchors: ['バナーのみテスト 公式サイト'],
         adCreatives: [
           {
             id: 'cr-b1',
             type: 'banner',
             label: 'バナーのみ',
             affiliateUrl: 'https://example.com/banner-only',
-            imageUrl: 'https://img.example.com/banner.png',
-            bannerSize: '300x250',
+            rawHtml: '<a href="https://example.com/banner-only"><img src="https://img.example.com/banner.png" /></a>',
             isActive: true,
             useForInjection: false,
             useForBanner: true,
@@ -778,10 +841,33 @@ describe('injectAffiliateLinksByCategory — with adCreatives', () => {
       }),
     ])
 
-    const content = '<p>フォールバックテスト 公式サイトをチェック。</p>'
+    const content = '<p>バナーのみテスト 公式サイトをチェック。</p>'
     const result = await injectAffiliateLinksByCategory(content, 'aga')
 
-    // Should use default URL (no text creatives available)
-    expect(result).toContain('href="https://example.com/default-url"')
+    // No text creatives available, so no link should be injected
+    expect(result).not.toContain('<a href=')
+    expect(result).toBe(content)
+  })
+
+  it('should not inject links when program has no adCreatives at all', async () => {
+    const { selectBestPrograms } = await import('@/lib/asp/selector')
+    const mockedSelect = vi.mocked(selectBestPrograms)
+    mockedSelect.mockResolvedValueOnce([
+      createMockAspProgram({
+        id: 'no-cr-001',
+        aspName: 'a8',
+        programName: 'クリエイティブなしテスト',
+        programId: 'prog-no-cr-001',
+        recommendedAnchors: ['クリエイティブなしテスト 公式サイト'],
+        // adCreatives undefined
+      }),
+    ])
+
+    const content = '<p>クリエイティブなしテスト 公式サイトをチェック。</p>'
+    const result = await injectAffiliateLinksByCategory(content, 'aga')
+
+    // No adCreatives, so no link should be injected
+    expect(result).not.toContain('<a href=')
+    expect(result).toBe(content)
   })
 })

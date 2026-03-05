@@ -90,7 +90,7 @@ async function generateMockAspData(): Promise<AspRevenueData[]> {
         programName: program.programName,
         clicks: Math.floor(Math.random() * 200) + 50,
         conversions: Math.floor(Math.random() * 5) + 1,
-        revenue: program.rewardAmount * (Math.floor(Math.random() * 3) + 1),
+        revenue: (program.rewardTiers[0]?.amount ?? 0) * (Math.floor(Math.random() * 3) + 1),
         date: today,
       }))
     }

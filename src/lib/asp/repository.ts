@@ -103,10 +103,7 @@ async function fetchProgramsFromSupabase(category: ContentCategory): Promise<Asp
       programName: seed.programName,
       programId: seed.programId,
       category: seed.category,
-      affiliateUrl: seed.affiliateUrl,
-      rewardAmount: seed.rewardAmount,
-      rewardType: seed.rewardType,
-      conversionCondition: seed.conversionCondition || undefined,
+      rewardTiers: seed.rewardTiers,
       approvalRate: seed.approvalRate,
       epc: seed.epc,
       itpSupport: seed.itpSupport,
@@ -114,9 +111,13 @@ async function fetchProgramsFromSupabase(category: ContentCategory): Promise<Asp
       isActive: seed.isActive,
       priority: seed.priority,
       recommendedAnchors: seed.recommendedAnchors,
-      landingPageUrl: seed.landingPageUrl,
       notes: seed.notes,
       adCreatives: seed.adCreatives,
+      advertiserName: seed.advertiserName,
+      aspCategory: seed.aspCategory,
+      confirmationPeriodDays: seed.confirmationPeriodDays,
+      partnershipStatus: seed.partnershipStatus,
+      lastApprovalDate: seed.lastApprovalDate,
     }
   })
 

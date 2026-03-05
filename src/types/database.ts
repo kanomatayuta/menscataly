@@ -113,10 +113,7 @@ export interface AspProgramRow {
   program_name: string
   program_id: string
   category: string
-  affiliate_url: string
-  reward_amount: number
-  reward_type: string
-  conversion_condition: string | null
+  reward_tiers: Json
   approval_rate: number
   epc: number
   itp_support: boolean
@@ -124,9 +121,13 @@ export interface AspProgramRow {
   is_active: boolean
   priority: number
   recommended_anchors: string[]
-  landing_page_url: string | null
   notes: string | null
   ad_creatives: Json | null
+  advertiser_name: string
+  asp_category: string
+  confirmation_period_days: number
+  partnership_status: string
+  last_approval_date: string | null
   created_at: string
   updated_at: string
 }
@@ -137,10 +138,7 @@ export type AspProgramInsert = {
   program_name: string
   program_id: string
   category: string
-  affiliate_url: string
-  reward_amount: number
-  reward_type: string
-  conversion_condition?: string | null
+  reward_tiers?: Json
   approval_rate?: number
   epc?: number
   itp_support?: boolean
@@ -148,9 +146,13 @@ export type AspProgramInsert = {
   is_active?: boolean
   priority?: number
   recommended_anchors?: string[]
-  landing_page_url?: string | null
   notes?: string | null
   ad_creatives?: Json | null
+  advertiser_name?: string
+  asp_category?: string
+  confirmation_period_days?: number
+  partnership_status?: string
+  last_approval_date?: string | null
 }
 
 export type AspProgramUpdate = Partial<Omit<AspProgramRow, 'id' | 'created_at'>>

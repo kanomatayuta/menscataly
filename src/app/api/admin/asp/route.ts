@@ -9,6 +9,7 @@ import { validateAdminAuth, getAuthErrorStatus } from '@/lib/admin/auth'
 import { type AspProgramSeed } from '@/lib/asp/seed'
 import { mapRowToProgram } from '@/lib/asp/helpers'
 import type { AspProgramRow } from '@/types/database'
+import type { RewardTier } from '@/types/asp-config'
 
 // ============================================================
 // インメモリストア (Supabase未設定時のフォールバック)
@@ -123,10 +124,7 @@ interface CreateAspProgramRequest {
   programName: string
   programId: string
   category: string
-  affiliateUrl: string
-  rewardAmount: number
-  rewardType: 'fixed' | 'percentage'
-  conversionCondition: string
+  rewardTiers: RewardTier[]
   approvalRate?: number
   epc?: number
   itpSupport?: boolean
@@ -134,9 +132,13 @@ interface CreateAspProgramRequest {
   isActive?: boolean
   priority?: number
   recommendedAnchors?: string[]
-  landingPageUrl: string
   notes?: string
   adCreatives?: unknown[]
+  advertiserName?: string
+  aspCategory?: string
+  confirmationPeriodDays?: number
+  partnershipStatus?: string
+  lastApprovalDate?: string | null
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -162,7 +164,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const now = new Date().toISOString()
-  const newId = `${body.aspName}-${body.category}-${Date.now()}`
+  const newId = crypto.randomUUID()
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -175,10 +177,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       programName: body.programName,
       programId: body.programId,
       category: body.category as AspProgramSeed['category'],
-      affiliateUrl: body.affiliateUrl,
-      rewardAmount: body.rewardAmount,
-      rewardType: body.rewardType,
-      conversionCondition: body.conversionCondition,
+      rewardTiers: body.rewardTiers,
       approvalRate: body.approvalRate ?? 0,
       epc: body.epc ?? 0,
       itpSupport: body.itpSupport ?? false,
@@ -186,9 +185,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       isActive: body.isActive ?? true,
       priority: body.priority ?? 3,
       recommendedAnchors: body.recommendedAnchors ?? [body.programName],
-      landingPageUrl: body.landingPageUrl,
       notes: body.notes,
       adCreatives: body.adCreatives as AspProgramSeed['adCreatives'],
+      advertiserName: body.advertiserName ?? '',
+      aspCategory: body.aspCategory ?? '',
+      confirmationPeriodDays: body.confirmationPeriodDays ?? 30,
+      partnershipStatus: body.partnershipStatus ?? 'active',
+      lastApprovalDate: body.lastApprovalDate || null,
     }
 
     inMemoryPrograms.push(newProgram)
@@ -212,10 +215,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         program_name: body.programName,
         program_id: body.programId,
         category: body.category,
-        affiliate_url: body.affiliateUrl,
-        reward_amount: body.rewardAmount,
-        reward_type: body.rewardType,
-        conversion_condition: body.conversionCondition,
+        reward_tiers: body.rewardTiers,
         approval_rate: body.approvalRate ?? 0,
         epc: body.epc ?? 0,
         itp_support: body.itpSupport ?? false,
@@ -223,9 +223,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         is_active: body.isActive ?? true,
         priority: body.priority ?? 3,
         recommended_anchors: body.recommendedAnchors ?? [body.programName],
-        landing_page_url: body.landingPageUrl,
         notes: body.notes ?? null,
         ad_creatives: body.adCreatives ?? [],
+        advertiser_name: body.advertiserName ?? '',
+        asp_category: body.aspCategory ?? '',
+        confirmation_period_days: body.confirmationPeriodDays ?? 30,
+        partnership_status: body.partnershipStatus ?? 'active',
+        last_approval_date: body.lastApprovalDate || null,
         created_at: now,
         updated_at: now,
       })
@@ -235,7 +239,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (error) {
       console.error('[admin/asp] Insert error:', error.message)
       return NextResponse.json(
-        { error: 'Failed to create ASP program' },
+        { error: `Failed to create ASP program: ${error.message}` },
         { status: 500 }
       )
     }
@@ -262,13 +266,19 @@ function validateCreateRequest(body: CreateAspProgramRequest): string | null {
   if (!body.programName) return 'programName is required'
   if (!body.programId) return 'programId is required'
   if (!body.category) return 'category is required'
-  if (!body.affiliateUrl) return 'affiliateUrl is required'
-  if (body.rewardAmount === undefined || body.rewardAmount === null) return 'rewardAmount is required'
-  if (!body.rewardType || !['fixed', 'percentage'].includes(body.rewardType)) {
-    return 'rewardType must be "fixed" or "percentage"'
+
+  // rewardTiers バリデーション
+  if (!Array.isArray(body.rewardTiers) || body.rewardTiers.length === 0) {
+    return 'rewardTiers must be a non-empty array'
   }
-  if (!body.conversionCondition) return 'conversionCondition is required'
-  if (!body.landingPageUrl) return 'landingPageUrl is required'
+  for (let i = 0; i < body.rewardTiers.length; i++) {
+    const tier = body.rewardTiers[i]
+    if (!tier.condition) return `rewardTiers[${i}].condition is required`
+    if (tier.amount === undefined || tier.amount === null) return `rewardTiers[${i}].amount is required`
+    if (!['fixed', 'percentage'].includes(tier.type)) {
+      return `rewardTiers[${i}].type must be "fixed" or "percentage"`
+    }
+  }
 
   const validAsps = ['afb', 'a8', 'accesstrade', 'valuecommerce', 'felmat', 'moshimo']
   if (!validAsps.includes(body.aspName)) {
@@ -284,6 +294,14 @@ function validateCreateRequest(body: CreateAspProgramRequest): string | null {
   if (body.adCreatives !== undefined) {
     const creativesError = validateAdCreatives(body.adCreatives)
     if (creativesError) return creativesError
+  }
+
+  // partnershipStatus バリデーション
+  if (body.partnershipStatus !== undefined) {
+    const validStatuses = ['active', 'pending', 'ended']
+    if (!validStatuses.includes(body.partnershipStatus)) {
+      return `partnershipStatus must be one of: ${validStatuses.join(', ')}`
+    }
   }
 
   return null
@@ -304,8 +322,10 @@ function validateAdCreatives(creatives: unknown[]): string | null {
     if (!['text', 'banner'].includes(c.type as string)) {
       return `adCreatives[${i}].type: must be 'text' or 'banner'`
     }
-    if (typeof c.affiliateUrl !== 'string' || !c.affiliateUrl) {
-      return `adCreatives[${i}].affiliateUrl: must be a non-empty string`
+    // rawHtml が設定されている場合、affiliateUrl は不要（rawHtml内に含まれる）
+    const hasRawHtml = typeof c.rawHtml === 'string' && c.rawHtml.length > 0
+    if (!hasRawHtml && (typeof c.affiliateUrl !== 'string' || !c.affiliateUrl)) {
+      return `adCreatives[${i}].affiliateUrl: must be a non-empty string (or provide rawHtml)`
     }
     if (typeof c.isActive !== 'boolean') {
       return `adCreatives[${i}].isActive: must be a boolean`

@@ -4,7 +4,7 @@
  */
 
 import type { AspProgramSeed } from '@/lib/asp/seed'
-import type { AdCreative } from '@/types/asp-config'
+import type { AdCreative, RewardTier } from '@/types/asp-config'
 import type { AspProgramRow, Json } from '@/types/database'
 
 /**
@@ -18,10 +18,7 @@ export function mapRowToProgram(row: AspProgramRow): AspProgramSeed {
     programName: row.program_name,
     programId: row.program_id,
     category: row.category as AspProgramSeed['category'],
-    affiliateUrl: row.affiliate_url,
-    rewardAmount: parseFloat(String(row.reward_amount ?? '0')),
-    rewardType: row.reward_type as 'fixed' | 'percentage',
-    conversionCondition: row.conversion_condition ?? '',
+    rewardTiers: parseRewardTiers(row.reward_tiers),
     approvalRate: parseFloat(String(row.approval_rate ?? '0')),
     epc: parseFloat(String(row.epc ?? '0')),
     itpSupport: Boolean(row.itp_support),
@@ -29,10 +26,34 @@ export function mapRowToProgram(row: AspProgramRow): AspProgramSeed {
     isActive: Boolean(row.is_active),
     priority: parseInt(String(row.priority ?? '3'), 10),
     recommendedAnchors: row.recommended_anchors ?? [],
-    landingPageUrl: row.landing_page_url ?? '',
     notes: row.notes ?? undefined,
     adCreatives: parseAdCreatives(row.ad_creatives),
+    advertiserName: row.advertiser_name ?? '',
+    aspCategory: row.asp_category ?? '',
+    confirmationPeriodDays: row.confirmation_period_days ?? 30,
+    partnershipStatus: row.partnership_status ?? 'active',
+    lastApprovalDate: row.last_approval_date ?? null,
   }
+}
+
+/**
+ * JSONB の reward_tiers を RewardTier[] にパースする
+ */
+export function parseRewardTiers(raw: Json | null | undefined): RewardTier[] {
+  if (!raw) return []
+  if (!Array.isArray(raw)) {
+    console.warn('[parseRewardTiers] Expected array, got:', typeof raw)
+    return []
+  }
+  return raw.filter((item) => {
+    if (typeof item !== 'object' || item === null) return false
+    const t = item as Record<string, unknown>
+    return (
+      typeof t.condition === 'string' &&
+      typeof t.amount === 'number' &&
+      (t.type === 'fixed' || t.type === 'percentage')
+    )
+  }) as unknown as RewardTier[]
 }
 
 /**
@@ -52,7 +73,7 @@ function parseAdCreatives(raw: Json | null | undefined): AdCreative[] | undefine
       return false
     }
     const c = item as Record<string, unknown>
-    return typeof c.id === 'string' && typeof c.type === 'string' && typeof c.affiliateUrl === 'string'
+    return typeof c.id === 'string' && typeof c.type === 'string' && (typeof c.rawHtml === 'string' || typeof c.affiliateUrl === 'string')
   })
   if (valid.length === 0) return undefined
   return valid as unknown as AdCreative[]

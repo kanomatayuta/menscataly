@@ -74,8 +74,8 @@ export function toAffiliateLinks(programs: AspProgram[]): AffiliateLink[] {
     return {
       programName: program.programName,
       aspName: program.aspName,
-      url: textCreative?.affiliateUrl ?? program.affiliateUrl,
-      rewardAmount: program.rewardAmount,
+      url: textCreative?.affiliateUrl ?? '',
+      rewardAmount: program.rewardTiers[0]?.amount ?? 0,
       anchorText: (textCreative?.anchorText || undefined) ?? program.recommendedAnchors[0] ?? program.programName,
     }
   })

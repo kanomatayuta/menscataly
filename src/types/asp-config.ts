@@ -8,20 +8,24 @@ import type { ContentCategory } from "@/types/content";
 export type AspName = "afb" | "a8" | "accesstrade" | "valuecommerce" | "felmat" | "moshimo";
 
 export type AdCreativeType = 'text' | 'banner'
-export type BannerSize = '120x60' | '300x250' | '468x60' | '728x90' | '160x600' | 'custom'
 
 export interface AdCreative {
   id: string
   type: AdCreativeType
   label: string
-  affiliateUrl: string
+  affiliateUrl?: string
   anchorText?: string
-  imageUrl?: string
-  bannerSize?: BannerSize
-  altText?: string
+  rawHtml?: string
   isActive: boolean
   useForInjection: boolean
   useForBanner: boolean
+}
+
+export interface RewardTier {
+  condition: string;
+  amount: number;
+  type: 'fixed' | 'percentage';
+  productPrice?: number;
 }
 
 export interface AspProgram {
@@ -30,10 +34,7 @@ export interface AspProgram {
   programName: string;
   programId: string;
   category: ContentCategory;
-  affiliateUrl: string;
-  rewardAmount: number;
-  rewardType: "fixed" | "percentage";
-  conversionCondition?: string;
+  rewardTiers: RewardTier[];
   approvalRate: number;
   epc: number;
   itpSupport: boolean;
@@ -41,9 +42,13 @@ export interface AspProgram {
   isActive: boolean;
   priority?: number;
   recommendedAnchors: string[];
-  landingPageUrl: string;
   notes?: string;
   adCreatives?: AdCreative[];
+  advertiserName?: string;
+  aspCategory?: string;
+  confirmationPeriodDays?: number;
+  partnershipStatus?: string;
+  lastApprovalDate?: string | null;
 }
 
 export interface AspCategoryMapping {

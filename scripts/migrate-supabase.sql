@@ -295,7 +295,6 @@ CREATE TABLE IF NOT EXISTS asp_programs (
   program_name        TEXT NOT NULL,
   program_id          TEXT NOT NULL UNIQUE,
   category            TEXT NOT NULL,
-  affiliate_url       TEXT NOT NULL,
   reward_amount       NUMERIC(10,2) NOT NULL DEFAULT 0,
   reward_type         TEXT NOT NULL DEFAULT 'fixed',
   approval_rate       NUMERIC(5,2) NOT NULL DEFAULT 0,
@@ -304,7 +303,6 @@ CREATE TABLE IF NOT EXISTS asp_programs (
   cookie_duration     INT NOT NULL DEFAULT 30,
   is_active           BOOLEAN NOT NULL DEFAULT TRUE,
   recommended_anchors JSONB NOT NULL DEFAULT '[]',
-  landing_page_url    TEXT NOT NULL,
   created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -984,5 +982,187 @@ END $$;
 COMMENT ON COLUMN asp_programs.ad_creatives IS '広告クリエイティブ (テキストリンク/バナー) JSONB配列';
 
 -- ============================================================
--- Done — v2.3 (Migration 007: asp_programs.ad_creatives JSONB)
+-- 18. Migration 008: asp_programs A8.net拡張フィールド
+-- ============================================================
+
+INSERT INTO schema_migrations (version, description) VALUES
+  ('008', 'asp_programs: A8.net拡張フィールド (advertiser_name, asp_category, target_devices, confirmation_period_days, partnership_status, last_approval_date)')
+ON CONFLICT (version) DO NOTHING;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'asp_programs' AND column_name = 'advertiser_name'
+  ) THEN
+    ALTER TABLE asp_programs ADD COLUMN advertiser_name TEXT DEFAULT '';
+    RAISE NOTICE 'Migration 008: advertiser_name column added';
+  END IF;
+END $$;
+COMMENT ON COLUMN asp_programs.advertiser_name IS '広告主名 (例: 株式会社◯◯)';
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'asp_programs' AND column_name = 'asp_category'
+  ) THEN
+    ALTER TABLE asp_programs ADD COLUMN asp_category TEXT DEFAULT '';
+    RAISE NOTICE 'Migration 008: asp_category column added';
+  END IF;
+END $$;
+COMMENT ON COLUMN asp_programs.asp_category IS 'ASP側カテゴリ (例: ボディケア) — サイトカテゴリ(category)とは別管理';
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'asp_programs' AND column_name = 'target_devices'
+  ) THEN
+    ALTER TABLE asp_programs ADD COLUMN target_devices JSONB DEFAULT '["pc","smartphone"]';
+    RAISE NOTICE 'Migration 008: target_devices column added';
+  END IF;
+END $$;
+COMMENT ON COLUMN asp_programs.target_devices IS '成果対象デバイス (JSON配列: ["pc","smartphone"])';
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'asp_programs' AND column_name = 'confirmation_period_days'
+  ) THEN
+    ALTER TABLE asp_programs ADD COLUMN confirmation_period_days INT DEFAULT 30;
+    RAISE NOTICE 'Migration 008: confirmation_period_days column added';
+  END IF;
+END $$;
+COMMENT ON COLUMN asp_programs.confirmation_period_days IS '成果確定目安 (日数)';
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'asp_programs' AND column_name = 'partnership_status'
+  ) THEN
+    ALTER TABLE asp_programs ADD COLUMN partnership_status TEXT DEFAULT 'active';
+    RAISE NOTICE 'Migration 008: partnership_status column added';
+  END IF;
+END $$;
+COMMENT ON COLUMN asp_programs.partnership_status IS '提携状況 (active/pending/ended)';
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'asp_programs' AND column_name = 'last_approval_date'
+  ) THEN
+    ALTER TABLE asp_programs ADD COLUMN last_approval_date DATE;
+    RAISE NOTICE 'Migration 008: last_approval_date column added';
+  END IF;
+END $$;
+COMMENT ON COLUMN asp_programs.last_approval_date IS '最終承認日';
+
+-- ============================================================
+-- 19. Migration 009: asp_programs 不要カラム削除 (landing_page_url, target_devices)
+-- ============================================================
+
+INSERT INTO schema_migrations (version, description) VALUES
+  ('009', 'asp_programs: landing_page_url と target_devices カラムを削除 (rawHtml方式への移行)')
+ON CONFLICT (version) DO NOTHING;
+
+-- landing_page_url: コードベースで未使用 (ASP発行HTMLにURLが含まれるため不要)
+ALTER TABLE asp_programs DROP COLUMN IF EXISTS landing_page_url;
+
+-- target_devices: コードベースで未使用 (レンダリング・選定ロジックで参照なし)
+ALTER TABLE asp_programs DROP COLUMN IF EXISTS target_devices;
+
+-- ============================================================
+-- 20. Migration 010: asp_programs affiliate_url カラム削除
+-- ============================================================
+
+INSERT INTO schema_migrations (version, description) VALUES
+  ('010', 'asp_programs: affiliate_url カラムを削除 (adCreatives rawHtml にURLが含まれるため不要)')
+ON CONFLICT (version) DO NOTHING;
+
+-- affiliate_url: ASP発行の rawHtml (adCreatives) 内にアフィリエイトURLが含まれるため不要
+ALTER TABLE asp_programs DROP COLUMN IF EXISTS affiliate_url;
+
+-- ============================================================
+-- 21. Migration 011: asp_programs.product_price カラム追加
+-- ============================================================
+
+INSERT INTO schema_migrations (version, description) VALUES
+  ('011', 'asp_programs: product_price カラム追加 (成果報酬%の予想報酬額計算用)')
+ON CONFLICT (version) DO NOTHING;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'asp_programs' AND column_name = 'product_price'
+  ) THEN
+    ALTER TABLE asp_programs ADD COLUMN product_price NUMERIC(10,2) DEFAULT NULL;
+    RAISE NOTICE 'Migration 011: product_price column added';
+  END IF;
+END $$;
+COMMENT ON COLUMN asp_programs.product_price IS '商品金額 (成果報酬%の場合の予想報酬額計算用)';
+
+-- ============================================================
+-- 22. Migration 012: asp_programs reward_tiers JSONB配列化
+--     reward_amount/reward_type/product_price/conversion_condition → reward_tiers
+-- ============================================================
+
+INSERT INTO schema_migrations (version, description) VALUES
+  ('012', 'asp_programs: reward_tiers JSONB配列化 (複数成果条件対応)')
+ON CONFLICT (version) DO NOTHING;
+
+-- Step 1: reward_tiers カラム追加
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'asp_programs' AND column_name = 'reward_tiers'
+  ) THEN
+    ALTER TABLE asp_programs ADD COLUMN reward_tiers JSONB NOT NULL DEFAULT '[]';
+    RAISE NOTICE 'Migration 012: reward_tiers column added';
+  END IF;
+END $$;
+COMMENT ON COLUMN asp_programs.reward_tiers IS '報酬テーブル配列 [{condition, amount, type, productPrice?}]';
+
+-- Step 2: 既存データを reward_tiers に変換 (reward_tiers が空の場合のみ)
+UPDATE asp_programs
+SET reward_tiers = jsonb_build_array(
+  jsonb_build_object(
+    'condition', COALESCE(conversion_condition, '成果発生'),
+    'amount', COALESCE(reward_amount, 0),
+    'type', COALESCE(reward_type, 'fixed')
+  ) || CASE
+    WHEN product_price IS NOT NULL THEN jsonb_build_object('productPrice', product_price)
+    ELSE '{}'::jsonb
+  END
+)
+WHERE reward_tiers = '[]'::jsonb
+  AND (reward_amount IS NOT NULL AND reward_amount > 0);
+
+-- Step 3: 旧カラム削除
+ALTER TABLE asp_programs DROP COLUMN IF EXISTS reward_amount;
+ALTER TABLE asp_programs DROP COLUMN IF EXISTS reward_type;
+ALTER TABLE asp_programs DROP COLUMN IF EXISTS product_price;
+ALTER TABLE asp_programs DROP COLUMN IF EXISTS conversion_condition;
+
+-- Step 4: v_revenue_by_asp ビュー更新 (旧 reward_amount 参照を削除)
+CREATE OR REPLACE VIEW v_revenue_by_asp AS
+SELECT
+  asp_name,
+  COUNT(*) AS program_count,
+  AVG(approval_rate) AS avg_approval_rate,
+  AVG(epc) AS avg_epc,
+  COUNT(*) FILTER (WHERE itp_support = TRUE) AS itp_supported_count
+FROM asp_programs
+WHERE is_active = TRUE
+GROUP BY asp_name
+ORDER BY avg_epc DESC;
+COMMENT ON VIEW v_revenue_by_asp IS 'ASP別収益集計';
+
+-- ============================================================
+-- Done — v2.8 (Migration 012: reward_tiers JSONB配列化)
 -- ============================================================

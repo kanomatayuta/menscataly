@@ -166,11 +166,13 @@ export async function injectAffiliateLinksByCategory(
 
 /**
  * プログラムからテキストリンク用クリエイティブを解決する
- * adCreatives があれば useForInjection=true のものを優先、なければ従来の affiliateUrl にフォールバック
+ * adCreatives (useForInjection=true) があればそのURLを使用
+ * rawHtml がある場合は rawHtml をそのまま注入に使用する
+ * adCreatives が登録されていない場合は空配列を返す（リンク注入しない）
  */
 export function resolveTextCreatives(
   program: AspProgram
-): Array<{ affiliateUrl: string; anchors: string[] }> {
+): Array<{ affiliateUrl?: string; anchors: string[]; rawHtml?: string }> {
   if (program.adCreatives && program.adCreatives.length > 0) {
     const textCreatives = program.adCreatives.filter(
       (c) => c.type === 'text' && c.isActive && c.useForInjection
@@ -180,25 +182,24 @@ export function resolveTextCreatives(
         .map((c) => ({
           affiliateUrl: c.affiliateUrl,
           anchors: c.anchorText ? [c.anchorText] : program.recommendedAnchors,
+          rawHtml: c.rawHtml,
         }))
-        .filter((c) => c.anchors.length > 0)
+        .filter((c) => c.rawHtml || c.anchors.length > 0)
     }
   }
-  // フォールバック: 従来の affiliateUrl + recommendedAnchors
-  return [{ affiliateUrl: program.affiliateUrl, anchors: program.recommendedAnchors }]
+  // adCreatives が未登録または有効なテキストクリエイティブがない場合はリンク注入しない
+  return []
 }
 
 /**
  * バナーHTMLを生成する
+ * rawHtml がある場合はそのまま返す（ASP発行のトラッキングピクセル保持）
  */
 export function generateBannerHtml(creative: AdCreative, aspName: string, programId: string, category: string): string {
-  if (creative.type !== 'banner' || !creative.imageUrl) return ''
-  const width = creative.bannerSize ? creative.bannerSize.split('x')[0] : undefined
-  const height = creative.bannerSize ? creative.bannerSize.split('x')[1] : undefined
-  const sizeAttrs = width && height && creative.bannerSize !== 'custom'
-    ? ` width="${width}" height="${height}"`
-    : ''
-  return `<a href="${escapeHtmlAttr(creative.affiliateUrl)}" rel="sponsored noopener" target="_blank" data-asp="${escapeHtmlAttr(aspName)}" data-program="${escapeHtmlAttr(programId)}" data-category="${escapeHtmlAttr(category)}"><img src="${escapeHtmlAttr(creative.imageUrl)}" alt="${escapeHtmlAttr(creative.altText ?? creative.label)}"${sizeAttrs} loading="lazy" /></a>`
+  if (creative.type !== 'banner') return ''
+  // rawHtml がある場合はそのまま返す（トラッキングピクセル含む）
+  if (creative.rawHtml) return creative.rawHtml
+  return ''
 }
 
 /**
@@ -231,7 +232,8 @@ ${bannerHtmls.join('\n')}
 
 /**
  * 単一プログラムのアフィリエイトリンクをコンテンツに注入する
- * adCreatives (useForInjection) があればクリエイティブURLを使用、なければ従来の affiliateUrl にフォールバック
+ * adCreatives (useForInjection) のクリエイティブURLを使用
+ * adCreatives が未登録の場合はリンク注入しない
  *
  * マッチング優先順位:
  * 1. 完全一致
@@ -251,10 +253,28 @@ function injectSingleLink(
   const creatives = resolveTextCreatives(program)
 
   for (const creative of creatives) {
-    // クリエイティブのURLでプログラムオブジェクトを拡張
-    const effectiveProgram: AspProgram = creative.affiliateUrl !== program.affiliateUrl
-      ? { ...program, affiliateUrl: creative.affiliateUrl }
-      : program
+    // rawHtml がある場合: アンカーテキストの出現位置を rawHtml で置換
+    if (creative.rawHtml) {
+      for (const anchor of creative.anchors) {
+        const escapedAnchor = anchor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const alreadyLinked = new RegExp(`<a\\s[^>]*>[^<]*${escapedAnchor}[^<]*</a>`, 'i')
+        if (alreadyLinked.test(content)) continue
+
+        const index = content.indexOf(anchor)
+        if (index === -1) continue
+        if (isInForbiddenRange(forbiddenRanges, index, anchor.length)) continue
+
+        const before = content.slice(0, index)
+        const after = content.slice(index + anchor.length)
+        return before + creative.rawHtml + after
+      }
+      continue
+    }
+
+    // クリエイティブにaffiliate URLがない場合はスキップ
+    if (!creative.affiliateUrl) continue
+
+    const creativeUrl = creative.affiliateUrl
 
     for (const anchor of creative.anchors) {
       // 既にリンク化済み（<a> タグ内）でないかチェック
@@ -269,15 +289,15 @@ function injectSingleLink(
       }
 
       // --- Pass 1: 完全一致 ---
-      const exactResult = tryExactMatch(content, anchor, effectiveProgram, forbiddenRanges)
+      const exactResult = tryExactMatch(content, anchor, program, creativeUrl, forbiddenRanges)
       if (exactResult !== null) return exactResult
 
       // --- Pass 2: 正規化マッチング ---
-      const normalizedResult = tryNormalizedMatch(content, anchor, effectiveProgram, forbiddenRanges)
+      const normalizedResult = tryNormalizedMatch(content, anchor, program, creativeUrl, forbiddenRanges)
       if (normalizedResult !== null) return normalizedResult
 
       // --- Pass 3: コアネーム マッチング ---
-      const coreResult = tryCoreNameMatch(content, anchor, effectiveProgram, forbiddenRanges)
+      const coreResult = tryCoreNameMatch(content, anchor, program, creativeUrl, forbiddenRanges)
       if (coreResult !== null) return coreResult
     }
   }
@@ -292,6 +312,7 @@ function tryExactMatch(
   content: string,
   anchor: string,
   program: AspProgram,
+  affiliateUrl: string,
   forbiddenRanges: ForbiddenRange[]
 ): string | null {
   const index = content.indexOf(anchor)
@@ -300,7 +321,7 @@ function tryExactMatch(
   // 禁止タグ内チェック
   if (isInForbiddenRange(forbiddenRanges, index, anchor.length)) return null
 
-  const linkHtml = `<a href="${escapeHtmlAttr(program.affiliateUrl)}" rel="sponsored noopener" target="_blank" data-asp="${escapeHtmlAttr(program.aspName)}" data-program="${escapeHtmlAttr(program.programId)}" data-category="${escapeHtmlAttr(program.category)}">${anchor}</a>`
+  const linkHtml = `<a href="${escapeHtmlAttr(affiliateUrl)}" rel="sponsored noopener" target="_blank" data-asp="${escapeHtmlAttr(program.aspName)}" data-program="${escapeHtmlAttr(program.programId)}" data-category="${escapeHtmlAttr(program.category)}">${anchor}</a>`
   const before = content.slice(0, index)
   const after = content.slice(index + anchor.length)
 
@@ -316,6 +337,7 @@ function tryNormalizedMatch(
   content: string,
   anchor: string,
   program: AspProgram,
+  affiliateUrl: string,
   forbiddenRanges: ForbiddenRange[]
 ): string | null {
   const normalizedAnchor = normalizeText(anchor)
@@ -342,7 +364,7 @@ function tryNormalizedMatch(
     // 禁止タグ内チェック
     if (isInForbiddenRange(forbiddenRanges, absoluteStart, matchedText.length)) continue
 
-    const linkHtml = `<a href="${escapeHtmlAttr(program.affiliateUrl)}" rel="sponsored noopener" target="_blank" data-asp="${escapeHtmlAttr(program.aspName)}" data-program="${escapeHtmlAttr(program.programId)}" data-category="${escapeHtmlAttr(program.category)}">${matchedText}</a>`
+    const linkHtml = `<a href="${escapeHtmlAttr(affiliateUrl)}" rel="sponsored noopener" target="_blank" data-asp="${escapeHtmlAttr(program.aspName)}" data-program="${escapeHtmlAttr(program.programId)}" data-category="${escapeHtmlAttr(program.category)}">${matchedText}</a>`
     const before = content.slice(0, absoluteStart)
     const after = content.slice(absoluteEnd)
 
@@ -362,6 +384,7 @@ function tryCoreNameMatch(
   content: string,
   anchor: string,
   program: AspProgram,
+  affiliateUrl: string,
   forbiddenRanges: ForbiddenRange[]
 ): string | null {
   const coreName = extractCoreName(anchor)
@@ -376,7 +399,7 @@ function tryCoreNameMatch(
   // 禁止タグ内チェック
   if (isInForbiddenRange(forbiddenRanges, index, coreName.length)) return null
 
-  const linkHtml = `<a href="${escapeHtmlAttr(program.affiliateUrl)}" rel="sponsored noopener" target="_blank" data-asp="${escapeHtmlAttr(program.aspName)}" data-program="${escapeHtmlAttr(program.programId)}" data-category="${escapeHtmlAttr(program.category)}">${coreName}</a>`
+  const linkHtml = `<a href="${escapeHtmlAttr(affiliateUrl)}" rel="sponsored noopener" target="_blank" data-asp="${escapeHtmlAttr(program.aspName)}" data-program="${escapeHtmlAttr(program.programId)}" data-category="${escapeHtmlAttr(program.category)}">${coreName}</a>`
   const before = content.slice(0, index)
   const after = content.slice(index + coreName.length)
 
@@ -499,18 +522,35 @@ export async function generateAffiliateSection(
     return ''
   }
 
-  const listItems = programs
-    .map(
-      (p) =>
-        `  <li><a href="${escapeHtmlAttr(p.affiliateUrl)}" rel="sponsored noopener" target="_blank" data-asp="${escapeHtmlAttr(p.aspName)}" data-program="${escapeHtmlAttr(p.programId)}" data-category="${escapeHtmlAttr(p.category)}">${p.recommendedAnchors[0] ?? p.programName}</a> - ${p.programName}</li>`
+  const listItems: string[] = []
+  for (const p of programs) {
+    // adCreatives からアクティブなテキストクリエイティブを探す
+    const textCreative = p.adCreatives?.find(
+      (c) => c.type === 'text' && c.isActive && c.useForInjection
     )
-    .join('\n')
+
+    if (textCreative?.rawHtml) {
+      // rawHtml がある場合はそのまま使用
+      listItems.push(`  <li>${textCreative.rawHtml} - ${p.programName}</li>`)
+    } else if (textCreative?.affiliateUrl) {
+      // クリエイティブの affiliateUrl を使用
+      const anchorText = textCreative.anchorText || p.recommendedAnchors[0] || p.programName
+      listItems.push(
+        `  <li><a href="${escapeHtmlAttr(textCreative.affiliateUrl)}" rel="sponsored noopener" target="_blank" data-asp="${escapeHtmlAttr(p.aspName)}" data-program="${escapeHtmlAttr(p.programId)}" data-category="${escapeHtmlAttr(p.category)}">${anchorText}</a> - ${p.programName}</li>`
+      )
+    }
+    // adCreatives が無い or 有効なテキストクリエイティブが無い場合はスキップ
+  }
+
+  if (listItems.length === 0) {
+    return ''
+  }
 
   return `<div class="affiliate-section">
 <h3>おすすめクリニック・サービス</h3>
 <p>※以下のリンクはアフィリエイト広告を含みます</p>
 <ul>
-${listItems}
+${listItems.join('\n')}
 </ul>
 </div>`
 }

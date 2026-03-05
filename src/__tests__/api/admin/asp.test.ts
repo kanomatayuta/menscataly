@@ -27,11 +27,7 @@ async function seedTestProgram(
     programName: 'テストシードプログラム',
     programId: `seed-${Date.now()}`,
     category: 'aga',
-    affiliateUrl: 'https://example.com/aff',
-    rewardAmount: 5000,
-    rewardType: 'fixed',
-    conversionCondition: '初回購入',
-    landingPageUrl: 'https://example.com/lp',
+    rewardTiers: [{ condition: '初回購入', amount: 5000, type: 'fixed' }],
     isActive: true,
     ...overrides,
   }
@@ -108,8 +104,8 @@ describe('ASP CRUD API', () => {
         expect(program.aspName).toBeDefined()
         expect(program.programName).toBeDefined()
         expect(program.category).toBeDefined()
-        expect(typeof program.rewardAmount).toBe('number')
-        expect(['fixed', 'percentage']).toContain(program.rewardType)
+        expect(Array.isArray(program.rewardTiers)).toBe(true)
+        expect(program.rewardTiers.length).toBeGreaterThan(0)
         expect(typeof program.isActive).toBe('boolean')
       }
     })
@@ -169,11 +165,7 @@ describe('ASP CRUD API', () => {
       programName: 'テストプログラム',
       programId: 'test-prog-001',
       category: 'aga',
-      affiliateUrl: 'https://example.com/affiliate',
-      rewardAmount: 10000,
-      rewardType: 'fixed' as const,
-      conversionCondition: '初回購入完了',
-      landingPageUrl: 'https://example.com/landing',
+      rewardTiers: [{ condition: '初回購入完了', amount: 10000, type: 'fixed' as const }],
     }
 
     it('有効なリクエストで201を返すこと', async () => {
@@ -252,11 +244,11 @@ describe('ASP CRUD API', () => {
       expect(response.status).toBe(400)
     })
 
-    it('無効なrewardTypeで400を返すこと', async () => {
+    it('無効なrewardTiersで400を返すこと', async () => {
       const req = new Request('http://localhost/api/admin/asp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...validBody, rewardType: 'invalid' }),
+        body: JSON.stringify({ ...validBody, rewardTiers: [{ condition: 'test', amount: 100, type: 'invalid' }] }),
       }) as any
 
       const response = await POST(req)

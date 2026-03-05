@@ -10,6 +10,7 @@ import { validateAdminAuth, getAuthErrorStatus } from '@/lib/admin/auth'
 import { type AspProgramSeed } from '@/lib/asp/seed'
 import { mapRowToProgram } from '@/lib/asp/helpers'
 import type { AspProgramRow } from '@/types/database'
+import type { RewardTier } from '@/types/asp-config'
 import { getInMemoryPrograms } from '../route'
 
 // ============================================================
@@ -92,11 +93,11 @@ export async function GET(
 // ============================================================
 
 interface UpdateAspProgramRequest {
+  aspName?: string
+  programId?: string
+  category?: string
   programName?: string
-  affiliateUrl?: string
-  rewardAmount?: number
-  rewardType?: 'fixed' | 'percentage'
-  conversionCondition?: string
+  rewardTiers?: RewardTier[]
   approvalRate?: number
   epc?: number
   itpSupport?: boolean
@@ -104,9 +105,13 @@ interface UpdateAspProgramRequest {
   isActive?: boolean
   priority?: number
   recommendedAnchors?: string[]
-  landingPageUrl?: string
   notes?: string
   adCreatives?: unknown[]
+  advertiserName?: string
+  aspCategory?: string
+  confirmationPeriodDays?: number
+  partnershipStatus?: string
+  lastApprovalDate?: string | null
 }
 
 export async function PUT(
@@ -137,11 +142,56 @@ export async function PUT(
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  if (body.rewardType && !['fixed', 'percentage'].includes(body.rewardType)) {
-    return NextResponse.json(
-      { error: 'rewardType must be "fixed" or "percentage"' },
-      { status: 400 }
-    )
+  // rewardTiers バリデーション
+  if (body.rewardTiers !== undefined) {
+    if (!Array.isArray(body.rewardTiers) || body.rewardTiers.length === 0) {
+      return NextResponse.json(
+        { error: 'rewardTiers must be a non-empty array' },
+        { status: 400 }
+      )
+    }
+    for (let i = 0; i < body.rewardTiers.length; i++) {
+      const tier = body.rewardTiers[i]
+      if (!tier.condition) {
+        return NextResponse.json({ error: `rewardTiers[${i}].condition is required` }, { status: 400 })
+      }
+      if (!['fixed', 'percentage'].includes(tier.type)) {
+        return NextResponse.json({ error: `rewardTiers[${i}].type must be "fixed" or "percentage"` }, { status: 400 })
+      }
+    }
+  }
+
+  // aspName バリデーション
+  if (body.aspName !== undefined) {
+    const validAsps = ['afb', 'a8', 'accesstrade', 'valuecommerce', 'felmat', 'moshimo']
+    if (!validAsps.includes(body.aspName)) {
+      return NextResponse.json(
+        { error: `aspName must be one of: ${validAsps.join(', ')}` },
+        { status: 400 }
+      )
+    }
+  }
+
+  // category バリデーション
+  if (body.category !== undefined) {
+    const validCategories = ['aga', 'hair-removal', 'skincare', 'ed', 'column']
+    if (!validCategories.includes(body.category)) {
+      return NextResponse.json(
+        { error: `category must be one of: ${validCategories.join(', ')}` },
+        { status: 400 }
+      )
+    }
+  }
+
+  // partnershipStatus バリデーション
+  if (body.partnershipStatus !== undefined) {
+    const validStatuses = ['active', 'pending', 'ended']
+    if (!validStatuses.includes(body.partnershipStatus)) {
+      return NextResponse.json(
+        { error: `partnershipStatus must be one of: ${validStatuses.join(', ')}` },
+        { status: 400 }
+      )
+    }
   }
 
   // adCreatives バリデーション
@@ -169,11 +219,11 @@ export async function PUT(
     const existing = programs[index]
     const updated: AspProgramSeed = {
       ...existing,
+      ...(body.aspName !== undefined && { aspName: body.aspName as AspProgramSeed['aspName'] }),
+      ...(body.programId !== undefined && { programId: body.programId }),
+      ...(body.category !== undefined && { category: body.category as AspProgramSeed['category'] }),
       ...(body.programName !== undefined && { programName: body.programName }),
-      ...(body.affiliateUrl !== undefined && { affiliateUrl: body.affiliateUrl }),
-      ...(body.rewardAmount !== undefined && { rewardAmount: body.rewardAmount }),
-      ...(body.rewardType !== undefined && { rewardType: body.rewardType }),
-      ...(body.conversionCondition !== undefined && { conversionCondition: body.conversionCondition }),
+      ...(body.rewardTiers !== undefined && { rewardTiers: body.rewardTiers }),
       ...(body.approvalRate !== undefined && { approvalRate: body.approvalRate }),
       ...(body.epc !== undefined && { epc: body.epc }),
       ...(body.itpSupport !== undefined && { itpSupport: body.itpSupport }),
@@ -181,9 +231,13 @@ export async function PUT(
       ...(body.isActive !== undefined && { isActive: body.isActive }),
       ...(body.priority !== undefined && { priority: body.priority }),
       ...(body.recommendedAnchors !== undefined && { recommendedAnchors: body.recommendedAnchors }),
-      ...(body.landingPageUrl !== undefined && { landingPageUrl: body.landingPageUrl }),
       ...(body.notes !== undefined && { notes: body.notes }),
       ...(body.adCreatives !== undefined && { adCreatives: body.adCreatives as AspProgramSeed['adCreatives'] }),
+      ...(body.advertiserName !== undefined && { advertiserName: body.advertiserName }),
+      ...(body.aspCategory !== undefined && { aspCategory: body.aspCategory }),
+      ...(body.confirmationPeriodDays !== undefined && { confirmationPeriodDays: body.confirmationPeriodDays }),
+      ...(body.partnershipStatus !== undefined && { partnershipStatus: body.partnershipStatus }),
+      ...(body.lastApprovalDate !== undefined && { lastApprovalDate: body.lastApprovalDate }),
     }
     programs[index] = updated
 
@@ -198,11 +252,11 @@ export async function PUT(
       updated_at: new Date().toISOString(),
     }
 
+    if (body.aspName !== undefined) updatePayload.asp_name = body.aspName
+    if (body.programId !== undefined) updatePayload.program_id = body.programId
+    if (body.category !== undefined) updatePayload.category = body.category
     if (body.programName !== undefined) updatePayload.program_name = body.programName
-    if (body.affiliateUrl !== undefined) updatePayload.affiliate_url = body.affiliateUrl
-    if (body.rewardAmount !== undefined) updatePayload.reward_amount = body.rewardAmount
-    if (body.rewardType !== undefined) updatePayload.reward_type = body.rewardType
-    if (body.conversionCondition !== undefined) updatePayload.conversion_condition = body.conversionCondition
+    if (body.rewardTiers !== undefined) updatePayload.reward_tiers = body.rewardTiers
     if (body.approvalRate !== undefined) updatePayload.approval_rate = body.approvalRate
     if (body.epc !== undefined) updatePayload.epc = body.epc
     if (body.itpSupport !== undefined) updatePayload.itp_support = body.itpSupport
@@ -210,9 +264,13 @@ export async function PUT(
     if (body.isActive !== undefined) updatePayload.is_active = body.isActive
     if (body.priority !== undefined) updatePayload.priority = body.priority
     if (body.recommendedAnchors !== undefined) updatePayload.recommended_anchors = body.recommendedAnchors
-    if (body.landingPageUrl !== undefined) updatePayload.landing_page_url = body.landingPageUrl
     if (body.notes !== undefined) updatePayload.notes = body.notes
     if (body.adCreatives !== undefined) updatePayload.ad_creatives = body.adCreatives
+    if (body.advertiserName !== undefined) updatePayload.advertiser_name = body.advertiserName
+    if (body.aspCategory !== undefined) updatePayload.asp_category = body.aspCategory
+    if (body.confirmationPeriodDays !== undefined) updatePayload.confirmation_period_days = body.confirmationPeriodDays
+    if (body.partnershipStatus !== undefined) updatePayload.partnership_status = body.partnershipStatus
+    if (body.lastApprovalDate !== undefined) updatePayload.last_approval_date = body.lastApprovalDate || null
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any)
@@ -342,8 +400,10 @@ function validateAdCreatives(creatives: unknown[]): string | null {
     if (!['text', 'banner'].includes(c.type as string)) {
       return `adCreatives[${i}].type: must be 'text' or 'banner'`
     }
-    if (typeof c.affiliateUrl !== 'string' || !c.affiliateUrl) {
-      return `adCreatives[${i}].affiliateUrl: must be a non-empty string`
+    // rawHtml が設定されている場合、affiliateUrl は不要（rawHtml内に含まれる）
+    const hasRawHtml = typeof c.rawHtml === 'string' && c.rawHtml.length > 0
+    if (!hasRawHtml && (typeof c.affiliateUrl !== 'string' || !c.affiliateUrl)) {
+      return `adCreatives[${i}].affiliateUrl: must be a non-empty string (or provide rawHtml)`
     }
     if (typeof c.isActive !== 'boolean') {
       return `adCreatives[${i}].isActive: must be a boolean`

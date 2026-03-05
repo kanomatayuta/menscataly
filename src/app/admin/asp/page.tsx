@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { AdminHeader } from "@/components/admin/AdminHeader";
-import type { AspName, AspProgram, AdCreative, AdCreativeType, BannerSize } from "@/types/asp-config";
+import type { AspName, AspProgram, AdCreative, AdCreativeType, RewardTier } from "@/types/asp-config";
 import type { ContentCategory } from "@/types/content";
 
 // ------------------------------------------------------------------
@@ -26,8 +26,6 @@ const CATEGORY_LABELS: Record<ContentCategory, string> = {
   column: "コラム",
 };
 
-const BANNER_SIZES: BannerSize[] = ["120x60", "300x250", "468x60", "728x90", "160x600", "custom"];
-
 function createEmptyCreative(): AdCreative {
   return {
     id: `cr-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -35,13 +33,73 @@ function createEmptyCreative(): AdCreative {
     label: "",
     affiliateUrl: "",
     anchorText: "",
-    imageUrl: "",
-    bannerSize: "300x250",
-    altText: "",
+    rawHtml: "",
     isActive: true,
     useForInjection: false,
     useForBanner: false,
   };
+}
+
+/**
+ * ASP発行HTMLから情報を自動パースする
+ * - <a href="..."> から affiliateUrl を抽出
+ * - テキストリンクの場合、<a> 内テキストから anchorText を抽出
+ * - バナーの場合、img src/width/height/alt から imageUrl, bannerSize, altText を抽出
+ *   (1x1 トラッキングピクセルはスキップ)
+ */
+function parseAspHtml(html: string, type: 'text' | 'banner'): Partial<AdCreative> {
+  const updates: Partial<AdCreative> = { rawHtml: html }
+
+  // <a href="..."> から affiliateUrl を抽出
+  const hrefMatch = html.match(/<a\s[^>]*href="([^"]+)"/)
+  if (hrefMatch) {
+    updates.affiliateUrl = hrefMatch[1]
+  }
+
+  if (type === 'text') {
+    // テキストリンク: <a>タグ内のテキストを抽出
+    const anchorMatch = html.match(/<a\s[^>]*>([^<]+)<\/a>/)
+    if (anchorMatch) {
+      updates.anchorText = anchorMatch[1].trim()
+    }
+  }
+
+  if (type === 'banner') {
+    // バナー: すべての<img>タグを取得し、1x1トラッキングピクセルをスキップ
+    const imgRegex = /<img\s[^>]*>/gi
+    let imgMatch: RegExpExecArray | null
+    while ((imgMatch = imgRegex.exec(html)) !== null) {
+      const imgTag = imgMatch[0]
+      const widthMatch = imgTag.match(/width="(\d+)"/)
+      const heightMatch = imgTag.match(/height="(\d+)"/)
+      const w = widthMatch ? parseInt(widthMatch[1], 10) : 0
+      const h = heightMatch ? parseInt(heightMatch[1], 10) : 0
+
+      // 1x1 トラッキングピクセルをスキップ
+      if (w === 1 && h === 1) continue
+
+      // imageUrl を抽出
+      const srcMatch = imgTag.match(/src="([^"]+)"/)
+      if (srcMatch) {
+        (updates as Record<string, unknown>).imageUrl = srcMatch[1]
+      }
+
+      // bannerSize を抽出
+      if (w > 0 && h > 0) {
+        (updates as Record<string, unknown>).bannerSize = `${w}x${h}`
+      }
+
+      // altText を抽出
+      const altMatch = imgTag.match(/alt="([^"]*)"/)
+      if (altMatch) {
+        (updates as Record<string, unknown>).altText = altMatch[1]
+      }
+
+      break // 最初の非トラッキングピクセル画像のみ使用
+    }
+  }
+
+  return updates
 }
 
 // ------------------------------------------------------------------
@@ -53,39 +111,53 @@ interface ProgramFormData {
   programName: string;
   programId: string;
   category: string;
-  affiliateUrl: string;
-  rewardAmount: number;
-  rewardType: "fixed" | "percentage";
+  rewardTiers: RewardTier[];
   approvalRate: number;
   epc: number;
   itpSupport: boolean;
   cookieDuration: number;
   isActive: boolean;
-  landingPageUrl: string;
   priority: number;
   recommendedAnchors: string;
-  conversionCondition: string;
+  notes: string;
   adCreatives: AdCreative[];
+  advertiserName: string;
+  aspCategory: string;
+  confirmationPeriodDays: number;
+  partnershipStatus: string;
+  lastApprovalDate: string;
 }
+
+function createEmptyRewardTier(): RewardTier {
+  return { condition: "", amount: 0, type: "fixed" };
+}
+
+const PARTNERSHIP_STATUS_LABELS: Record<string, string> = {
+  active: "提携中",
+  pending: "申請中",
+  ended: "終了",
+};
 
 const EMPTY_FORM: ProgramFormData = {
   aspName: "a8",
   programName: "",
   programId: "",
   category: "aga",
-  affiliateUrl: "",
-  rewardAmount: 0,
-  rewardType: "fixed",
+  rewardTiers: [createEmptyRewardTier()],
   approvalRate: 0,
   epc: 0,
   itpSupport: false,
   cookieDuration: 30,
   isActive: true,
-  landingPageUrl: "",
   priority: 3,
   recommendedAnchors: "",
-  conversionCondition: "",
+  notes: "",
   adCreatives: [],
+  advertiserName: "",
+  aspCategory: "",
+  confirmationPeriodDays: 30,
+  partnershipStatus: "active",
+  lastApprovalDate: "",
 };
 
 // ------------------------------------------------------------------
@@ -253,90 +325,87 @@ function AdCreativesSection({
                 </div>
               </div>
 
-              {/* Affiliate URL */}
+              {/* ASP HTMLコード貼り付け */}
               <div>
-                <label className="mb-1 block text-[10px] font-medium text-neutral-500">アフィリエイトURL *</label>
-                <input
-                  type="url"
-                  value={creative.affiliateUrl}
-                  onChange={(e) => updateCreative(idx, { affiliateUrl: e.target.value })}
-                  placeholder="https://px.a8.net/..."
+                <label className="mb-1 block text-[10px] font-medium text-neutral-500">
+                  ASP発行HTMLコード
+                  <span className="ml-1 text-neutral-400">(貼り付けると自動パース)</span>
+                </label>
+                <textarea
+                  value={creative.rawHtml ?? ""}
+                  onChange={(e) => {
+                    const html = e.target.value
+                    if (html.trim()) {
+                      const parsed = parseAspHtml(html, creative.type)
+                      updateCreative(idx, { ...parsed })
+                    } else {
+                      updateCreative(idx, { rawHtml: "" })
+                    }
+                  }}
+                  placeholder={creative.type === "banner"
+                    ? '<a href="https://px.a8.net/..."><img ...></a>\n<img ... src="https://...0.gif..." alt="">'
+                    : '<a href="https://px.a8.net/...">テキスト</a>\n<img ... src="https://...0.gif..." alt="">'}
+                  rows={3}
                   className="w-full rounded border border-neutral-300 px-2 py-1.5 font-mono text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none"
                 />
+                {/* プレビュー */}
+                {creative.rawHtml && (
+                  <div className="mt-2 rounded border border-neutral-200 bg-white p-2">
+                    <p className="mb-1 text-[10px] font-medium text-neutral-400">プレビュー:</p>
+                    <div
+                      className="text-sm"
+                      dangerouslySetInnerHTML={{ __html: creative.rawHtml }}
+                    />
+                  </div>
+                )}
               </div>
 
-              {/* Text-specific fields */}
-              {creative.type === "text" && (
-                <>
-                  <div>
-                    <label className="mb-1 block text-[10px] font-medium text-neutral-500">アンカーテキスト</label>
-                    <input
-                      type="text"
-                      value={creative.anchorText ?? ""}
-                      onChange={(e) => updateCreative(idx, { anchorText: e.target.value })}
-                      placeholder="例: 公式サイトはこちら"
-                      className="w-full rounded border border-neutral-300 px-2 py-1.5 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none"
-                    />
-                  </div>
-                  <label className="flex items-center gap-2 text-xs text-neutral-600">
-                    <input
-                      type="checkbox"
-                      checked={creative.useForInjection}
-                      onChange={(e) => updateCreative(idx, { useForInjection: e.target.checked })}
-                      className="rounded border-neutral-300"
-                    />
-                    記事内テキストリンク注入に使用
-                  </label>
-                </>
-              )}
 
-              {/* Banner-specific fields */}
+              {/* パース結果の表示（rawHtml入力時） */}
+              {creative.rawHtml && creative.affiliateUrl && (() => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const c = creative as any
+                return (
+                  <div className="rounded bg-green-50 px-2 py-1.5 text-[10px] text-green-700 space-y-0.5">
+                    <div>URL抽出済み: <span className="font-mono">{creative.affiliateUrl!.slice(0, 60)}...</span></div>
+                    {creative.type === "text" && creative.anchorText && (
+                      <div>アンカー: {creative.anchorText}</div>
+                    )}
+                    {creative.type === "banner" && c.imageUrl && (
+                      <div>画像URL: <span className="font-mono">{String(c.imageUrl).slice(0, 60)}...</span></div>
+                    )}
+                    {creative.type === "banner" && c.bannerSize && (
+                      <div>サイズ: {String(c.bannerSize)}</div>
+                    )}
+                    {creative.type === "banner" && c.altText && (
+                      <div>alt: {String(c.altText)}</div>
+                    )}
+                  </div>
+                )
+              })()}
+
+              {/* 用途チェックボックス */}
+              {creative.type === "text" && (
+                <label className="flex items-center gap-2 text-xs text-neutral-600">
+                  <input
+                    type="checkbox"
+                    checked={creative.useForInjection}
+                    onChange={(e) => updateCreative(idx, { useForInjection: e.target.checked })}
+                    className="rounded border-neutral-300"
+                  />
+                  記事内テキストリンク注入に使用
+                </label>
+              )}
               {creative.type === "banner" && (
-                <>
-                  <div>
-                    <label className="mb-1 block text-[10px] font-medium text-neutral-500">バナー画像URL *</label>
-                    <input
-                      type="url"
-                      value={creative.imageUrl ?? ""}
-                      onChange={(e) => updateCreative(idx, { imageUrl: e.target.value })}
-                      placeholder="https://..."
-                      className="w-full rounded border border-neutral-300 px-2 py-1.5 font-mono text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="mb-1 block text-[10px] font-medium text-neutral-500">サイズ</label>
-                      <select
-                        value={creative.bannerSize ?? "300x250"}
-                        onChange={(e) => updateCreative(idx, { bannerSize: e.target.value as BannerSize })}
-                        className="w-full rounded border border-neutral-300 px-2 py-1.5 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none"
-                      >
-                        {BANNER_SIZES.map((size) => (
-                          <option key={size} value={size}>{size}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-[10px] font-medium text-neutral-500">alt テキスト</label>
-                      <input
-                        type="text"
-                        value={creative.altText ?? ""}
-                        onChange={(e) => updateCreative(idx, { altText: e.target.value })}
-                        placeholder="バナーの説明"
-                        className="w-full rounded border border-neutral-300 px-2 py-1.5 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                  <label className="flex items-center gap-2 text-xs text-neutral-600">
-                    <input
-                      type="checkbox"
-                      checked={creative.useForBanner}
-                      onChange={(e) => updateCreative(idx, { useForBanner: e.target.checked })}
-                      className="rounded border-neutral-300"
-                    />
-                    バナー配置に使用
-                  </label>
-                </>
+                <label className="flex items-center gap-2 text-xs text-neutral-600">
+                  <input
+                    type="checkbox"
+                    checked={creative.useForBanner}
+                    onChange={(e) => updateCreative(idx, { useForBanner: e.target.checked })}
+                    className="rounded border-neutral-300"
+                  />
+                  バナー配置に使用
+                </label>
               )}
             </div>
           ))}
@@ -394,15 +463,11 @@ function ProgramModal({
         </div>
 
         <div className="space-y-4">
-          {/* ASP */}
+          {/* === 基本情報（最小限） === */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="mb-1 block text-xs font-medium text-neutral-600">ASP *</label>
-              <select
-                value={form.aspName}
-                onChange={(e) => onChange({ aspName: e.target.value })}
-                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
-              >
+              <select value={form.aspName} onChange={(e) => onChange({ aspName: e.target.value })} className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none">
                 {(Object.keys(ASP_DISPLAY_NAMES) as AspName[]).map((asp) => (
                   <option key={asp} value={asp}>{ASP_DISPLAY_NAMES[asp]}</option>
                 ))}
@@ -410,11 +475,7 @@ function ProgramModal({
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-neutral-600">カテゴリ *</label>
-              <select
-                value={form.category}
-                onChange={(e) => onChange({ category: e.target.value })}
-                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
-              >
+              <select value={form.category} onChange={(e) => onChange({ category: e.target.value })} className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none">
                 {(Object.keys(CATEGORY_LABELS) as ContentCategory[]).map((cat) => (
                   <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>
                 ))}
@@ -422,164 +483,205 @@ function ProgramModal({
             </div>
           </div>
 
-          {/* Program name */}
-          <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-600">プログラム名 *</label>
-            <input
-              type="text"
-              value={form.programName}
-              onChange={(e) => onChange({ programName: e.target.value })}
-              placeholder="例: AGAスキンクリニック 来院募集"
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
-            />
-          </div>
-
-          {/* Program ID */}
-          <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-600">プログラムID *</label>
-            <input
-              type="text"
-              value={form.programId}
-              onChange={(e) => onChange({ programId: e.target.value })}
-              placeholder="例: 09-0717"
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
-            />
-          </div>
-
-          {/* Affiliate URL */}
-          <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-600">アフィリエイトURL *</label>
-            <input
-              type="url"
-              value={form.affiliateUrl}
-              onChange={(e) => onChange({ affiliateUrl: e.target.value })}
-              placeholder="https://px.a8.net/svt/ejp?a8mat=..."
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 font-mono text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
-            />
-          </div>
-
-          {/* Landing Page URL */}
-          <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-600">LP URL *</label>
-            <input
-              type="url"
-              value={form.landingPageUrl}
-              onChange={(e) => onChange({ landingPageUrl: e.target.value })}
-              placeholder="https://example.com/"
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
-            />
-          </div>
-
-          {/* Reward */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-1 block text-xs font-medium text-neutral-600">報酬額 (円)</label>
-              <input
-                type="number"
-                value={form.rewardAmount}
-                onChange={(e) => onChange({ rewardAmount: Number(e.target.value) })}
-                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
-              />
+              <label className="mb-1 block text-xs font-medium text-neutral-600">プログラム名 *</label>
+              <input type="text" value={form.programName} onChange={(e) => onChange({ programName: e.target.value })} placeholder="AGAスキンクリニック" className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none" />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-neutral-600">報酬タイプ</label>
-              <select
-                value={form.rewardType}
-                onChange={(e) => onChange({ rewardType: e.target.value as "fixed" | "percentage" })}
-                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+              <label className="mb-1 block text-xs font-medium text-neutral-600">プログラムID *</label>
+              <input type="text" value={form.programId} onChange={(e) => onChange({ programId: e.target.value })} placeholder="09-0717" className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none" />
+            </div>
+          </div>
+
+          {/* === 報酬テーブル === */}
+          <div className="rounded-lg border border-neutral-200 p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-neutral-600">成果条件・報酬 *</label>
+              <button
+                type="button"
+                onClick={() => onChange({ rewardTiers: [...form.rewardTiers, createEmptyRewardTier()] })}
+                className="rounded px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
               >
-                <option value="fixed">固定報酬</option>
-                <option value="percentage">成果報酬 (%)</option>
-              </select>
+                + 成果条件を追加
+              </button>
             </div>
+            {form.rewardTiers.map((tier, idx) => (
+              <div key={idx} className="grid grid-cols-[1fr_80px_90px_32px] gap-2 items-end">
+                <div>
+                  {idx === 0 && <label className="mb-1 block text-[10px] font-medium text-neutral-500">成果条件</label>}
+                  <input
+                    type="text"
+                    value={tier.condition}
+                    onChange={(e) => {
+                      const next = [...form.rewardTiers];
+                      next[idx] = { ...tier, condition: e.target.value };
+                      onChange({ rewardTiers: next });
+                    }}
+                    placeholder="初回来院完了"
+                    className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  {idx === 0 && <label className="mb-1 block text-[10px] font-medium text-neutral-500">{tier.type === "percentage" ? "率(%)" : "報酬額"}</label>}
+                  <input
+                    type="number"
+                    value={tier.amount}
+                    onChange={(e) => {
+                      const next = [...form.rewardTiers];
+                      next[idx] = { ...tier, amount: Number(e.target.value) };
+                      onChange({ rewardTiers: next });
+                    }}
+                    className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  {idx === 0 && <label className="mb-1 block text-[10px] font-medium text-neutral-500">タイプ</label>}
+                  <select
+                    value={tier.type}
+                    onChange={(e) => {
+                      const next = [...form.rewardTiers];
+                      next[idx] = { ...tier, type: e.target.value as "fixed" | "percentage" };
+                      onChange({ rewardTiers: next });
+                    }}
+                    className="w-full rounded-md border border-neutral-300 px-1 py-1.5 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none"
+                  >
+                    <option value="fixed">固定</option>
+                    <option value="percentage">%</option>
+                  </select>
+                </div>
+                <div>
+                  {form.rewardTiers.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = form.rewardTiers.filter((_, i) => i !== idx);
+                        onChange({ rewardTiers: next });
+                      }}
+                      className="rounded p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600"
+                      title="削除"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  )}
+                </div>
+                {/* 成果報酬%の場合: 商品金額から予想額計算 */}
+                {tier.type === "percentage" && (
+                  <div className="col-span-4 rounded bg-blue-50 px-2 py-1.5 flex items-center gap-2">
+                    <span className="text-[10px] text-blue-600">商品金額:</span>
+                    <input
+                      type="number"
+                      value={tier.productPrice ?? 0}
+                      onChange={(e) => {
+                        const next = [...form.rewardTiers];
+                        next[idx] = { ...tier, productPrice: Number(e.target.value) };
+                        onChange({ rewardTiers: next });
+                      }}
+                      placeholder="10000"
+                      className="w-24 rounded border border-blue-200 px-2 py-1 text-xs focus:border-blue-500 focus:outline-none"
+                    />
+                    <span className="text-[10px] text-neutral-500">× {tier.amount}% =</span>
+                    <span className="text-xs font-bold text-green-700">
+                      {Math.round((tier.productPrice ?? 0) * tier.amount / 100).toLocaleString()}円
+                    </span>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
 
-          {/* EPC / Approval */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-neutral-600">EPC (円)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={form.epc}
-                onChange={(e) => onChange({ epc: Number(e.target.value) })}
-                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-neutral-600">確定率 (%)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={form.approvalRate}
-                onChange={(e) => onChange({ approvalRate: Number(e.target.value) })}
-                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
-              />
-            </div>
-          </div>
+          {/* === 詳細設定 (折りたたみ) === */}
+          <details className="rounded-lg border border-neutral-200">
+            <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-neutral-600 hover:bg-neutral-50">
+              詳細設定
+            </summary>
+            <div className="space-y-3 border-t border-neutral-100 px-4 py-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-neutral-600">広告主名</label>
+                <input type="text" value={form.advertiserName} onChange={(e) => onChange({ advertiserName: e.target.value })} placeholder="株式会社◯◯" className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none" />
+              </div>
 
-          {/* Priority + Conversion Condition */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-neutral-600">優先度 (1=最高 〜 5=最低)</label>
-              <select
-                value={form.priority}
-                onChange={(e) => onChange({ priority: Number(e.target.value) })}
-                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
-              >
-                <option value={1}>1 — 最優先</option>
-                <option value={2}>2 — 高</option>
-                <option value={3}>3 — 標準</option>
-                <option value={4}>4 — 低</option>
-                <option value={5}>5 — 最低</option>
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-neutral-600">成果条件</label>
-              <input
-                type="text"
-                value={form.conversionCondition}
-                onChange={(e) => onChange({ conversionCondition: e.target.value })}
-                placeholder="例: 初回来院完了"
-                className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
-              />
-            </div>
-          </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-neutral-600">EPC (円)</label>
+                  <input type="number" step="0.01" value={form.epc} onChange={(e) => onChange({ epc: Number(e.target.value) })} className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-neutral-600">確定率 (%)</label>
+                  <input type="number" step="0.01" value={form.approvalRate} onChange={(e) => onChange({ approvalRate: Number(e.target.value) })} className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-neutral-600">優先度</label>
+                  <select value={form.priority} onChange={(e) => onChange({ priority: Number(e.target.value) })} className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none">
+                    <option value={1}>1 最優先</option>
+                    <option value={2}>2 高</option>
+                    <option value={3}>3 標準</option>
+                    <option value={4}>4 低</option>
+                    <option value={5}>5 最低</option>
+                  </select>
+                </div>
+              </div>
 
-          {/* Recommended Anchors */}
-          <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-600">推奨アンカーテキスト (カンマ区切り)</label>
-            <input
-              type="text"
-              value={form.recommendedAnchors}
-              onChange={(e) => onChange({ recommendedAnchors: e.target.value })}
-              placeholder="例: 公式サイト, 詳細を見る, 無料カウンセリング"
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
-            />
-            <p className="mt-1 text-xs text-neutral-400">記事内でアフィリエイトリンクを挿入する際に使用されるテキスト</p>
-          </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-neutral-600">ASPカテゴリ</label>
+                  <input type="text" value={form.aspCategory} onChange={(e) => onChange({ aspCategory: e.target.value })} placeholder="ボディケア" className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-neutral-600">提携状況</label>
+                  <select value={form.partnershipStatus} onChange={(e) => onChange({ partnershipStatus: e.target.value })} className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none">
+                    <option value="active">提携中</option>
+                    <option value="pending">申請中</option>
+                    <option value="ended">終了</option>
+                  </select>
+                </div>
+              </div>
 
-          {/* Toggles */}
-          <div className="flex items-center gap-6">
-            <label className="flex items-center gap-2 text-sm text-neutral-700">
-              <input
-                type="checkbox"
-                checked={form.itpSupport}
-                onChange={(e) => onChange({ itpSupport: e.target.checked })}
-                className="rounded border-neutral-300"
-              />
-              ITP対応
-            </label>
-            <label className="flex items-center gap-2 text-sm text-neutral-700">
-              <input
-                type="checkbox"
-                checked={form.isActive}
-                onChange={(e) => onChange({ isActive: e.target.checked })}
-                className="rounded border-neutral-300"
-              />
-              有効
-            </label>
-          </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-neutral-600">確定目安</label>
+                  <div className="flex items-center gap-1">
+                    <input type="number" value={form.confirmationPeriodDays} onChange={(e) => onChange({ confirmationPeriodDays: Number(e.target.value) })} min={0} className="w-16 rounded-md border border-neutral-300 px-2 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none" />
+                    <span className="text-xs text-neutral-500">日</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-neutral-600">Cookie</label>
+                  <div className="flex items-center gap-1">
+                    <input type="number" value={form.cookieDuration} onChange={(e) => onChange({ cookieDuration: Number(e.target.value) })} className="w-16 rounded-md border border-neutral-300 px-2 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none" />
+                    <span className="text-xs text-neutral-500">日</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-neutral-600">推奨アンカー (カンマ区切り)</label>
+                <input type="text" value={form.recommendedAnchors} onChange={(e) => onChange({ recommendedAnchors: e.target.value })} placeholder="公式サイト, 詳細を見る" className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none" />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-neutral-600">メモ</label>
+                <textarea value={form.notes} onChange={(e) => onChange({ notes: e.target.value })} placeholder="プログラムに関するメモ" rows={2} className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-neutral-600">最終承認日</label>
+                  <input type="date" value={form.lastApprovalDate} onChange={(e) => onChange({ lastApprovalDate: e.target.value })} className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none" />
+                </div>
+                <div className="flex items-center gap-4 pt-5">
+                  <label className="flex items-center gap-1.5 text-sm text-neutral-700">
+                    <input type="checkbox" checked={form.itpSupport} onChange={(e) => onChange({ itpSupport: e.target.checked })} className="rounded border-neutral-300" />
+                    ITP対応
+                  </label>
+                  <label className="flex items-center gap-1.5 text-sm text-neutral-700">
+                    <input type="checkbox" checked={form.isActive} onChange={(e) => onChange({ isActive: e.target.checked })} className="rounded border-neutral-300" />
+                    有効
+                  </label>
+                </div>
+              </div>
+            </div>
+          </details>
 
           {/* Ad Creatives Section */}
           <AdCreativesSection
@@ -600,7 +702,7 @@ function ProgramModal({
           <button
             type="button"
             onClick={onSave}
-            disabled={isSaving || !form.programName || !form.affiliateUrl || !form.landingPageUrl}
+            disabled={isSaving || !form.programName}
             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {isSaving ? "保存中..." : "保存"}
@@ -675,19 +777,21 @@ export default function AdminAspPage() {
       programName: program.programName,
       programId: program.programId ?? "",
       category: program.category,
-      affiliateUrl: program.affiliateUrl,
-      rewardAmount: program.rewardAmount,
-      rewardType: program.rewardType ?? "fixed",
+      rewardTiers: program.rewardTiers.length > 0 ? program.rewardTiers : [createEmptyRewardTier()],
       approvalRate: program.approvalRate ?? 0,
       epc: program.epc ?? 0,
       itpSupport: program.itpSupport,
       cookieDuration: program.cookieDuration ?? 30,
       isActive: program.isActive,
-      landingPageUrl: program.landingPageUrl ?? "",
       priority: program.priority ?? 3,
       recommendedAnchors: (program.recommendedAnchors ?? []).join(", "),
-      conversionCondition: program.conversionCondition ?? "",
+      notes: program.notes ?? "",
       adCreatives: program.adCreatives ?? [],
+      advertiserName: program.advertiserName ?? "",
+      aspCategory: program.aspCategory ?? "",
+      confirmationPeriodDays: program.confirmationPeriodDays ?? 30,
+      partnershipStatus: program.partnershipStatus ?? "active",
+      lastApprovalDate: program.lastApprovalDate ?? "",
     });
     setModalTitle("プログラム編集");
     setModalOpen(true);
@@ -925,8 +1029,10 @@ export default function AdminAspPage() {
           <thead>
             <tr className="border-b border-neutral-200 bg-neutral-50">
               <th className="px-4 py-3 font-medium text-neutral-600">プログラム名</th>
+              <th className="px-4 py-3 font-medium text-neutral-600">広告主</th>
               <th className="px-4 py-3 font-medium text-neutral-600">ASP</th>
               <th className="px-4 py-3 font-medium text-neutral-600">カテゴリ</th>
+              <th className="px-4 py-3 font-medium text-neutral-600">提携</th>
               <th className="px-4 py-3 font-medium text-neutral-600">優先度</th>
               <th className="px-4 py-3 font-medium text-neutral-600">報酬</th>
               <th className="px-4 py-3 font-medium text-neutral-600">成果条件</th>
@@ -959,12 +1065,21 @@ export default function AdminAspPage() {
                         </span>
                       )}
                     </div>
-                    <p className="mt-0.5 truncate font-mono text-xs text-neutral-400">{program.affiliateUrl.slice(0, 40)}...</p>
+                    <p className="mt-0.5 truncate text-xs text-neutral-400">{program.advertiserName || program.programId}</p>
                   </td>
+                  <td className="max-w-[120px] truncate px-4 py-3 text-xs text-neutral-500">{program.advertiserName || "-"}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${aspColor}`}>{ASP_DISPLAY_NAMES[program.aspName]}</span>
                   </td>
                   <td className="px-4 py-3 text-neutral-600">{CATEGORY_LABELS[program.category]}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                      program.partnershipStatus === "active" ? "bg-green-100 text-green-700" :
+                      program.partnershipStatus === "pending" ? "bg-yellow-100 text-yellow-700" :
+                      program.partnershipStatus === "ended" ? "bg-neutral-100 text-neutral-500" :
+                      "bg-neutral-100 text-neutral-500"
+                    }`}>{PARTNERSHIP_STATUS_LABELS[program.partnershipStatus ?? "active"] ?? program.partnershipStatus}</span>
+                  </td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-bold ${
                       (program.priority ?? 3) <= 1 ? "bg-red-100 text-red-700" :
@@ -973,8 +1088,16 @@ export default function AdminAspPage() {
                       "bg-neutral-50 text-neutral-400"
                     }`}>{program.priority ?? 3}</span>
                   </td>
-                  <td className="px-4 py-3 font-medium text-neutral-900">{program.rewardAmount.toLocaleString()}円</td>
-                  <td className="max-w-[120px] truncate px-4 py-3 text-xs text-neutral-500">{program.conversionCondition || "-"}</td>
+                  <td className="px-4 py-3 font-medium text-neutral-900">
+                    {(() => {
+                      const tiers = program.rewardTiers ?? [];
+                      if (tiers.length === 0) return "-";
+                      const maxTier = tiers.reduce((max, t) => (t.amount > max.amount ? t : max), tiers[0]);
+                      const display = maxTier.type === "percentage" ? `${maxTier.amount}%` : `${maxTier.amount.toLocaleString()}円`;
+                      return tiers.length > 1 ? <>{display} <span className="text-xs text-neutral-400">+他{tiers.length - 1}件</span></> : display;
+                    })()}
+                  </td>
+                  <td className="max-w-[120px] truncate px-4 py-3 text-xs text-neutral-500">{program.rewardTiers?.[0]?.condition || "-"}</td>
                   <td className="px-4 py-3">
                     {program.approvalRate != null ? (
                       <span className={`text-sm font-medium ${program.approvalRate >= 80 ? "text-green-700" : program.approvalRate >= 60 ? "text-yellow-700" : "text-red-700"}`}>{program.approvalRate}%</span>
@@ -1024,7 +1147,10 @@ export default function AdminAspPage() {
           {(Object.keys(CATEGORY_LABELS) as ContentCategory[]).map((category) => {
               const categoryPrograms = programs.filter((p) => p.category === category && p.isActive);
               const avgApproval = categoryPrograms.length > 0 ? Math.round(categoryPrograms.reduce((sum, p) => sum + (p.approvalRate ?? 0), 0) / categoryPrograms.length) : 0;
-              const totalReward = categoryPrograms.reduce((sum, p) => sum + p.rewardAmount, 0);
+              const totalReward = categoryPrograms.reduce((sum, p) => {
+                const maxFixed = (p.rewardTiers ?? []).filter((t) => t.type === "fixed").reduce((max, t) => Math.max(max, t.amount), 0);
+                return sum + maxFixed;
+              }, 0);
               const sorted = [...categoryPrograms].sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99));
 
               return (
@@ -1088,7 +1214,14 @@ export default function AdminAspPage() {
 
                           {/* Reward + priority selector */}
                           <div className="flex shrink-0 items-center gap-3">
-                            <span className="text-sm font-semibold text-neutral-800">{p.rewardAmount.toLocaleString()}円</span>
+                            <span className="text-sm font-semibold text-neutral-800">
+                              {(() => {
+                                const tiers = p.rewardTiers ?? [];
+                                if (tiers.length === 0) return "-";
+                                const maxTier = tiers.reduce((max, t) => (t.amount > max.amount ? t : max), tiers[0]);
+                                return maxTier.type === "percentage" ? `${maxTier.amount}%` : `${maxTier.amount.toLocaleString()}円`;
+                              })()}
+                            </span>
                             <select
                               value={p.priority ?? 3}
                               onChange={async (e) => {

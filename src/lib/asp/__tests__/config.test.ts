@@ -98,9 +98,13 @@ describe('ASP設定モジュール', () => {
         expect(program.programName).toBeDefined()
         expect(program.programId).toBeDefined()
         expect(program.category).toBeDefined()
-        expect(program.affiliateUrl).toBeDefined()
-        expect(typeof program.rewardAmount).toBe('number')
-        expect(['fixed', 'percentage']).toContain(program.rewardType)
+        expect(Array.isArray(program.rewardTiers)).toBe(true)
+        expect(program.rewardTiers.length).toBeGreaterThan(0)
+        program.rewardTiers.forEach(tier => {
+          expect(typeof tier.condition).toBe('string')
+          expect(typeof tier.amount).toBe('number')
+          expect(['fixed', 'percentage']).toContain(tier.type)
+        })
         expect(typeof program.approvalRate).toBe('number')
         expect(program.approvalRate).toBeGreaterThanOrEqual(0)
         expect(program.approvalRate).toBeLessThanOrEqual(100)
@@ -109,21 +113,15 @@ describe('ASP設定モジュール', () => {
         expect(typeof program.cookieDuration).toBe('number')
         expect(typeof program.isActive).toBe('boolean')
         expect(Array.isArray(program.recommendedAnchors)).toBe(true)
-        expect(program.landingPageUrl).toBeDefined()
       })
     })
 
-    it('affiliateUrl がURL形式であること', () => {
+    it('rewardTiers の各 amount が正の値であること', () => {
       const programs = getPrograms()
       programs.forEach(program => {
-        expect(program.affiliateUrl).toMatch(/^https?:\/\//)
-      })
-    })
-
-    it('rewardAmount が正の値であること', () => {
-      const programs = getPrograms()
-      programs.forEach(program => {
-        expect(program.rewardAmount).toBeGreaterThan(0)
+        program.rewardTiers.forEach(tier => {
+          expect(tier.amount).toBeGreaterThan(0)
+        })
       })
     })
   })

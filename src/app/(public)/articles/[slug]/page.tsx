@@ -17,6 +17,8 @@ import type { ArticleCategory } from "@/components/ui/Badge";
 import { ArticleBody } from "@/components/article/ArticleBody";
 import { TableOfContents } from "@/components/article/TableOfContents";
 import { RelatedArticles } from "@/components/article/RelatedArticles";
+import { enrichContentWithAffiliateLinks } from "@/lib/asp/enrich-content";
+import type { ContentCategory } from "@/types/content";
 
 /** thumbnail_url (Cloudinary) → thumbnail (microCMS画像) → null のフォールバック */
 function getImageUrl(article: MicroCMSArticle): string | null {
@@ -160,6 +162,15 @@ async function ArticleContent({
 
   const category = (article.category?.slug ?? "aga") as ArticleCategory;
 
+  // ASPアフィリエイトリンクを動的注入（最新のSupabaseデータを使用）
+  const validCategories: ContentCategory[] = ['aga', 'hair-removal', 'skincare', 'ed', 'column']
+  const contentCategory = validCategories.includes(category as ContentCategory)
+    ? (category as ContentCategory)
+    : null
+  const enrichedContent = contentCategory
+    ? await enrichContentWithAffiliateLinks(article.content, contentCategory)
+    : article.content
+
   return (
     <>
       {/* 構造化データ (JSON-LD) — MedicalWebPage/Article + BreadcrumbList + FAQPage */}
@@ -275,9 +286,9 @@ async function ArticleContent({
       {/* 目次 (TOC) — クライアントサイドでDOMから見出しを読み取りスクロール処理 */}
       <TableOfContents />
 
-      {/* 記事本文 */}
+      {/* 記事本文 (ASPリンク動的注入済み) */}
       <article>
-        <ArticleBody content={article.content} className="max-w-none" />
+        <ArticleBody content={enrichedContent} className="max-w-none" />
       </article>
 
       {/* タグ */}

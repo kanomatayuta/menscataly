@@ -100,9 +100,20 @@ describe('ASPセレクタモジュール（実装テスト）', () => {
         createMockAspProgram({
           programName: 'テストプログラム',
           aspName: 'a8',
-          affiliateUrl: 'https://px.a8.net/test',
-          rewardAmount: 12000,
+          rewardTiers: [{ condition: '初回購入', amount: 12000, type: 'fixed' }],
           recommendedAnchors: ['おすすめリンク'],
+          adCreatives: [
+            {
+              id: 'cr-1',
+              type: 'text',
+              label: 'テキスト',
+              affiliateUrl: 'https://px.a8.net/test',
+              anchorText: 'おすすめリンク',
+              isActive: true,
+              useForInjection: true,
+              useForBanner: false,
+            },
+          ],
         }),
       ]
 

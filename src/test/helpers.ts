@@ -142,16 +142,13 @@ export function createMockAspProgram(overrides?: Partial<AspProgram>): AspProgra
     programName: 'AGAクリニック テスト',
     programId: 'afb-aga-001',
     category: 'aga',
-    affiliateUrl: 'https://t.afb.ne.jp/test',
-    rewardAmount: 15000,
-    rewardType: 'fixed',
+    rewardTiers: [{ condition: '初回来院完了', amount: 15000, type: 'fixed' }],
     approvalRate: 45,
     epc: 120,
     itpSupport: true,
     cookieDuration: 30,
     isActive: true,
     recommendedAnchors: ['AGAクリニックの詳細を見る'],
-    landingPageUrl: 'https://example.com/aga',
     ...overrides,
   }
 }

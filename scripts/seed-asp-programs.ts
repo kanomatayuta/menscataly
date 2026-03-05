@@ -39,16 +39,13 @@ async function main() {
       program_name: program.programName,
       program_id: program.programId,
       category: program.category,
-      affiliate_url: program.affiliateUrl,
-      reward_amount: program.rewardAmount,
-      reward_type: program.rewardType,
+      reward_tiers: program.rewardTiers,
       approval_rate: program.approvalRate,
       epc: program.epc,
       itp_support: program.itpSupport,
       cookie_duration: program.cookieDuration,
       is_active: program.isActive,
       recommended_anchors: program.recommendedAnchors,
-      landing_page_url: program.landingPageUrl,
     }
 
     const { error } = await supabase
