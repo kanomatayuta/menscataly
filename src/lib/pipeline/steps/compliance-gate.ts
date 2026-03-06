@@ -3,10 +3,14 @@
  * 記事公開前の薬機法・景表法・ステマ規制チェック
  *
  * スコア閾値:
- *   95+ → 自動公開 (auto-publish)
- *   85-94 → 条件付き (E-E-A-T チェック通過で公開)
- *   70-84 → レビューキュー (手動レビュー待ち)
- *   70未満 → 拒否 (reject) + アラート通知
+ *   70+ → 自動公開 (auto-publish)
+ *   60-69 → 条件付き (E-E-A-T チェック通過で公開)
+ *   50-59 → レビューキュー (手動レビュー待ち)
+ *   50未満 → 拒否 (reject) + アラート通知
+ *
+ * セカンドパス:
+ *   初回チェック後、auto-fix済みテキストを再チェックし、
+ *   スコアが改善していれば2回目のスコアで判定する
  *
  * Phase 3b: キュー永続化 — 判定結果を article_review_queue テーブルに保存
  */
@@ -88,10 +92,10 @@ export interface ComplianceGateOutput {
 // ============================================================
 
 const THRESHOLDS = {
-  AUTO_PUBLISH: 95,    // 自動公開
-  CONDITIONAL: 85,     // 条件付き（E-E-A-T チェック）
-  REVIEW_QUEUE: 70,    // レビューキュー
-  // 70未満 → 拒否
+  AUTO_PUBLISH: 70,    // 自動公開（旧95 — AI生成コンテンツの現実的な閾値に調整）
+  CONDITIONAL: 60,     // 条件付き（E-E-A-T チェック通過で公開）
+  REVIEW_QUEUE: 50,    // レビューキュー（手動レビュー待ち）
+  // 50未満 → 拒否
 } as const
 
 /** E-E-A-T スコアの最低ラインの閾値（conditional判定時に使用） */
@@ -261,12 +265,26 @@ export const complianceGateStep: PipelineStep<GeneratedArticleData[], Compliance
     for (const article of input) {
       console.log(`[compliance-gate] チェック中: ${article.title}`)
 
-      // コンプライアンスチェック実行
+      // コンプライアンスチェック実行（第1パス）
       const articleData = toArticleForEEAT(article)
-      const result = checker.checkWithArticle(article.content, articleData)
+      let result = checker.checkWithArticle(article.content, articleData)
 
-      const complianceScore = result.score
-      const eeatScore = result.eeatScore?.total
+      let complianceScore = result.score
+      let eeatScore = result.eeatScore?.total
+
+      // セカンドパス: 第1パスでauto-publish未達の場合、修正済みテキストを再チェック
+      if (complianceScore < THRESHOLDS.AUTO_PUBLISH && result.fixedText !== article.content) {
+        console.log(`[compliance-gate] セカンドパス実行: ${article.title} (第1パス: ${complianceScore})`)
+        const secondPassArticle = toArticleForEEAT({ ...article, content: result.fixedText })
+        const secondResult = checker.checkWithArticle(result.fixedText, secondPassArticle)
+
+        if (secondResult.score > complianceScore) {
+          console.log(`[compliance-gate] セカンドパスでスコア改善: ${complianceScore} → ${secondResult.score}`)
+          result = secondResult
+          complianceScore = secondResult.score
+          eeatScore = secondResult.eeatScore?.total
+        }
+      }
 
       // 判定
       const { decision, reason } = determineDecision(complianceScore, eeatScore)

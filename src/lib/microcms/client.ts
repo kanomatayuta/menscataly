@@ -12,6 +12,18 @@ import {
 } from 'microcms-js-sdk'
 import { connection } from 'next/server'
 import type { MicroCMSArticle, MicroCMSCategory, MicroCMSTag, MicroCMSArticleQueries } from '@/types/microcms'
+
+/**
+ * Next.js リクエストスコープ外（パイプラインスクリプト等）では connection() が
+ * 例外を投げるため、安全にスキップするヘルパー
+ */
+async function ensureConnection() {
+  try {
+    await ensureConnection()
+  } catch {
+    // Running outside Next.js request scope (e.g., pipeline script)
+  }
+}
 import {
   MOCK_ARTICLES,
   getArticlesByCategory as getMockArticlesByCategory,
@@ -171,7 +183,7 @@ export async function getArticles(
   }
 
   // microCMS SDK は内部で new Date() を使用するため、PPR では connection() で動的宣言が必要
-  await connection()
+  await ensureConnection()
   const client = getMicroCMSClient()
 
   // category クエリを microCMS filters 形式に変換
@@ -232,7 +244,7 @@ export async function getArticleBySlug(slug: string, draftKey?: string): Promise
     return mock ? mockToMicroCMSArticle(mock) : null
   }
 
-  await connection()
+  await ensureConnection()
   const client = getMicroCMSClient()
 
   const queries: MicroCMSQueries = {
@@ -266,7 +278,7 @@ export async function getArticleById(
   id: string,
   draftKey?: string
 ): Promise<MicroCMSArticle> {
-  await connection()
+  await ensureConnection()
   const client = getMicroCMSClient()
 
   const article = await client.getListDetail<MicroCMSArticle>({
@@ -322,7 +334,7 @@ export async function getCategories(
     ]
     return { contents: fallback, totalCount: fallback.length, offset: 0, limit: 100 }
   }
-  await connection()
+  await ensureConnection()
   const client = getMicroCMSClient()
   const queries: MicroCMSQueries = { limit: 100, orders: 'display_order', ...params }
   return await client.getList<MicroCMSCategory>({ endpoint: ENDPOINTS.categories, queries })
@@ -333,7 +345,7 @@ export async function getCategoryBySlug(slug: string): Promise<MicroCMSCategory 
     const categories = await getCategories()
     return categories.contents.find((c) => c.slug === slug) ?? null
   }
-  await connection()
+  await ensureConnection()
   const client = getMicroCMSClient()
   const response = await client.getList<MicroCMSCategory>({
     endpoint: ENDPOINTS.categories,
@@ -352,7 +364,7 @@ export async function getTags(
   if (!isMicroCMSConfigured()) {
     return { contents: [], totalCount: 0, offset: 0, limit: 100 }
   }
-  await connection()
+  await ensureConnection()
   const client = getMicroCMSClient()
   const queries: MicroCMSQueries = { limit: 100, ...params }
   return await client.getList<MicroCMSTag>({ endpoint: ENDPOINTS.tags, queries })

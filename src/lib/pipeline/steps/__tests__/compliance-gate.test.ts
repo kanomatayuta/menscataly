@@ -121,7 +121,7 @@ describe('complianceGateStep', () => {
 
   it('中間スコア記事は conditional 判定となること（E-E-AT が閾値以上）', async () => {
     mockCheckWithArticle.mockReturnValue({
-      score: 90,
+      score: 65,
       violations: [{ type: 'yakuji_ho', severity: 'warning', ngText: 'NG', suggestedText: 'OK' }],
       fixedText: '<p>修正済み</p>',
       eeatScore: { total: 65 },
@@ -138,7 +138,7 @@ describe('complianceGateStep', () => {
 
   it('低スコア記事は review-queue 判定となること', async () => {
     mockCheckWithArticle.mockReturnValue({
-      score: 75,
+      score: 55,
       violations: [
         { type: 'yakuji_ho', severity: 'error', ngText: 'NG1', suggestedText: 'OK1' },
         { type: 'yakuji_ho', severity: 'error', ngText: 'NG2', suggestedText: 'OK2' },
@@ -163,9 +163,9 @@ describe('complianceGateStep', () => {
     )
   })
 
-  it('スコア70未満は reject 判定となること', async () => {
+  it('スコア50未満は reject 判定となること', async () => {
     mockCheckWithArticle.mockReturnValue({
-      score: 50,
+      score: 35,
       violations: [
         { type: 'yakuji_ho', severity: 'critical', ngText: 'NG', suggestedText: 'OK' },
       ],

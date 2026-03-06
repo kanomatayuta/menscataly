@@ -14,6 +14,7 @@ import type {
   StepLog,
   StepStatus,
 } from './types'
+import type { SlackBlock } from '@/lib/notification/slack'
 
 // ============================================================
 // デフォルト設定
@@ -112,6 +113,15 @@ export class PipelineExecutor {
     // Supabaseへの記録
     if (this.config.enableSupabaseLogging && !this.config.dryRun) {
       await this.recordToSupabase(result)
+    }
+
+    // Slack完了通知（dryRun時はスキップ）
+    if (!this.config.dryRun) {
+      try {
+        await this.sendCompletionNotification(result)
+      } catch (err) {
+        console.error('[Pipeline] Failed to send completion notification:', err)
+      }
     }
 
     console.log(`[Pipeline] Run ${runId} completed: ${finalStatus} (${durationMs}ms)`)
@@ -236,6 +246,74 @@ export class PipelineExecutor {
     } catch (err) {
       // Supabase記録失敗はパイプライン全体を止めない
       console.error('[Pipeline] Supabase recording error:', err)
+    }
+  }
+
+  /**
+   * パイプライン完了時のSlack通知を送信する
+   * 成功/失敗に関わらずサマリーを通知する
+   */
+  private async sendCompletionNotification(result: PipelineResult): Promise<void> {
+    try {
+      const { SlackNotifier } = await import('@/lib/notification/slack')
+      const notifier = new SlackNotifier()
+
+      const isSuccess = result.status === 'success'
+      const emoji = isSuccess ? ':white_check_mark:' : ':x:'
+      const statusLabel = isSuccess ? '成功' : '失敗'
+      const durationSec = (result.durationMs / 1000).toFixed(1)
+
+      const stepSummary = result.stepLogs
+        .map((log) => {
+          const icon = log.status === 'success' ? ':white_check_mark:' : ':x:'
+          const duration = log.durationMs != null ? `${(log.durationMs / 1000).toFixed(1)}s` : '-'
+          return `${icon} ${log.stepName} (${duration})`
+        })
+        .join('\n')
+
+      const blocks: SlackBlock[] = [
+        {
+          type: 'header',
+          text: {
+            type: 'plain_text',
+            text: `${emoji} パイプライン${statusLabel}: ${result.type}`,
+            emoji: true,
+          },
+        },
+        {
+          type: 'section',
+          fields: [
+            { type: 'mrkdwn', text: `*タイプ:*\n${result.type}` },
+            { type: 'mrkdwn', text: `*ステータス:*\n${statusLabel}` },
+            { type: 'mrkdwn', text: `*実行時間:*\n${durationSec}秒` },
+            { type: 'mrkdwn', text: `*ステップ:*\n${result.metadata.completedSteps}/${result.metadata.totalSteps} 完了` },
+          ],
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `*ステップ詳細:*\n${stepSummary}`,
+          },
+        },
+      ]
+
+      // 失敗時はエラー情報を追加
+      if (result.error) {
+        blocks.push({
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `*エラー:*\n\`\`\`${result.error}\`\`\``,
+          },
+        })
+      }
+
+      const fallbackText = `[Pipeline] ${result.type} ${statusLabel} — ${result.metadata.completedSteps}/${result.metadata.totalSteps} steps (${durationSec}s)`
+
+      await notifier.sendMessage('#pipeline', fallbackText, blocks)
+    } catch (err) {
+      console.error('[Pipeline] Completion notification error:', err)
     }
   }
 
