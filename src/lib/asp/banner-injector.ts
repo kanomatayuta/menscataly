@@ -494,7 +494,7 @@ function selectSlots(
 
     // 既に選択済みのスロットとの間隔をチェック
     const tooClose = selected.some(s => {
-      const distance = Math.abs(slot.index - s.index)
+      const _distance = Math.abs(slot.index - s.index)
       const paragraphsBetween = countParagraphsBetween(
         content,
         Math.min(slot.index, s.index),

@@ -151,7 +151,7 @@ async function fetchTodayActivity(): Promise<TodayActivity> {
 // Data fetching: Active alerts
 // ------------------------------------------------------------------
 
-async function fetchActiveAlerts(): Promise<MonitoringAlert[]> {
+async function _fetchActiveAlerts(): Promise<MonitoringAlert[]> {
   try {
     await connection();
   } catch {

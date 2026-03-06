@@ -331,7 +331,7 @@ export class ArticleRewriter {
     // 3. レスポンスをパース
     // ----------------------------------------------------------------
     const parsed = parseRewriteResponse(aiResponse.content, article, now)
-    let rewrittenArticle = this.mergeArticle(article, parsed.article, now)
+    const rewrittenArticle = this.mergeArticle(article, parsed.article, now)
 
     // ----------------------------------------------------------------
     // 4. 薬機法チェッカーで自動チェック
