@@ -983,6 +983,114 @@ body {
 }
 
 /* ============================================================
+   記事ヒーロー (サムネイル + メタ情報 横並び)
+   ============================================================ */
+
+.article-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.article-hero-image {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.article-hero-image img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.article-hero-meta {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  flex: 1;
+}
+
+@media (min-width: 768px) {
+  .article-hero {
+    flex-direction: row;
+    gap: 1.5rem;
+    align-items: stretch;
+  }
+
+  .article-hero-image {
+    width: 50%;
+    max-width: 500px;
+  }
+}
+
+/* ============================================================
+   SNSシェアボタン
+   ============================================================ */
+
+.share-buttons {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.share-buttons-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--color-neutral-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.share-buttons-list {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+}
+
+.share-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--color-neutral-200);
+  background: transparent;
+  color: var(--color-neutral-500);
+  cursor: pointer;
+  transition: color 200ms ease-out, border-color 200ms ease-out, background-color 200ms ease-out, transform 150ms ease-out;
+  text-decoration: none;
+}
+
+.share-button:hover {
+  color: var(--share-color, var(--color-neutral-700));
+  border-color: var(--share-color, var(--color-neutral-400));
+  background-color: color-mix(in srgb, var(--share-color, var(--color-neutral-200)) 8%, transparent);
+  transform: translateY(-1px);
+}
+
+.share-button:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+.share-button:active {
+  transform: translateY(0);
+}
+
+@media (min-width: 768px) {
+  .share-button {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+/* ============================================================
    目次 (TOC)
    ============================================================ */
 
@@ -1078,6 +1186,596 @@ body {
 }
 
 /* ============================================================
+   21. 3カラムレイアウト (左TOC / メイン / 右広告)
+   ============================================================ */
+
+/* 記事ページ 3カラムグリッド */
+.article-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+
+@media (min-width: 1024px) {
+  .article-layout {
+    grid-template-columns: 260px 1fr 200px;
+    gap: 1.75rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .article-layout {
+    grid-template-columns: 300px 1fr 220px;
+    gap: 2rem;
+  }
+}
+
+@media (min-width: 1536px) {
+  .article-layout {
+    grid-template-columns: 320px 1fr 240px;
+    gap: 2.5rem;
+  }
+}
+
+/* --- 左サイドバー (目次 + 監修者) --- */
+.left-sidebar {
+  width: 100%;
+}
+
+.left-sidebar-sticky {
+  position: sticky;
+  top: 5rem;
+  max-height: calc(100vh - 6rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  padding-bottom: 2rem;
+}
+
+.left-sidebar-sticky::-webkit-scrollbar {
+  width: 3px;
+}
+
+.left-sidebar-sticky::-webkit-scrollbar-thumb {
+  background: var(--color-neutral-300);
+  border-radius: 2px;
+}
+
+/* --- 右サイドバー (広告専用) --- */
+.ad-sidebar {
+  width: 100%;
+}
+
+.ad-sidebar-sticky {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-bottom: 2rem;
+}
+
+.ad-sidebar-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  overflow: hidden;
+  contain: layout;
+}
+
+.ad-sidebar-slot img,
+.ad-sidebar-slot iframe {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  border: none;
+}
+
+.ad-sidebar-slot a::after {
+  content: none !important;
+}
+
+.sidebar-sticky {
+  position: sticky;
+  top: 5rem;
+  max-height: calc(100vh - 6rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  padding-bottom: 2rem;
+}
+
+.sidebar-sticky::-webkit-scrollbar {
+  width: 3px;
+}
+
+.sidebar-sticky::-webkit-scrollbar-thumb {
+  background: var(--color-neutral-300);
+  border-radius: 2px;
+}
+
+/* --- サイドバーTOC (stoc) --- */
+.stoc {
+  padding: 0.75rem;
+  border: 1px solid var(--color-neutral-200);
+  border-radius: 10px;
+  background: var(--color-background);
+}
+
+/* ヘッダー */
+.stoc-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-neutral-150, var(--color-neutral-200));
+}
+
+.stoc-icon {
+  display: flex;
+  color: var(--color-primary-500);
+}
+
+.stoc-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-neutral-800);
+  letter-spacing: 0.02em;
+}
+
+/* リスト */
+.stoc-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* h2アイテム */
+.stoc-item {
+  position: relative;
+  margin-bottom: 1px;
+}
+
+.stoc-item + .stoc-item {
+  border-top: 1px solid var(--color-neutral-100);
+}
+
+/* h2 行 */
+.stoc-h2 {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  padding: 0.4rem 0.25rem;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.stoc-item.active > .stoc-h2 {
+  background: var(--color-primary-50);
+}
+
+/* 番号 */
+.stoc-num {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  margin-top: 0.05rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--color-primary-500);
+  background: var(--color-primary-50);
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.stoc-item.active .stoc-num {
+  color: #fff;
+  background: var(--color-primary-500);
+}
+
+/* h2 リンク */
+.stoc-link {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--color-neutral-700);
+  text-decoration: none;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  transition: color 0.15s ease;
+}
+
+.stoc-link:hover {
+  color: var(--color-primary-500);
+}
+
+.stoc-link.active {
+  color: var(--color-primary-600);
+  font-weight: 600;
+}
+
+/* シェブロン (トグル) */
+.stoc-chevron {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.05rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-neutral-400);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.stoc-chevron:hover {
+  color: var(--color-primary-500);
+  background: var(--color-neutral-100);
+}
+
+.stoc-chevron svg {
+  transition: transform 0.2s ease;
+  transform: rotate(-90deg);
+}
+
+.stoc-chevron.open svg {
+  transform: rotate(0deg);
+}
+
+/* サブリスト (h3/h4/h5 アコーディオン) */
+.stoc-sub {
+  margin: 0;
+  padding: 0 0 0 1.55rem;
+  list-style: none;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.25s ease, opacity 0.2s ease, padding 0.2s ease;
+}
+
+.stoc-sub.open {
+  max-height: 600px;
+  opacity: 1;
+  padding-bottom: 0.3rem;
+}
+
+/* サブアイテム共通 */
+.stoc-sub-item {
+  position: relative;
+  padding-left: 0.6rem;
+}
+
+.stoc-sub-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55rem;
+  width: 4px;
+  height: 1px;
+  background: var(--color-neutral-300);
+}
+
+.stoc-sub-item a {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  overflow: hidden;
+  padding: 0.2rem 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--color-neutral-500);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.stoc-sub-item a:hover {
+  color: var(--color-primary-500);
+}
+
+.stoc-sub-item.active a {
+  color: var(--color-primary-600);
+  font-weight: 600;
+}
+
+/* h4: 少し深め */
+.stoc-sub-item.lv4 {
+  padding-left: 1.1rem;
+}
+
+.stoc-sub-item.lv4::before {
+  left: 0.5rem;
+  width: 3px;
+}
+
+.stoc-sub-item.lv4 a {
+  font-size: 0.68rem;
+  color: var(--color-neutral-400);
+}
+
+/* h5: さらに深め */
+.stoc-sub-item.lv5 {
+  padding-left: 1.6rem;
+}
+
+.stoc-sub-item.lv5::before {
+  left: 1rem;
+  width: 3px;
+}
+
+.stoc-sub-item.lv5 a {
+  font-size: 0.65rem;
+  color: var(--color-neutral-400);
+}
+
+/* --- サイドバーセクション共通 --- */
+.sidebar-section {
+  padding: 1rem;
+  border: 1px solid var(--color-neutral-200);
+  border-radius: 8px;
+  background: var(--color-neutral-50);
+}
+
+/* レスポンシブバナー共通 */
+.banner-content--responsive {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.banner-content--responsive img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+
+/* --- デスクトップ時にメイン目次を非表示 --- */
+@media (min-width: 1024px) {
+  .article-toc {
+    display: none;
+  }
+}
+
+/* ============================================================
+   22. インラインバナー広告 (自動配置)
+   — CLS防止 / コンプライアンス / アクセシビリティ対応
+   — デバイス別: PC=728px / タブレット=468px / SP=100%
+   ============================================================ */
+
+.affiliate-inline-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 2rem auto;
+  max-width: min(728px, 100%);
+  max-height: 400px;
+  min-height: 90px;
+  overflow: hidden;
+  contain: layout;
+}
+
+.affiliate-inline-banner .banner-disclosure {
+  display: none;
+}
+
+.affiliate-inline-banner .banner-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  min-height: 70px;
+  max-height: 350px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.affiliate-inline-banner img,
+.affiliate-inline-banner iframe {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.affiliate-inline-banner img:hover { opacity: 0.92; }
+
+.affiliate-inline-banner a,
+.affiliate-inline-banner a::after { text-decoration: none; content: none; line-height: 0; }
+
+/* 末尾バナーセクション */
+.affiliate-banner-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin: 2.5rem auto;
+  padding: 1rem;
+  max-width: 728px;
+  overflow: hidden;
+  contain: layout;
+  background-color: var(--color-neutral-50);
+  border: 1px solid var(--color-neutral-200);
+  border-radius: 8px;
+}
+
+.affiliate-banner-section > p {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-neutral-400);
+  text-align: center;
+}
+
+.affiliate-banner-section img,
+.affiliate-banner-section iframe {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.affiliate-banner-section img:hover { opacity: 0.92; }
+
+/* CTA バナーリンク */
+.cta-banner-link {
+  display: block;
+  margin: 2rem auto;
+  padding: 1rem 2rem;
+  max-width: 480px;
+  min-height: 44px;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.5;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-600) 100%);
+  border: none;
+  border-radius: 8px;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(26, 54, 93, 0.25);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cta-banner-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(26, 54, 93, 0.35);
+}
+
+.cta-banner-link:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(26, 54, 93, 0.2);
+}
+
+.cta-banner-link::after { content: none !important; }
+
+/* インラインバナーサイズバリアント (CLS防止) */
+.affiliate-inline-banner--728x90 { max-width: 728px; min-height: 90px; aspect-ratio: 728 / 90; }
+.affiliate-inline-banner--468x60 { max-width: 468px; min-height: 60px; aspect-ratio: 468 / 60; }
+.affiliate-inline-banner--336x280 { max-width: 336px; min-height: 280px; aspect-ratio: 336 / 280; }
+.affiliate-inline-banner--300x250 { max-width: 300px; min-height: 250px; aspect-ratio: 300 / 250; }
+.affiliate-inline-banner--320x100 { max-width: 320px; min-height: 100px; aspect-ratio: 320 / 100; }
+
+/* PC (≥1024px) */
+@media (min-width: 1024px) {
+  /* サイズ指定なしバナーのデフォルト: 728px幅 */
+  .affiliate-inline-banner:not([data-banner-width]) { max-width: 728px; min-height: 90px; }
+  .affiliate-banner-section { max-width: 728px; padding: 1.25rem; }
+  .cta-banner-link { max-width: 480px; padding: 1.1rem 2.5rem; font-size: 1.05rem; }
+}
+
+/* タブレット (768px-1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .affiliate-inline-banner:not([data-banner-width]) { max-width: min(468px, 100%); min-height: 60px; }
+  /* サイズ指定バナー: タブレットでは画面幅に収める */
+  .affiliate-inline-banner[data-banner-width] { max-width: min(var(--banner-max-w, 468px), 100%); }
+  .affiliate-inline-banner--728x90 { max-width: 468px; aspect-ratio: 468 / 60; min-height: 60px; }
+  .affiliate-inline-banner--300x250 { max-width: 300px; }
+  .affiliate-inline-banner--336x280 { max-width: 336px; }
+  .affiliate-banner-section { max-width: 468px; padding: 1rem; }
+  .cta-banner-link { max-width: 420px; padding: 0.9rem 1.8rem; font-size: 1rem; }
+}
+
+/* SP (<768px) */
+@media (max-width: 767px) {
+  .affiliate-inline-banner {
+    max-width: calc(100% - 1rem);
+    min-height: 50px;
+    margin: 1.25rem auto;
+  }
+  .affiliate-banner-section {
+    max-width: 100%;
+    margin: 1.5rem auto;
+    padding: 0.75rem;
+    border-radius: 6px;
+  }
+  .cta-banner-link {
+    max-width: 100%;
+    margin: 1.25rem auto;
+    padding: 0.85rem 1.2rem;
+    min-height: 44px;
+    font-size: 0.95rem;
+    border-radius: 6px;
+  }
+  .affiliate-inline-banner a,
+  .affiliate-banner-section a {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* アフィリエイトリスト */
+.article-body .affiliate-section {
+  margin: 2.5rem 0;
+  padding: 1.5rem;
+  border: 1px solid var(--color-neutral-200);
+  border-radius: 8px;
+  background: var(--color-neutral-50);
+}
+
+.article-body .affiliate-section > p {
+  font-size: 0.75rem;
+  color: var(--color-neutral-500);
+  margin-bottom: 0.5rem;
+}
+
+/* ============================================================
+   23. 広告アクセシビリティ & ダークモード
+   ============================================================ */
+
+.affiliate-inline-banner a:focus-visible,
+.affiliate-banner-section a:focus-visible,
+.cta-banner-link:focus-visible {
+  outline: 3px solid var(--color-primary-400);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .affiliate-banner-section {
+    background-color: var(--color-neutral-800, #282828);
+    border-color: var(--color-neutral-700, #404040);
+  }
+  .affiliate-banner-section > p {
+    color: var(--color-neutral-400, #a0a0a0);
+  }
+  .cta-banner-link {
+    background: linear-gradient(135deg, var(--color-primary-400, #3363b3) 0%, var(--color-primary-500, #1a365d) 100%);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  }
+  .cta-banner-link:focus-visible {
+    outline-color: var(--color-primary-300, #6699cc);
+  }
+}
+
+/* ============================================================
    レスポンシブ調整
    ============================================================ */
 
@@ -1135,6 +1833,11 @@ body {
   .article-body .affiliate-cta {
     padding: 1rem 1.2rem;
     font-size: 0.98rem;
+  }
+
+  .article-body .affiliate-inline-banner {
+    margin: 1.5rem auto;
+    min-height: 60px;
   }
 
   .article-toc {

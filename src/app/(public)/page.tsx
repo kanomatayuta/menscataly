@@ -16,13 +16,11 @@ function articleToCardData(article: MicroCMSArticle) {
     category,
     publishedAt: article.publishedAt,
     updatedAt: article.updatedAt,
-    eyecatch: (article.thumbnail_url || article.thumbnail)
-      ? {
-          url: article.thumbnail_url ?? article.thumbnail!.url,
-          width: article.thumbnail?.width ?? 1200,
-          height: article.thumbnail?.height ?? 630,
-        }
-      : undefined,
+    eyecatch: (() => {
+      const url = article.thumbnail?.url || (article.thumbnail_url && !article.thumbnail_url.includes('via.placeholder.com') ? article.thumbnail_url : null);
+      if (!url) return undefined;
+      return { url, width: article.thumbnail?.width ?? 1200, height: article.thumbnail?.height ?? 630 };
+    })(),
   };
 }
 

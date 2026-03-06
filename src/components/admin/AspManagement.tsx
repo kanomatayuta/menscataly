@@ -70,37 +70,56 @@ function parseAspHtml(html: string, type: 'text' | 'banner'): Partial<AdCreative
   }
 
   if (type === 'banner') {
-    // バナー: すべての<img>タグを取得し、1x1トラッキングピクセルをスキップ
-    const imgRegex = /<img\s[^>]*>/gi
-    let imgMatch: RegExpExecArray | null
-    while ((imgMatch = imgRegex.exec(html)) !== null) {
-      const imgTag = imgMatch[0]
-      const widthMatch = imgTag.match(/width="(\d+)"/)
-      const heightMatch = imgTag.match(/height="(\d+)"/)
-      const w = widthMatch ? parseInt(widthMatch[1], 10) : 0
-      const h = heightMatch ? parseInt(heightMatch[1], 10) : 0
+    // バナー: すべての<img>/<iframe>タグを取得し、1x1トラッキングピクセルをスキップ
+    const elemRegex = /<(?:img|iframe)\s[^>]*>/gi
+    let elemMatch: RegExpExecArray | null
+    while ((elemMatch = elemRegex.exec(html)) !== null) {
+      const tag = elemMatch[0]
 
-      // 1x1 トラッキングピクセルをスキップ
-      if (w === 1 && h === 1) continue
-
-      // imageUrl を抽出
-      const srcMatch = imgTag.match(/src="([^"]+)"/)
-      if (srcMatch) {
-        (updates as Record<string, unknown>).imageUrl = srcMatch[1]
+      // width/height を HTML属性から抽出
+      let w = 0, h = 0
+      const widthAttr = tag.match(/\bwidth\s*=\s*["']?(\d+)["']?/i)
+      const heightAttr = tag.match(/\bheight\s*=\s*["']?(\d+)["']?/i)
+      if (widthAttr && heightAttr) {
+        w = parseInt(widthAttr[1], 10)
+        h = parseInt(heightAttr[1], 10)
       }
 
-      // bannerSize を抽出
-      if (w > 0 && h > 0) {
-        (updates as Record<string, unknown>).bannerSize = `${w}x${h}`
+      // style属性からのフォールバック
+      if (w === 0 || h === 0) {
+        const styleMatch = tag.match(/style\s*=\s*["']([^"']+)["']/i)
+        if (styleMatch) {
+          const wm = styleMatch[1].match(/width\s*:\s*(\d+)\s*px/i)
+          const hm = styleMatch[1].match(/height\s*:\s*(\d+)\s*px/i)
+          if (wm && hm) {
+            w = parseInt(wm[1], 10)
+            h = parseInt(hm[1], 10)
+          }
+        }
+      }
+
+      // 1x1 トラッキングピクセルをスキップ
+      if (w <= 2 && h <= 2 && w > 0 && h > 0) continue
+
+      // imageUrl を抽出
+      const srcMatch = tag.match(/\bsrc\s*=\s*["']([^"']+)["']/i)
+      if (srcMatch) {
+        updates.imageUrl = srcMatch[1]
+      }
+
+      // width/height を数値でセット (サイズ自動登録)
+      if (w > 0 && h > 0 && w <= 2000 && h <= 2000) {
+        updates.width = w
+        updates.height = h
       }
 
       // altText を抽出
-      const altMatch = imgTag.match(/alt="([^"]*)"/)
+      const altMatch = tag.match(/alt="([^"]*)"/)
       if (altMatch) {
         (updates as Record<string, unknown>).altText = altMatch[1]
       }
 
-      break // 最初の非トラッキングピクセル画像のみ使用
+      break // 最初の非トラッキングピクセル要素のみ使用
     }
   }
 
@@ -368,26 +387,57 @@ function AdCreativesSection({
 
               {/* パース結果の表示（rawHtml入力時） */}
               {creative.rawHtml && creative.affiliateUrl && (() => {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const c = creative as any
                 return (
                   <div className="rounded bg-green-50 px-2 py-1.5 text-[10px] text-green-700 space-y-0.5">
                     <div>URL抽出済み: <span className="font-mono">{creative.affiliateUrl!.slice(0, 60)}...</span></div>
                     {creative.type === "text" && creative.anchorText && (
                       <div>アンカー: {creative.anchorText}</div>
                     )}
-                    {creative.type === "banner" && c.imageUrl && (
-                      <div>画像URL: <span className="font-mono">{String(c.imageUrl).slice(0, 60)}...</span></div>
+                    {creative.type === "banner" && creative.imageUrl && (
+                      <div>画像URL: <span className="font-mono">{creative.imageUrl.slice(0, 60)}...</span></div>
                     )}
-                    {creative.type === "banner" && c.bannerSize && (
-                      <div>サイズ: {String(c.bannerSize)}</div>
-                    )}
-                    {creative.type === "banner" && c.altText && (
-                      <div>alt: {String(c.altText)}</div>
+                    {creative.type === "banner" && creative.width && creative.height && (
+                      <div>サイズ自動検出: <span className="font-semibold">{creative.width}x{creative.height}</span></div>
                     )}
                   </div>
                 )
               })()}
+
+              {/* バナーサイズ (自動検出 + 手動編集) */}
+              {creative.type === "banner" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-[10px] font-medium text-neutral-500">
+                      幅 (px)
+                      {creative.rawHtml && creative.width && <span className="ml-1 text-green-600">自動検出</span>}
+                    </label>
+                    <input
+                      type="number"
+                      value={creative.width ?? ""}
+                      onChange={(e) => updateCreative(idx, { width: e.target.value ? parseInt(e.target.value, 10) : undefined })}
+                      placeholder="例: 300"
+                      min={1}
+                      max={2000}
+                      className="w-full rounded border border-neutral-300 px-2 py-1.5 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[10px] font-medium text-neutral-500">
+                      高さ (px)
+                      {creative.rawHtml && creative.height && <span className="ml-1 text-green-600">自動検出</span>}
+                    </label>
+                    <input
+                      type="number"
+                      value={creative.height ?? ""}
+                      onChange={(e) => updateCreative(idx, { height: e.target.value ? parseInt(e.target.value, 10) : undefined })}
+                      placeholder="例: 250"
+                      min={1}
+                      max={2000}
+                      className="w-full rounded border border-neutral-300 px-2 py-1.5 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* 用途チェックボックス */}
               {creative.type === "text" && (

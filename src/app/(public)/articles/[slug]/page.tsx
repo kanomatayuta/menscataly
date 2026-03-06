@@ -22,17 +22,10 @@ import { enrichContentWithInternalLinks } from "@/lib/content/enrich-internal-li
 import { HeatmapTracker } from "@/components/HeatmapTracker";
 import type { ContentCategory } from "@/types/content";
 import { getSupervisorsByCategory } from "@/lib/seo/supervisors-data";
-
-/** thumbnail_url (Cloudinary) → thumbnail (microCMS画像) → null のフォールバック */
-function getImageUrl(article: MicroCMSArticle): string | null {
-  const url = article.thumbnail_url || article.thumbnail?.url || null;
-  if (!url) return null;
-  // Cloudinary URL の場合、自動フォーマット・品質最適化・幅指定を付与
-  if (url.includes('res.cloudinary.com') && url.includes('/upload/')) {
-    return url.replace('/upload/', '/upload/f_auto,q_auto,w_1200/');
-  }
-  return url;
-}
+import { ArticleSidebar } from "@/components/article/ArticleSidebar";
+import { AdSidebar } from "@/components/article/AdSidebar";
+import { ShareButtons } from "@/components/article/ShareButtons";
+import { formatDate, getImageUrl } from "@/lib/utils/article";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -92,15 +85,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       }),
     },
   };
-}
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString("ja-JP", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
 }
 
 /**
@@ -171,10 +155,6 @@ async function ArticleContent({
 
   const category = (article.category?.slug ?? "aga") as ArticleCategory;
 
-  // カテゴリに対応する監修者を取得（監修者詳細ページへのリンク用）
-  const supervisors = getSupervisorsByCategory(category);
-  const supervisor = supervisors[0] ?? null;
-
   // ASPアフィリエイトリンクを動的注入（最新のSupabaseデータを使用）
   const validCategories: ContentCategory[] = ['aga', 'hair-removal', 'skincare', 'ed', 'column']
   const contentCategory = validCategories.includes(category as ContentCategory)
@@ -210,139 +190,21 @@ async function ArticleContent({
 
   return (
     <>
-      {/* 構造化データ (JSON-LD) — MedicalWebPage/Article + BreadcrumbList + FAQPage */}
+      {/* 構造化データ (JSON-LD) */}
       <ArticleJsonLd article={article} />
 
-      {/* パンくずリスト */}
-      <Breadcrumb
-        items={[
-          { label: "ホーム", href: "/" },
-          { label: "記事一覧", href: "/articles" },
-          ...(article.category
-            ? [
-                {
-                  label: article.category.name,
-                  href: `/articles?category=${category}`,
-                },
-              ]
-            : []),
-          { label: article.title },
-        ]}
-      />
-
-      {/* 記事ヘッダー */}
-      <header className="mb-8">
-        {/* カテゴリバッジ */}
-        <div className="mb-3">
-          <Badge category={category} />
-        </div>
-
-        {/* タイトル */}
-        <h1 className="mb-4 text-2xl font-bold leading-snug text-neutral-900 sm:text-3xl">
-          {article.title}
-        </h1>
-
-        {/* メタ情報 */}
-        <div className="flex flex-wrap items-center gap-4 text-sm text-neutral-500">
-          <time dateTime={article.publishedAt}>
-            公開日: {formatDate(article.publishedAt)}
-          </time>
-          {article.updatedAt && article.updatedAt !== article.publishedAt && (
-            <time dateTime={article.updatedAt}>
-              最終更新: {formatDate(article.updatedAt)}
-            </time>
-          )}
-        </div>
-
-        {/* 監修者情報 (E-E-A-T対応) — 監修者ページへリンク */}
-        {(article.supervisor_name || article.author_name) && (
-          <div className="mt-4 flex items-center gap-3 rounded-lg bg-neutral-50 p-3">
-            <div
-              className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full"
-              aria-hidden="true"
-              style={{
-                backgroundColor: "var(--color-primary-100, #ccd8ec)",
-              }}
-            >
-              <svg
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                style={{ color: "var(--color-primary-500, #1a365d)" }}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
-            </div>
-            <div>
-              <p className="text-xs text-neutral-500">
-                {article.supervisor_name ? "監修者" : "執筆"}
-              </p>
-              <p className="text-sm font-medium text-neutral-800">
-                {article.supervisor_name ?? article.author_name}
-              </p>
-              {article.supervisor_creds && (
-                <p className="text-xs text-neutral-500">
-                  {article.supervisor_creds}
-                </p>
-              )}
-            </div>
-            <Link
-              href={supervisor ? `/supervisors/${supervisor.id}` : `/supervisors#${category}`}
-              className="ml-auto text-xs text-neutral-500 hover:text-neutral-700 hover:underline"
-            >
-              {supervisor ? "監修者プロフィール" : "監修者一覧"}
-            </Link>
-          </div>
-        )}
-      </header>
-
       {/* PR表記 (景表法・ステマ規制対応) */}
-      {article.is_pr && <PRDisclosure variant="default" className="mb-8" />}
+      {article.is_pr && <PRDisclosure variant="default" className="mb-6" />}
 
-      {/* 記事リード文 */}
-      {article.excerpt && (
-        <div
-          className="mb-8 rounded-lg border-l-4 p-4"
-          style={{
-            borderColor: "var(--color-primary-500, #1a365d)",
-            backgroundColor: "var(--color-primary-50, #eef2f8)",
-          }}
-        >
-          <p className="text-base leading-relaxed text-neutral-700">
-            {article.excerpt}
-          </p>
-        </div>
-      )}
-
-      {/* 目次 (TOC) — クライアントサイドでDOMから見出しを読み取りスクロール処理 */}
-      <TableOfContents />
+      {/* 目次 (TOC) — モバイルのみ表示 */}
+      <div className="lg:hidden">
+        <TableOfContents />
+      </div>
 
       {/* 記事本文 (ASPリンク動的注入済み) */}
       <article>
         <ArticleBody content={enrichedContent} className="max-w-none" />
       </article>
-
-      {/* タグ */}
-      {article.tags && article.tags.length > 0 && (
-        <div className="mt-8 border-t border-neutral-200 pt-6">
-          <p className="mb-2 text-sm font-medium text-neutral-700">タグ:</p>
-          <ul className="flex flex-wrap gap-2" role="list">
-            {article.tags.map((tag) => (
-              <li key={tag.id}>
-                <span className="inline-flex items-center rounded-full bg-neutral-100 px-3 py-1 text-xs text-neutral-700">
-                  #{tag.name}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
 
       {/* 関連記事 (同カテゴリ) */}
       <Suspense fallback={null}>
@@ -354,13 +216,16 @@ async function ArticleContent({
 
       {/* 免責事項 (YMYL対応) */}
       <aside
-        className="mt-10 rounded-lg border border-neutral-200 bg-neutral-50 p-4"
+        className="mt-10 rounded-r-lg border-l-4 border-amber-500 bg-amber-50 p-4"
         aria-label="免責事項"
       >
-        <h2 className="mb-2 text-sm font-semibold text-neutral-800">
+        <h2 className="mb-2 flex items-center gap-1.5 text-sm font-bold text-amber-800">
+          <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
           免責事項
         </h2>
-        <p className="text-xs leading-relaxed text-neutral-600">
+        <p className="text-sm leading-relaxed text-amber-900/80">
           本記事は情報提供を目的としており、医療診断・治療の代替となるものではありません。
           症状や治療についてのご判断は、必ず医師・薬剤師等の専門家にご相談ください。
           本記事の内容は公開時点の情報に基づいており、最新情報と異なる場合があります。
@@ -370,7 +235,7 @@ async function ArticleContent({
       {/* ナビゲーション */}
       <nav
         aria-label="記事ナビゲーション"
-        className="mt-10 flex items-center justify-between border-t border-neutral-200 pt-6"
+        className="mt-10 flex flex-col gap-3 border-t border-neutral-200 pt-6 sm:flex-row sm:items-center sm:justify-between"
       >
         <Link
           href="/articles"
@@ -425,27 +290,141 @@ async function ArticleContent({
 export default async function ArticleDetailPage({ params, searchParams }: Props) {
   const { slug } = await params;
 
+  const article = await getArticleBySlug(slug);
+  const category = (article?.category?.slug ?? "aga") as string;
+  const supervisors = getSupervisorsByCategory(category);
+  const supervisor = supervisors[0] ?? null;
+
   return (
     <div className="bg-white py-8 sm:py-12">
-      {/* Heatmap tracker (非表示、クリック/スクロール記録) */}
       <HeatmapTracker articleSlug={slug} />
 
-      {/* Draft Mode バナー (動的、Suspense でラップ) */}
       <Suspense fallback={null}>
         <DraftModeBanner />
       </Suspense>
 
-      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-        {/* 記事コンテンツ (Suspense でラップ — searchParams含む動的処理を隔離) */}
-        <Suspense
-          fallback={
-            <div className="flex items-center justify-center py-24">
-              <span className="text-sm text-neutral-500">読み込み中...</span>
+      <div className="mx-auto px-4 sm:px-6 lg:px-8 max-w-screen-2xl">
+        {/* パンくずリスト */}
+        {article && (
+          <Breadcrumb
+            items={[
+              { label: "ホーム", href: "/" },
+              { label: "記事一覧", href: "/articles" },
+              ...(article.category
+                ? [{ label: article.category.name, href: `/articles?category=${category}` }]
+                : []),
+              { label: article.title },
+            ]}
+          />
+        )}
+
+        {/* ヒーロー: サムネイル左 + メタ情報右 (グリッドの上、フルワイド) */}
+        {article && (
+          <header className="mb-8">
+            <div className="article-hero">
+              {getImageUrl(article) && (
+                <div className="article-hero-image">
+                  <img
+                    src={getImageUrl(article)!}
+                    alt={article.title}
+                    width={article.thumbnail?.width ?? 1200}
+                    height={article.thumbnail?.height ?? 630}
+                    className="w-full h-full object-cover rounded-lg"
+                    loading="eager"
+                    decoding="async"
+                  />
+                </div>
+              )}
+              <div className="article-hero-meta">
+                <div className="mb-2">
+                  <Badge category={category as ArticleCategory} />
+                </div>
+                <h1 className="mb-2 text-lg font-bold leading-snug text-neutral-900 sm:text-xl lg:text-2xl">
+                  {article.title}
+                </h1>
+                {article.tags && article.tags.length > 0 && (
+                  <ul className="mb-3 flex flex-wrap gap-1.5" role="list">
+                    {article.tags.map((tag) => (
+                      <li key={tag.id}>
+                        <span className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs text-neutral-600">
+                          #{tag.name}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className="flex flex-wrap items-center gap-3 text-sm text-neutral-500 mb-3">
+                  <time dateTime={article.publishedAt}>
+                    公開日: {formatDate(article.publishedAt)}
+                  </time>
+                  {article.updatedAt && article.updatedAt !== article.publishedAt && (
+                    <time dateTime={article.updatedAt}>
+                      最終更新: {formatDate(article.updatedAt)}
+                    </time>
+                  )}
+                </div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 flex-wrap">
+                  {(article.supervisor_name || article.author_name) && (
+                    <div className="flex items-center gap-3 rounded-lg bg-neutral-50 p-2.5">
+                      <div
+                        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full"
+                        aria-hidden="true"
+                        style={{ backgroundColor: "var(--color-primary-100, #ccd8ec)" }}
+                      >
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: "var(--color-primary-500, #1a365d)" }}>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[0.65rem] text-neutral-500">
+                          {article.supervisor_name ? "監修者" : "執筆"}
+                        </p>
+                        <Link
+                          href={supervisor ? `/supervisors/${supervisor.id}` : `/supervisors#${category}`}
+                          className="text-sm font-medium text-neutral-800 hover:text-primary-600 hover:underline"
+                        >
+                          {article.supervisor_name ?? article.author_name}
+                        </Link>
+                        {article.supervisor_creds && (
+                          <p className="text-[0.65rem] text-neutral-500">{article.supervisor_creds}</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {/* SNSシェアボタン */}
+                  <ShareButtons title={article.title} />
+                </div>
+              </div>
             </div>
-          }
-        >
-          <ArticleContent slug={slug} searchParams={searchParams} />
-        </Suspense>
+          </header>
+        )}
+
+        {/* 3カラム: 左TOC + 記事本文 + 右広告 */}
+        <div className="article-layout">
+          <Suspense fallback={null}>
+            <ArticleSidebar
+              category={category}
+              supervisorName={article?.supervisor_name}
+              supervisorCreds={article?.supervisor_creds}
+            />
+          </Suspense>
+
+          <div className="min-w-0">
+            <Suspense
+              fallback={
+                <div className="flex items-center justify-center py-24">
+                  <span className="text-sm text-neutral-500">読み込み中...</span>
+                </div>
+              }
+            >
+              <ArticleContent slug={slug} searchParams={searchParams} />
+            </Suspense>
+          </div>
+
+          <Suspense fallback={null}>
+            <AdSidebar category={category} />
+          </Suspense>
+        </div>
       </div>
     </div>
   );

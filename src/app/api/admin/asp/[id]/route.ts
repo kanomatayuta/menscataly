@@ -11,7 +11,8 @@ import { withRateLimit } from '@/lib/admin/rate-limit'
 import { type AspProgramSeed } from '@/lib/asp/seed'
 import { mapRowToProgram } from '@/lib/asp/helpers'
 import type { AspProgramRow } from '@/types/database'
-import type { RewardTier } from '@/types/asp-config'
+import type { RewardTier, AdCreative } from '@/types/asp-config'
+import { enrichCreativeWithParsedSize } from '@/lib/asp/banner-parser'
 import { getInMemoryPrograms } from '../route'
 
 // ============================================================
@@ -276,7 +277,7 @@ export async function PUT(
     if (body.priority !== undefined) updatePayload.priority = body.priority
     if (body.recommendedAnchors !== undefined) updatePayload.recommended_anchors = body.recommendedAnchors
     if (body.notes !== undefined) updatePayload.notes = body.notes
-    if (body.adCreatives !== undefined) updatePayload.ad_creatives = body.adCreatives
+    if (body.adCreatives !== undefined) updatePayload.ad_creatives = body.adCreatives.map((c) => enrichCreativeWithParsedSize(c as AdCreative))
     if (body.advertiserName !== undefined) updatePayload.advertiser_name = body.advertiserName
     if (body.aspCategory !== undefined) updatePayload.asp_category = body.aspCategory
     if (body.confirmationPeriodDays !== undefined) updatePayload.confirmation_period_days = body.confirmationPeriodDays

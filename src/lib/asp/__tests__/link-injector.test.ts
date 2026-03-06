@@ -707,7 +707,10 @@ describe('generateBannerHtml', () => {
       useForBanner: true,
     }
     const result = generateBannerHtml(creative, 'a8', 'prog-001', 'aga')
-    expect(result).toBe('')
+    // affiliateUrl + anchorText/label からCTAリンクを生成
+    expect(result).toContain('href="https://example.com/"')
+    expect(result).toContain('rel="sponsored noopener"')
+    expect(result).toContain('rawHtml無しバナー')
   })
 
   it('should preserve tracking pixel in rawHtml', () => {

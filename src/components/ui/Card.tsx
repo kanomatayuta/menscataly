@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "./Badge";
 import type { ArticleCategory } from "./Badge";
+import { formatDate } from "@/lib/utils/article";
 
 export type ArticleCardData = {
   slug: string;
@@ -22,15 +23,6 @@ type CardProps = {
   article: ArticleCardData;
   className?: string;
 };
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString("ja-JP", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
 
 export function Card({ article, className = "" }: CardProps) {
   const { slug, title, excerpt, category, publishedAt, updatedAt, eyecatch } =

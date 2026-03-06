@@ -12,7 +12,7 @@
  * - 正規表現のedgeケースマッチ失敗
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 interface TocHeading {
   level: number;
@@ -50,17 +50,27 @@ function readHeadingsFromDOM(): TocHeading[] {
 
 export function TableOfContents() {
   const [headings, setHeadings] = useState<TocHeading[]>([]);
-  const didRun = useRef(false);
-
   useEffect(() => {
-    if (didRun.current) return;
-    didRun.current = true;
-    const items = readHeadingsFromDOM();
-    if (items.length > 0) {
-      // DOM読み取り結果をstateに反映 (マウント時1回のみ)
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setHeadings(items);
+    function tryRead() {
+      const items = readHeadingsFromDOM();
+      if (items.length > 0) {
+        setHeadings(items);
+        return true;
+      }
+      return false;
     }
+
+    if (tryRead()) return;
+
+    const observer = new MutationObserver(() => {
+      if (tryRead()) {
+        observer.disconnect();
+      }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    return () => observer.disconnect();
   }, []);
 
   // h2 が 2 つ未満なら目次不要

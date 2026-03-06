@@ -2,8 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { Badge } from "@/components/ui/Badge";
 import { getArticles } from "@/lib/microcms/client";
-import type { MicroCMSArticle } from "@/types/microcms";
 import type { ArticleCategory } from "@/components/ui/Badge";
+import { formatDate, getImageUrl } from "@/lib/utils/article";
 
 interface RelatedArticlesProps {
   /** 現在の記事のスラッグ（除外用） */
@@ -12,19 +12,6 @@ interface RelatedArticlesProps {
   category: string;
   /** 表示件数 (デフォルト: 4) */
   limit?: number;
-}
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString("ja-JP", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
-
-function getImageUrl(article: MicroCMSArticle): string | null {
-  return article.thumbnail_url || article.thumbnail?.url || null;
 }
 
 export async function RelatedArticles({

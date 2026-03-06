@@ -34,24 +34,3 @@ export function Badge({ category, className = "" }: BadgeProps) {
     </span>
   );
 }
-
-// テキストベースの汎用バッジ
-type GenericBadgeProps = {
-  label: string;
-  colorClass?: string;
-  className?: string;
-};
-
-export function GenericBadge({
-  label,
-  colorClass = "bg-neutral-100 text-neutral-800",
-  className = "",
-}: GenericBadgeProps) {
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${colorClass} ${className}`}
-    >
-      {label}
-    </span>
-  );
-}

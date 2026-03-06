@@ -6,6 +6,7 @@
 import type { AspProgramSeed } from '@/lib/asp/seed'
 import type { AdCreative, RewardTier } from '@/types/asp-config'
 import type { AspProgramRow, Json } from '@/types/database'
+import { enrichCreativeWithParsedSize } from './banner-parser'
 
 /**
  * Supabase の行データを AspProgramSeed 型にマッピングする
@@ -66,15 +67,24 @@ function parseAdCreatives(raw: Json | null | undefined): AdCreative[] | undefine
     return undefined
   }
   if (raw.length === 0) return undefined
-  // 各アイテムの最低限の型チェック
+  // 各アイテムの最低限の型チェック + width/height/imageUrl の正規化
   const valid = raw.filter((item) => {
     if (typeof item !== 'object' || item === null) {
       console.warn('[parseAdCreatives] Invalid creative item:', item)
       return false
     }
     const c = item as Record<string, unknown>
-    return typeof c.id === 'string' && typeof c.type === 'string' && (typeof c.rawHtml === 'string' || typeof c.affiliateUrl === 'string')
+    return typeof c.id === 'string' && typeof c.type === 'string' && (typeof c.rawHtml === 'string' || typeof c.affiliateUrl === 'string' || typeof c.imageUrl === 'string')
+  }).map((item) => {
+    const c = item as Record<string, unknown>
+    return {
+      ...c,
+      width: typeof c.width === 'number' ? c.width : undefined,
+      height: typeof c.height === 'number' ? c.height : undefined,
+      imageUrl: typeof c.imageUrl === 'string' ? c.imageUrl : undefined,
+    }
   })
   if (valid.length === 0) return undefined
-  return valid as unknown as AdCreative[]
+  // rawHtml から width/height を自動補完
+  return (valid as unknown as AdCreative[]).map(enrichCreativeWithParsedSize)
 }

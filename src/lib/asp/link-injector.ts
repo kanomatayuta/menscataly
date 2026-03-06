@@ -193,12 +193,30 @@ export function resolveTextCreatives(
 
 /**
  * バナーHTMLを生成する
- * rawHtml がある場合はそのまま返す（ASP発行のトラッキングピクセル保持）
+ * 1. rawHtml がある場合はそのまま返す（ASP発行のトラッキングピクセル保持）
+ * 2. imageUrl + affiliateUrl がある場合は <a><img> を生成（サイズ情報付き）
  */
-export function generateBannerHtml(creative: AdCreative, _aspName: string, _programId: string, _category: string): string {
+export function generateBannerHtml(creative: AdCreative, aspName: string, programId: string, category: string): string {
   if (creative.type !== 'banner') return ''
-  // rawHtml がある場合はそのまま返す（トラッキングピクセル含む）
+
+  // 1. rawHtml がある場合はそのまま返す（トラッキングピクセル含む）
   if (creative.rawHtml) return creative.rawHtml
+
+  // 2. imageUrl + affiliateUrl からバナーを生成
+  if (creative.imageUrl && creative.affiliateUrl) {
+    const w = creative.width ?? 300
+    const h = creative.height ?? 250
+    const alt = escapeHtmlAttr(creative.label || creative.anchorText || '')
+    return `<a href="${escapeHtmlAttr(creative.affiliateUrl)}" rel="sponsored noopener" target="_blank" data-asp="${escapeHtmlAttr(aspName)}" data-program="${escapeHtmlAttr(programId)}" data-category="${escapeHtmlAttr(category)}"><img src="${escapeHtmlAttr(creative.imageUrl)}" width="${w}" height="${h}" alt="${alt}" loading="lazy" style="max-width:100%;height:auto;"></a>`
+  }
+
+  // 3. affiliateUrl のみ（テキストリンクバナー）
+  if (creative.affiliateUrl) {
+    const text = creative.anchorText || creative.label || ''
+    if (!text) return ''
+    return `<a href="${escapeHtmlAttr(creative.affiliateUrl)}" rel="sponsored noopener" target="_blank" class="cta-banner-link" data-asp="${escapeHtmlAttr(aspName)}" data-program="${escapeHtmlAttr(programId)}" data-category="${escapeHtmlAttr(category)}">${escapeHtmlAttr(text)}</a>`
+  }
+
   return ''
 }
 

@@ -236,7 +236,7 @@ export class ArticlePublisher {
    * Ideogram API → Cloudinary → OG画像URL を返す
    * API未設定時はプレースホルダーURLを返す
    */
-  async generateThumbnail(article: Article): Promise<string> {
+  async generateThumbnail(article: Article): Promise<string | null> {
     try {
       console.info(`[ArticlePublisher] Generating thumbnail for: "${article.title}"`);
       const images = await this.imagePipeline.processArticleImage({
@@ -247,8 +247,8 @@ export class ArticlePublisher {
       console.info(`[ArticlePublisher] Thumbnail generated: ${images.og.url}`);
       return images.og.url;
     } catch (error) {
-      console.warn("[ArticlePublisher] Thumbnail generation failed, using placeholder:", error);
-      return `https://via.placeholder.com/1200x630/1a365d/ffffff?text=${encodeURIComponent(article.category.toUpperCase())}`;
+      console.warn("[ArticlePublisher] Thumbnail generation failed, no thumbnail will be set:", error);
+      return null;
     }
   }
 
@@ -371,7 +371,9 @@ export class ArticlePublisher {
     const body = articleToMicroCMSBody(article);
 
     // thumbnail_url フィールドに画像URL を設定
-    body.thumbnail_url = thumbnailUrl;
+    if (thumbnailUrl) {
+      body.thumbnail_url = thumbnailUrl;
+    }
 
     // カテゴリ（コンテンツ参照フィールド — IDで渡す）
     if (categoryId) {

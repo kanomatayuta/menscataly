@@ -16,6 +16,12 @@ export interface AdCreative {
   affiliateUrl?: string
   anchorText?: string
   rawHtml?: string
+  /** バナー画像URL (rawHtml が無い場合に使用) */
+  imageUrl?: string
+  /** バナー幅 (px) */
+  width?: number
+  /** バナー高さ (px) */
+  height?: number
   isActive: boolean
   useForInjection: boolean
   useForBanner: boolean

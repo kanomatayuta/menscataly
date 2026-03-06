@@ -11,7 +11,8 @@ import { safeParseInt } from '@/lib/utils/safe-parse'
 import { type AspProgramSeed } from '@/lib/asp/seed'
 import { mapRowToProgram } from '@/lib/asp/helpers'
 import type { AspProgramRow } from '@/types/database'
-import type { RewardTier } from '@/types/asp-config'
+import type { RewardTier, AdCreative } from '@/types/asp-config'
+import { enrichCreativeWithParsedSize } from '@/lib/asp/banner-parser'
 
 // ============================================================
 // インメモリストア (Supabase未設定時のフォールバック)
@@ -247,7 +248,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         priority: body.priority ?? 3,
         recommended_anchors: body.recommendedAnchors ?? [body.programName],
         notes: body.notes ?? null,
-        ad_creatives: body.adCreatives ?? [],
+        ad_creatives: (body.adCreatives ?? []).map((c) => enrichCreativeWithParsedSize(c as AdCreative)),
         advertiser_name: body.advertiserName ?? '',
         asp_category: body.aspCategory ?? '',
         confirmation_period_days: body.confirmationPeriodDays ?? 30,
