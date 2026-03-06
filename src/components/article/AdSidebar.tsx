@@ -37,40 +37,38 @@ async function AdBannerSlots({ category }: { category: string }) {
 
   if (!contentCategory) return null;
 
+  let bannerHtmls: string[];
   try {
-    const bannerHtmls = await collectSidebarBannerCreatives(
-      contentCategory,
-      3
-    );
-
-    if (bannerHtmls.length === 0) return null;
-
-    return (
-      <>
-        {bannerHtmls.map((html, i) => {
-          const sanitized = sanitizeBannerHtml(html);
-          const withLazy =
-            i > 0
-              ? sanitized.replace(
-                  /<img\b(?![^>]*loading=)/gi,
-                  '<img loading="lazy"'
-                )
-              : sanitized;
-          return (
-            <div
-              key={i}
-              className="ad-sidebar-slot"
-              role="img"
-              aria-label={`広告バナー ${i + 1}`}
-              dangerouslySetInnerHTML={{ __html: withLazy }}
-            />
-          );
-        })}
-      </>
-    );
+    bannerHtmls = await collectSidebarBannerCreatives(contentCategory, 3);
   } catch {
     return null;
   }
+
+  if (bannerHtmls.length === 0) return null;
+
+  return (
+    <>
+      {bannerHtmls.map((html, i) => {
+        const sanitized = sanitizeBannerHtml(html);
+        const withLazy =
+          i > 0
+            ? sanitized.replace(
+                /<img\b(?![^>]*loading=)/gi,
+                '<img loading="lazy"'
+              )
+            : sanitized;
+        return (
+          <div
+            key={i}
+            className="ad-sidebar-slot"
+            role="img"
+            aria-label={`広告バナー ${i + 1}`}
+            dangerouslySetInnerHTML={{ __html: withLazy }}
+          />
+        );
+      })}
+    </>
+  );
 }
 
 /**
