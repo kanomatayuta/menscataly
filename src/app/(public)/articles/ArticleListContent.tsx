@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { getArticles } from "@/lib/microcms/client";
 import type { ArticleCategory } from "@/components/ui/Badge";
-import type { MicroCMSArticle } from "@/types/microcms";
+import { articleToCardData } from "@/lib/utils/article";
 
 const CATEGORY_MAP: Record<string, ArticleCategory> = {
   aga: "aga",
@@ -44,26 +44,6 @@ const ARTICLES_PER_PAGE = 12;
 type Props = {
   searchParams: Promise<{ category?: string; page?: string }>;
 };
-
-/**
- * MicroCMSArticle を Card コンポーネント用データに変換
- */
-function articleToCardData(article: MicroCMSArticle) {
-  const category = (article.category?.slug ?? "aga") as ArticleCategory;
-  return {
-    slug: article.slug ?? article.id,
-    title: article.title,
-    excerpt: article.excerpt ?? "",
-    category,
-    publishedAt: article.publishedAt,
-    updatedAt: article.updatedAt,
-    eyecatch: (() => {
-      const url = article.thumbnail?.url || (article.thumbnail_url && !article.thumbnail_url.includes('via.placeholder.com') ? article.thumbnail_url : null);
-      if (!url) return undefined;
-      return { url, width: article.thumbnail?.width ?? 1200, height: article.thumbnail?.height ?? 630 };
-    })(),
-  };
-}
 
 // このコンポーネントは Suspense 内で searchParams を await する
 export async function ArticleListContent({ searchParams }: Props) {
