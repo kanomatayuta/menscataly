@@ -54,6 +54,7 @@ jobs:
         run: npm ci
 
       - name: Run daily pipeline
+        timeout-minutes: 20
         run: npx tsx scripts/run-pipeline.ts daily ${{ github.event.inputs.dry_run == 'true' && '--dry-run' || '' }}
 
       - name: Notify on failure

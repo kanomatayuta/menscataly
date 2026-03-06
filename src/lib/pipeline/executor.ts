@@ -197,12 +197,13 @@ export class PipelineExecutor {
     input: unknown,
     context: PipelineContext
   ): Promise<unknown> {
+    const timeoutMs = step.timeoutMs ?? this.config.timeoutMs
     return Promise.race([
       step.execute(input, context),
       new Promise<never>((_, reject) =>
         setTimeout(
-          () => reject(new Error(`Step "${step.name}" timed out after ${this.config.timeoutMs}ms`)),
-          this.config.timeoutMs
+          () => reject(new Error(`Step "${step.name}" timed out after ${timeoutMs}ms`)),
+          timeoutMs
         )
       ),
     ])

@@ -29,6 +29,9 @@ const MAX_RETRY_DELAY_MS = 32000;
 /** デフォルトのリトライ回数 */
 const DEFAULT_MAX_RETRIES = 3;
 
+/** 単一API呼び出しのタイムアウト（ms）— 120秒 */
+const REQUEST_TIMEOUT_MS = 120_000;
+
 /** Sonnet 4.6 の推定コスト (USD/1Mトークン) */
 const SONNET_COST_PER_1M_INPUT = 3.0;
 const SONNET_COST_PER_1M_OUTPUT = 15.0;
@@ -143,6 +146,7 @@ export class ClaudeClient {
 
     this.anthropic = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY ?? "dummy-key-for-dry-run",
+      timeout: REQUEST_TIMEOUT_MS,
     });
   }
 

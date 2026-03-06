@@ -31,6 +31,8 @@ export interface PipelineStep<TInput = unknown, TOutput = unknown> {
   name: string
   description: string
   maxRetries?: number
+  /** ステップ個別のタイムアウト（ms）。未指定時は PipelineConfig.timeoutMs を使用 */
+  timeoutMs?: number
   execute: (input: TInput, context: PipelineContext) => Promise<TOutput>
 }
 

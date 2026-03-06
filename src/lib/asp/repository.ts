@@ -145,14 +145,15 @@ export async function getProgramsByCategoryFromDB(
   category: ContentCategory
 ): Promise<AspProgram[]> {
   // 1. キャッシュチェック (Promise-based)
+  const now = Date.now()
   const cached = cache.get(category)
-  if (cached && cached.expiresAt > Date.now()) {
+  if (cached && cached.expiresAt > now) {
     return cached.promise
   }
 
   // 2. 新しい Promise をキャッシュに即座に格納（同時リクエストは同じ Promise を共有）
   const promise = fetchProgramsFromSupabase(category)
-  cache.set(category, { promise, expiresAt: Date.now() + CACHE_TTL_MS })
+  cache.set(category, { promise, expiresAt: now + CACHE_TTL_MS })
 
   // fetch が失敗したらキャッシュから削除（次回リクエストで再試行できるように）
   promise.catch(() => cache.delete(category))
