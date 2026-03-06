@@ -17,31 +17,45 @@ export default function AppleIcon() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #1e293b 0%, #1a365d 100%)",
+          background: "linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)",
           borderRadius: "36px",
+          position: "relative",
         }}
       >
-        {/* MC イニシャル */}
+        {/* MENS text */}
         <span
           style={{
-            fontSize: "80px",
-            fontWeight: 700,
+            fontSize: "48px",
+            fontWeight: 800,
             color: "#ffffff",
-            letterSpacing: "-3px",
+            letterSpacing: "-2px",
             lineHeight: 1,
           }}
         >
-          MC
+          MENS
+        </span>
+        {/* CATALY text in gold */}
+        <span
+          style={{
+            fontSize: "32px",
+            fontWeight: 700,
+            color: "#d4a843",
+            letterSpacing: "2px",
+            lineHeight: 1,
+            marginTop: "4px",
+          }}
+        >
+          CATALY
         </span>
 
-        {/* 下部アクセントライン */}
+        {/* Bottom accent line */}
         <div
           style={{
             position: "absolute",
-            bottom: "20px",
-            width: "60px",
+            bottom: "18px",
+            width: "80px",
             height: "3px",
-            background: "linear-gradient(90deg, #c8a951 0%, #d8b633 100%)",
+            background: "linear-gradient(90deg, #d4a843 0%, #e8c44a 100%)",
             borderRadius: "2px",
           }}
         />
