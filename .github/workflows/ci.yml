@@ -15,6 +15,9 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
+      - name: Audit dependencies for high/critical vulnerabilities
+        run: npm audit --audit-level=high
+        continue-on-error: true
       - run: npm run lint
       - run: npx tsc --noEmit
 
@@ -83,7 +86,6 @@ jobs:
           done
       - name: Run E2E tests
         run: npx playwright test --project=chromium
-        continue-on-error: true
         env:
           CI: true
           BASE_URL: http://localhost:3000

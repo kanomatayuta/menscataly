@@ -1,5 +1,12 @@
+# Lightweight test gate — full CI (lint, typecheck, coverage, build, E2E) is in ci.yml.
+# This workflow exists so branch-protection rules referencing "Test / test" keep working.
+# It runs only unit tests (no lint/typecheck/build, which ci.yml already covers).
 name: Test
-on: [push, pull_request]
+on:
+  push:
+    branches-ignore: [main, 'feature/**']
+  pull_request:
+    branches-ignore: [main]
 
 jobs:
   test:
@@ -12,4 +19,3 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npx vitest run
-      - run: npx tsc --noEmit
