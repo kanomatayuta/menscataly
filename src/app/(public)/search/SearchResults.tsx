@@ -2,6 +2,7 @@ import { Card } from "@/components/ui/Card";
 import { getArticles } from "@/lib/microcms/client";
 import type { MicroCMSArticle } from "@/types/microcms";
 import type { ArticleCategory } from "@/components/ui/Badge";
+import Link from "next/link";
 
 /**
  * MicroCMSArticle を Card コンポーネント用データに変換
@@ -17,12 +18,30 @@ function articleToCardData(article: MicroCMSArticle) {
     publishedAt: article.publishedAt,
     updatedAt: article.updatedAt,
     eyecatch: (() => {
-      const url = article.thumbnail?.url || (article.thumbnail_url && !article.thumbnail_url.includes('via.placeholder.com') ? article.thumbnail_url : null);
+      const url =
+        article.thumbnail?.url ||
+        (article.thumbnail_url &&
+        !article.thumbnail_url.includes("via.placeholder.com")
+          ? article.thumbnail_url
+          : null);
       if (!url) return undefined;
-      return { url, width: article.thumbnail?.width ?? 1200, height: article.thumbnail?.height ?? 630 };
+      return {
+        url,
+        width: article.thumbnail?.width ?? 1200,
+        height: article.thumbnail?.height ?? 630,
+      };
     })(),
   };
 }
+
+const SEARCH_SUGGESTIONS = [
+  { label: "AGA治療", query: "AGA" },
+  { label: "医療脱毛", query: "脱毛" },
+  { label: "スキンケア", query: "スキンケア" },
+  { label: "ED治療", query: "ED" },
+  { label: "クリニック", query: "クリニック" },
+  { label: "費用", query: "費用" },
+] as const;
 
 type Props = {
   searchParams: Promise<{ q?: string }>;
@@ -35,9 +54,39 @@ export async function SearchResults({ searchParams }: Props) {
   if (!keyword) {
     return (
       <div className="py-16 text-center">
-        <p className="text-neutral-500">
-          検索キーワードを入力してください。
+        <svg
+          className="mx-auto mb-4 h-16 w-16 text-neutral-200"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1}
+          stroke="currentColor"
+          aria-hidden="true"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+          />
+        </svg>
+        <p className="text-lg font-medium text-neutral-700">
+          検索キーワードを入力してください
         </p>
+        <p className="mt-2 text-sm text-neutral-500">
+          AGA治療・医療脱毛・スキンケア・ED治療など
+        </p>
+
+        {/* Quick search suggestions */}
+        <div className="mx-auto mt-6 flex max-w-md flex-wrap justify-center gap-2">
+          {SEARCH_SUGGESTIONS.map((s) => (
+            <Link
+              key={s.query}
+              href={`/search?q=${encodeURIComponent(s.query)}`}
+              className="inline-flex items-center rounded-full border border-neutral-200 bg-white px-4 py-1.5 text-sm font-medium text-neutral-600 transition-colors hover:border-neutral-300 hover:bg-neutral-50"
+            >
+              {s.label}
+            </Link>
+          ))}
+        </div>
       </div>
     );
   }
@@ -55,7 +104,7 @@ export async function SearchResults({ searchParams }: Props) {
         </h1>
         {articles.length > 0 && (
           <p className="mt-2 text-sm text-neutral-600">
-            {totalCount}件の検索結果
+            {totalCount}件の記事が見つかりました
           </p>
         )}
       </header>
@@ -75,10 +124,10 @@ export async function SearchResults({ searchParams }: Props) {
       ) : (
         <div className="py-16 text-center">
           <svg
-            className="mx-auto mb-4 h-12 w-12 text-neutral-300"
+            className="mx-auto mb-4 h-16 w-16 text-neutral-200"
             fill="none"
             viewBox="0 0 24 24"
-            strokeWidth={1.5}
+            strokeWidth={1}
             stroke="currentColor"
             aria-hidden="true"
           >
@@ -88,12 +137,49 @@ export async function SearchResults({ searchParams }: Props) {
               d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
             />
           </svg>
-          <p className="text-neutral-500">
-            検索結果がありません
+          <p className="text-lg font-medium text-neutral-700">
+            「{keyword}」に一致する記事が見つかりませんでした
           </p>
-          <p className="mt-2 text-sm text-neutral-400">
-            別のキーワードで検索してみてください。
+          <p className="mt-2 text-sm text-neutral-500">
+            キーワードを変更するか、以下のカテゴリから探してみてください。
           </p>
+
+          {/* Alternative suggestions */}
+          <div className="mx-auto mt-6 flex max-w-md flex-wrap justify-center gap-2">
+            {SEARCH_SUGGESTIONS.map((s) => (
+              <Link
+                key={s.query}
+                href={`/search?q=${encodeURIComponent(s.query)}`}
+                className="inline-flex items-center rounded-full border border-neutral-200 bg-white px-4 py-1.5 text-sm font-medium text-neutral-600 transition-colors hover:border-neutral-300 hover:bg-neutral-50"
+              >
+                {s.label}
+              </Link>
+            ))}
+          </div>
+
+          {/* Link to browse all articles */}
+          <div className="mt-8">
+            <Link
+              href="/articles"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800"
+            >
+              全記事一覧を見る
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"
+                />
+              </svg>
+            </Link>
+          </div>
         </div>
       )}
     </>
