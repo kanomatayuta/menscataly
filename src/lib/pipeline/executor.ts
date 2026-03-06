@@ -191,6 +191,7 @@ export class PipelineExecutor {
 
   /**
    * ステップをタイムアウト付きで実行する
+   * ステップ完了時に setTimeout をクリアして Timer リークを防止する
    */
   private executeWithTimeout(
     step: PipelineStep,
@@ -198,14 +199,18 @@ export class PipelineExecutor {
     context: PipelineContext
   ): Promise<unknown> {
     const timeoutMs = step.timeoutMs ?? this.config.timeoutMs
+    let timeoutId: NodeJS.Timeout
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(
+        () => reject(new Error(`Step "${step.name}" timed out after ${timeoutMs}ms`)),
+        timeoutMs
+      )
+    })
+
     return Promise.race([
-      step.execute(input, context),
-      new Promise<never>((_, reject) =>
-        setTimeout(
-          () => reject(new Error(`Step "${step.name}" timed out after ${timeoutMs}ms`)),
-          timeoutMs
-        )
-      ),
+      step.execute(input, context).finally(() => clearTimeout(timeoutId)),
+      timeoutPromise,
     ])
   }
 

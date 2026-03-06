@@ -115,6 +115,132 @@ export interface TrendData {
   metadata?: Record<string, unknown>;
 }
 
+// ============================================================
+// Tool Use (Function Calling)
+// ============================================================
+
+/** Claude API tool_use 用のツールスキーマ定義 */
+export interface ToolSchema {
+  /** ツール名 */
+  name: string;
+  /** ツールの説明 */
+  description: string;
+  /** JSON Schema 形式の入力スキーマ */
+  input_schema: {
+    type: 'object';
+    properties: Record<string, unknown>;
+    required?: string[];
+  };
+}
+
+/** tool_use レスポンスの型 */
+export interface ToolUseResponse<T> {
+  /** ツールが返した構造化データ */
+  content: T;
+  /** トークン使用量 */
+  tokenUsage: TokenUsage;
+  /** 応答時間（ms） */
+  durationMs: number;
+  /** 使用したモデルID */
+  model: string;
+}
+
+/** 記事生成用ツールスキーマ */
+export const ARTICLE_TOOL_SCHEMA: ToolSchema = {
+  name: 'generate_article',
+  description:
+    '医療・美容系メディア記事をJSON構造で生成するツール。薬機法・景表法に準拠した表現を使用し、E-E-A-T要件を満たす記事データを出力する。',
+  input_schema: {
+    type: 'object',
+    properties: {
+      title: {
+        type: 'string',
+        description: '記事タイトル（SEO最適化済み、32〜60文字推奨）',
+      },
+      lead: {
+        type: 'string',
+        description: 'リード文（120〜300文字、記事の要約）',
+      },
+      sections: {
+        type: 'array',
+        description: '記事本文のセクション配列',
+        items: {
+          type: 'object',
+          properties: {
+            heading: {
+              type: 'string',
+              description: 'セクション見出し',
+            },
+            level: {
+              type: 'string',
+              enum: ['h2', 'h3', 'h4'],
+              description: '見出しレベル',
+            },
+            content: {
+              type: 'string',
+              description: 'セクション本文（Markdown形式可）',
+            },
+            subsections: {
+              type: 'array',
+              description: 'サブセクション配列',
+              items: {
+                type: 'object',
+                properties: {
+                  heading: { type: 'string', description: 'サブセクション見出し' },
+                  level: {
+                    type: 'string',
+                    enum: ['h3', 'h4'],
+                    description: '見出しレベル',
+                  },
+                  content: {
+                    type: 'string',
+                    description: 'サブセクション本文',
+                  },
+                },
+                required: ['heading', 'level', 'content'],
+              },
+            },
+          },
+          required: ['heading', 'level', 'content'],
+        },
+      },
+      conclusion: {
+        type: 'string',
+        description: 'まとめセクションの本文',
+      },
+      cta: {
+        type: 'string',
+        description: 'CTA（行動喚起）テキスト',
+      },
+      tags: {
+        type: 'array',
+        items: { type: 'string' },
+        description: '記事タグ（3〜8個推奨）',
+      },
+      references: {
+        type: 'array',
+        description: '参考文献・出典',
+        items: {
+          type: 'object',
+          properties: {
+            title: { type: 'string', description: '文献タイトル' },
+            url: { type: 'string', description: 'URL' },
+            author: { type: 'string', description: '著者名' },
+            year: { type: 'number', description: '発行年' },
+            source: { type: 'string', description: '出典元' },
+          },
+          required: ['title', 'url'],
+        },
+      },
+    },
+    required: ['title', 'lead', 'sections', 'conclusion', 'tags', 'references'],
+  },
+};
+
+// ============================================================
+// トレンド分析
+// ============================================================
+
 /** スコアリング済みトレンド */
 export interface ScoredTrend extends TrendData {
   /** 話題性スコア（0-100） */

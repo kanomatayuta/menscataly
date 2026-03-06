@@ -4,6 +4,8 @@
  */
 
 import { createArticleGenerationClient } from "@/lib/ai/client";
+import { ARTICLE_TOOL_SCHEMA } from "@/lib/ai/types";
+import type { ToolSchema } from "@/lib/ai/types";
 import { ComplianceChecker } from "@/lib/compliance/checker";
 import { insertPRDisclosure } from "@/lib/compliance/templates/pr-disclosure";
 import {
@@ -323,6 +325,93 @@ function parseArticleResponse(
   };
 }
 
+/**
+ * RawArticleJSON（tool_use出力 or パース済み）からArticle型を構築する共通ヘルパー
+ */
+function buildArticleFromRaw(
+  raw: RawArticleJSON,
+  request: ContentGenerationRequest,
+  now: string
+): Article {
+  // セクション変換
+  const sections: ArticleSection[] = (raw.sections ?? []).map((s) => ({
+    heading: s.heading ?? "",
+    level: (["h2", "h3", "h4"].includes(s.level ?? "") ? s.level : "h2") as HeadingLevel,
+    content: s.content ?? "",
+    subsections: s.subsections?.map((sub) => ({
+      heading: sub.heading ?? "",
+      level: (["h2", "h3", "h4"].includes(sub.level ?? "") ? sub.level : "h3") as HeadingLevel,
+      content: sub.content ?? "",
+    })),
+  }));
+
+  // まとめセクションをセクションに追加
+  if (raw.conclusion) {
+    sections.push({
+      heading: "まとめ",
+      level: "h2" as HeadingLevel,
+      content: raw.conclusion + (raw.cta ? `\n\n${raw.cta}` : ""),
+    });
+  }
+
+  // フルコンテンツ組み立て
+  const fullContent = sections
+    .map(
+      (s) =>
+        `## ${s.heading}\n\n${s.content}${
+          s.subsections
+            ? "\n\n" +
+              s.subsections
+                .map((sub) => `### ${sub.heading}\n\n${sub.content}`)
+                .join("\n\n")
+            : ""
+        }`
+    )
+    .join("\n\n");
+
+  // 参考文献
+  const references: Reference[] = [
+    ...getRecommendedReferences(request.category),
+    ...(raw.references ?? []).map((r) => ({
+      title: r.title ?? "",
+      url: r.url ?? "",
+      author: r.author,
+      year: r.year,
+      source: r.source,
+    })),
+  ];
+
+  // SEOメタデータ
+  const seo: SEOMetadata = {
+    title: raw.title ?? `${request.keyword} 完全ガイド`,
+    description: raw.lead
+      ? extractExcerpt(raw.lead, { maxLength: 120 })
+      : extractExcerpt(fullContent, { maxLength: 120 }),
+    keywords: [request.keyword, ...(request.subKeywords ?? []), ...(raw.tags ?? [])],
+  };
+
+  const readingTime = calculateReadingTime(fullContent);
+
+  return {
+    title: raw.title ?? `${request.keyword} 完全ガイド`,
+    slug: slugify(raw.title ?? request.keyword),
+    lead: raw.lead ?? extractExcerpt(fullContent, { maxLength: 300 }),
+    content: fullContent,
+    sections,
+    category: request.category,
+    seo,
+    author: DEFAULT_AUTHOR,
+    supervisor: getSupervisorTemplate(CATEGORY_SUPERVISOR_MAP[request.category]),
+    references,
+    publishedAt: now,
+    updatedAt: now,
+    readingTime: readingTime.minutes,
+    tags: [...new Set([request.keyword, request.category, ...(raw.tags ?? [])])],
+    hasPRDisclosure: false, // コンプライアンスチェック後に更新
+    isCompliant: false,      // コンプライアンスチェック後に更新
+  };
+}
+
 // ============================================================
 // ArticleGenerator クラス
 // ============================================================
@@ -394,22 +483,56 @@ export class ArticleGenerator {
     const userMessage = this.buildUserMessage(request);
 
     // ----------------------------------------------------------------
-    // 2. Claude Sonnet 4.6 API 呼び出し
+    // 2. Claude Sonnet 4.6 API 呼び出し (tool_use で構造化出力)
     // ----------------------------------------------------------------
     console.info(`[ArticleGenerator] Generating article for keyword: "${request.keyword}"`);
-    const aiResponse = await this.aiClient.generate({
-      systemPrompt,
-      userMessage,
-      modelConfig: {
-        maxTokens: 8192,
-        temperature: 0.7,
-      },
-    });
 
-    // ----------------------------------------------------------------
-    // 3. レスポンスをArticle型にパース
-    // ----------------------------------------------------------------
-    let article = parseArticleResponse(aiResponse.content, request, now);
+    let article: Article;
+    let aiModel: string;
+    let aiTokenUsage: { inputTokens: number; outputTokens: number; estimatedCostUsd?: number };
+
+    try {
+      // tool_use (function calling) で構造化JSONを強制取得
+      const toolResponse = await this.aiClient.generateWithTool<RawArticleJSON>(
+        {
+          systemPrompt,
+          userMessage,
+          modelConfig: {
+            maxTokens: 8192,
+            temperature: 0.5,
+          },
+        },
+        ARTICLE_TOOL_SCHEMA as ToolSchema
+      );
+
+      console.info("[ArticleGenerator] tool_use response received — structured JSON output.");
+      aiModel = toolResponse.model;
+      aiTokenUsage = toolResponse.tokenUsage;
+
+      // tool_use の出力を直接 RawArticleJSON として使用（パース不要）
+      article = buildArticleFromRaw(toolResponse.content, request, now);
+    } catch (toolError) {
+      // tool_use 失敗時は従来のテキスト生成にフォールバック
+      console.warn(
+        "[ArticleGenerator] tool_use failed, falling back to text generation:",
+        toolError instanceof Error ? toolError.message : toolError
+      );
+
+      const aiResponse = await this.aiClient.generate({
+        systemPrompt,
+        userMessage,
+        modelConfig: {
+          maxTokens: 8192,
+          temperature: 0.5,
+        },
+      });
+
+      aiModel = aiResponse.model;
+      aiTokenUsage = aiResponse.tokenUsage;
+
+      // 従来のパースロジックでArticle型に変換
+      article = parseArticleResponse(aiResponse.content, request, now);
+    }
 
     // ----------------------------------------------------------------
     // 4. 薬機法チェッカーで自動チェック
@@ -470,8 +593,8 @@ export class ArticleGenerator {
 
     // コスト記録 (動的インポート — CostTracker が利用可能な場合のみ)
     this.recordGenerationCost(
-      aiResponse.tokenUsage,
-      aiResponse.model,
+      aiTokenUsage,
+      aiModel,
       article.id ?? null
     ).catch((err) =>
       console.error('[ArticleGenerator] Failed to record cost:', err)
@@ -481,7 +604,7 @@ export class ArticleGenerator {
       article,
       seo: article.seo,
       compliance: complianceResult,
-      model: aiResponse.model,
+      model: aiModel,
       generatedAt: now,
       processingTimeMs: Date.now() - startTime,
     };

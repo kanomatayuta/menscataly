@@ -10,6 +10,8 @@ import type {
   AIResponse,
   ModelConfig,
   TokenUsage,
+  ToolSchema,
+  ToolUseResponse,
 } from "./types";
 import {
   DEFAULT_ARTICLE_MODEL_CONFIG,
@@ -225,6 +227,130 @@ export class ClaudeClient {
 
     // ここには到達しないが TypeScript の型制約のため
     throw new Error("[ClaudeClient] Max retries exceeded");
+  }
+
+  /**
+   * Claude API に tool_use (function calling) でリクエストを送信し、
+   * 構造化JSONレスポンスを取得する（リトライ付き）
+   *
+   * @param request AIリクエスト
+   * @param toolSchema ツールのJSONスキーマ定義
+   * @returns 構造化レスポンス
+   */
+  async generateWithTool<T>(
+    request: AIRequest,
+    toolSchema: ToolSchema
+  ): Promise<ToolUseResponse<T>> {
+    if (this.isDryRun) {
+      return this.generateMockToolResponse<T>(request, toolSchema);
+    }
+
+    const effectiveConfig: ModelConfig = {
+      ...this.modelConfig,
+      ...request.modelConfig,
+    };
+
+    const maxRetries = request.maxRetries ?? DEFAULT_MAX_RETRIES;
+    const startTime = Date.now();
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const message = await this.anthropic.messages.create({
+          model: effectiveConfig.modelId,
+          max_tokens: effectiveConfig.maxTokens,
+          temperature: effectiveConfig.temperature,
+          ...(effectiveConfig.topP !== undefined && { top_p: effectiveConfig.topP }),
+          system: request.systemPrompt,
+          messages: [
+            {
+              role: "user",
+              content: request.userMessage,
+            },
+          ],
+          tools: [
+            {
+              name: toolSchema.name,
+              description: toolSchema.description,
+              input_schema: toolSchema.input_schema,
+            },
+          ],
+          tool_choice: {
+            type: "tool" as const,
+            name: toolSchema.name,
+          },
+        });
+
+        // tool_use ブロックから input を抽出
+        const toolUseBlock = message.content.find(
+          (block): block is Anthropic.ToolUseBlock => block.type === "tool_use"
+        );
+
+        if (!toolUseBlock) {
+          throw new Error(
+            `[ClaudeClient] No tool_use block found in response. Stop reason: ${message.stop_reason}`
+          );
+        }
+
+        const inputTokens = message.usage.input_tokens;
+        const outputTokens = message.usage.output_tokens;
+
+        const tokenUsage: TokenUsage = {
+          inputTokens,
+          outputTokens,
+          totalTokens: inputTokens + outputTokens,
+          estimatedCostUsd: estimateCost(
+            effectiveConfig.modelId,
+            inputTokens,
+            outputTokens
+          ),
+        };
+
+        return {
+          content: toolUseBlock.input as T,
+          tokenUsage,
+          durationMs: Date.now() - startTime,
+          model: message.model,
+        };
+      } catch (error) {
+        if (attempt < maxRetries && isRetryableError(error)) {
+          const delay = calcBackoffDelay(attempt);
+          console.warn(
+            `[ClaudeClient] Retryable error on tool_use attempt ${attempt + 1}/${maxRetries + 1}. Retrying in ${delay}ms...`,
+            error instanceof Error ? error.message : error
+          );
+          await sleep(delay);
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    throw new Error("[ClaudeClient] Max retries exceeded (generateWithTool)");
+  }
+
+  /**
+   * ANTHROPIC_API_KEY 未設定時の tool_use モックレスポンスを返す
+   */
+  private generateMockToolResponse<T>(
+    _request: AIRequest,
+    _toolSchema: ToolSchema
+  ): ToolUseResponse<T> {
+    console.info(
+      "[ClaudeClient] ANTHROPIC_API_KEY is not set. Returning mock tool response."
+    );
+
+    // モックでは空オブジェクトを返す — 呼び出し側でダミーデータにフォールバックする
+    return {
+      content: {} as T,
+      tokenUsage: {
+        inputTokens: 0,
+        outputTokens: 0,
+        totalTokens: 0,
+        estimatedCostUsd: 0,
+      },
+      durationMs: 0,
+      model: this.modelConfig.modelId,
+    };
   }
 
   /**
