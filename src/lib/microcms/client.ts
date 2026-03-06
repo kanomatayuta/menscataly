@@ -19,7 +19,7 @@ import type { MicroCMSArticle, MicroCMSCategory, MicroCMSTag, MicroCMSArticleQue
  */
 async function safeConnection(): Promise<void> {
   try {
-    await safeConnection()
+    await connection()
   } catch {
     // Next.js サーバー外 (standalone Node.js) では connection() が例外を投げる — 安全にスキップ
   }
