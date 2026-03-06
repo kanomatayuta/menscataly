@@ -278,6 +278,7 @@ export class PipelineExecutor {
 export async function getDailyPipelineSteps(): Promise<PipelineStep<any, any>[]> {
   const { fetchTrendsStep } = await import('./steps/fetch-trends')
   const { fetchAnalyticsStep } = await import('./steps/fetch-analytics')
+  const { generateArticlesStep } = await import('./steps/generate-articles')
   const { complianceGateStep } = await import('./steps/compliance-gate')
   const { publishToMicroCMSStep } = await import('./steps/publish-to-microcms')
   const { syncToSupabaseStep } = await import('./steps/sync-to-supabase')
@@ -285,6 +286,7 @@ export async function getDailyPipelineSteps(): Promise<PipelineStep<any, any>[]>
   return [
     fetchTrendsStep,
     fetchAnalyticsStep,
+    generateArticlesStep,
     complianceGateStep,
     publishToMicroCMSStep,
     syncToSupabaseStep,
@@ -293,14 +295,30 @@ export async function getDailyPipelineSteps(): Promise<PipelineStep<any, any>[]>
 
 /**
  * PDCAバッチパイプラインのステップを取得する
+ *
+ * 完全なPDCAループ:
+ * 1. fetch-analytics — GA4/GSC からアナリティクスデータ取得
+ * 2. fetch-asp — ASP各社から収益データ取得
+ * 3. calculate-health-scores — 全記事のヘルススコア算出
+ * 4. auto-depublish — コンプライアンス違反記事の自動非公開化
+ * 5. performance-alerts — パフォーマンス低下検出・アラート作成
+ * 6. execute-rewrites — 低パフォーマンス記事の自動リライト
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getPDCAPipelineSteps(): Promise<PipelineStep<any, any>[]> {
   const { fetchAnalyticsStep } = await import('./steps/fetch-analytics')
   const { fetchAspStep } = await import('./steps/fetch-asp')
+  const { calculateHealthScoresStep } = await import('./steps/calculate-health-scores')
+  const { autoDepublishStep } = await import('./steps/auto-depublish')
+  const { performanceAlertsStep } = await import('./steps/performance-alerts')
+  const { executeRewritesStep } = await import('./steps/execute-rewrites')
 
   return [
     fetchAnalyticsStep,
     fetchAspStep,
+    calculateHealthScoresStep,
+    autoDepublishStep,
+    performanceAlertsStep,
+    executeRewritesStep,
   ]
 }

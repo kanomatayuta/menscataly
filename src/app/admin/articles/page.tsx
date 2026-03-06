@@ -13,6 +13,7 @@ import { ArticleTable } from "@/components/admin/ArticleTable";
 import { CategoryChart } from "@/components/admin/CategoryChart";
 import { getArticles, getCategories } from "@/lib/microcms/client";
 import type { ArticleReviewItem, ArticleAnalytics, ArticleGrowthRate, TrendDataPoint, RankingData, RankingItem, CategoryTrendDataPoint, CategoryInfo } from "@/types/admin";
+import type { HealthScore, HealthScoreInput } from "@/lib/content/health-score";
 import type { ContentCategory } from "@/types/content";
 import type { MicroCMSArticle } from "@/types/microcms";
 import type { MicroCMSListResponse } from "microcms-js-sdk";
@@ -688,6 +689,38 @@ async function CategoryChartSection() {
   );
 }
 
+async function calculateHealthScores(
+  articles: ArticleReviewItem[],
+  analytics: Map<string, ArticleAnalytics>,
+): Promise<Map<string, HealthScore>> {
+  try {
+    const { calculateHealthScore } = await import("@/lib/content/health-score");
+
+    const results = new Map<string, HealthScore>();
+    for (const article of articles) {
+      const stats = analytics.get(article.id);
+      const input: HealthScoreInput = {
+        articleId: article.id,
+        rankingPosition: null,
+        rankingChange7d: null,
+        ctr: null,
+        impressions: null,
+        avgSessionDuration: null,
+        bounceRate: null,
+        pageviews7d: stats?.pageviews ?? null,
+        aspClicks: stats?.affiliateClicks ?? null,
+        aspConversions: stats?.conversions ?? null,
+        aspRevenue: stats?.revenue ?? null,
+      };
+      results.set(article.id, calculateHealthScore(input));
+    }
+    return results;
+  } catch (err) {
+    console.error("[admin/articles] Health score calc error:", err);
+    return new Map();
+  }
+}
+
 async function ArticlesTableSection() {
   const { articles } = await getCachedArticlesData();
   const [analytics, categories, growthRates] = await Promise.all([
@@ -695,6 +728,9 @@ async function ArticlesTableSection() {
     getCachedCategories(),
     fetchGrowthRates(articles),
   ]);
+
+  // ヘルススコア計算
+  const healthScores = await calculateHealthScores(articles, analytics);
 
   // 更新日マップ (microCMS revisedAt)
   const rawResponse = await getCachedRawArticles();
@@ -708,7 +744,7 @@ async function ArticlesTableSection() {
   return (
     <>
       <h3 className="mb-4 text-sm font-semibold text-slate-700">記事一覧</h3>
-      <ArticleTable articles={articles} analytics={analytics} categories={categories} updatedAtMap={updatedAtMap} growthRates={growthRates} />
+      <ArticleTable articles={articles} analytics={analytics} categories={categories} updatedAtMap={updatedAtMap} growthRates={growthRates} healthScores={healthScores} />
     </>
   );
 }

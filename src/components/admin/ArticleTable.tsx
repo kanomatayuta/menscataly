@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ComplianceScoreBadge } from "./ComplianceScoreBadge";
 import type { ArticleReviewItem, ArticleAnalytics, ArticleGrowthRate, ReviewStatus, CategoryInfo } from "@/types/admin";
+import type { HealthScore } from "@/lib/content/health-score";
 
 interface ArticleTableProps {
   articles: ArticleReviewItem[];
@@ -12,9 +13,10 @@ interface ArticleTableProps {
   categories?: CategoryInfo[];
   updatedAtMap?: Map<string, string>;
   growthRates?: Map<string, ArticleGrowthRate>;
+  healthScores?: Map<string, HealthScore>;
 }
 
-type SortColumn = "pageviews" | "searchClicks" | "affiliateClicks" | "affiliateCtr" | "conversions" | "revenue" | "growthRate" | null;
+type SortColumn = "pageviews" | "searchClicks" | "affiliateClicks" | "affiliateCtr" | "conversions" | "revenue" | "growthRate" | "healthScore" | null;
 type SortDirection = "asc" | "desc";
 
 const STATUS_STYLES: Record<ReviewStatus, { bg: string; text: string; label: string }> = {
@@ -98,7 +100,40 @@ function GrowthRateValue({ rate }: { rate: number | null | undefined }) {
   return <span className="text-slate-400">0.0%</span>;
 }
 
-export function ArticleTable({ articles, analytics, categories, updatedAtMap, growthRates }: ArticleTableProps) {
+const HEALTH_STATUS_LABELS: Record<string, string> = {
+  healthy: "良好",
+  needs_improvement: "改善必要",
+  critical: "要注意",
+};
+
+function HealthScoreValue({ score }: { score: HealthScore | undefined }) {
+  if (!score) return <span className="text-slate-300">&mdash;</span>;
+
+  let dotColor: string;
+  let textColor: string;
+  if (score.total >= 70) {
+    dotColor = "bg-green-500";
+    textColor = "text-green-700";
+  } else if (score.total >= 50) {
+    dotColor = "bg-amber-500";
+    textColor = "text-amber-700";
+  } else {
+    dotColor = "bg-red-500";
+    textColor = "text-red-700";
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className={`h-2 w-2 flex-shrink-0 rounded-full ${dotColor}`} />
+      <span className={`font-medium ${textColor}`}>{score.total}</span>
+      <span className="hidden text-[10px] text-slate-400 lg:inline">
+        {HEALTH_STATUS_LABELS[score.status] ?? score.status}
+      </span>
+    </div>
+  );
+}
+
+export function ArticleTable({ articles, analytics, categories, updatedAtMap, growthRates, healthScores }: ArticleTableProps) {
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [searchQuery, setSearchQuery] = useState("");
@@ -148,6 +183,11 @@ export function ArticleTable({ articles, analytics, categories, updatedAtMap, gr
   const sortedArticles = useMemo(() => {
     if (!sortColumn) return filteredArticles;
     return [...filteredArticles].sort((a, b) => {
+      if (sortColumn === "healthScore") {
+        const hsA = healthScores?.get(a.id)?.total ?? -1;
+        const hsB = healthScores?.get(b.id)?.total ?? -1;
+        return sortDirection === "asc" ? hsA - hsB : hsB - hsA;
+      }
       if (sortColumn === "growthRate") {
         const grA = growthRates?.get(a.id)?.growthRate ?? -Infinity;
         const grB = growthRates?.get(b.id)?.growthRate ?? -Infinity;
@@ -166,7 +206,7 @@ export function ArticleTable({ articles, analytics, categories, updatedAtMap, gr
       const valB = statsB?.[sortColumn] ?? 0;
       return sortDirection === "asc" ? valA - valB : valB - valA;
     });
-  }, [filteredArticles, analytics, growthRates, sortColumn, sortDirection]);
+  }, [filteredArticles, analytics, growthRates, healthScores, sortColumn, sortDirection]);
 
   const hasActiveFilter = searchQuery || filterCategory || filterStatus;
 
@@ -242,6 +282,7 @@ export function ArticleTable({ articles, analytics, categories, updatedAtMap, gr
             <th className="sticky top-0 z-20 whitespace-nowrap bg-slate-50 px-2 py-2 font-medium text-slate-600 md:px-4 md:py-3">ステータス</th>
             <SortableHeader label="PV" column="pageviews" active={sortColumn === "pageviews"} direction={sortDirection} onClick={handleSort} />
             <SortableHeader label="伸び率" column="growthRate" active={sortColumn === "growthRate"} direction={sortDirection} onClick={handleSort} />
+            <SortableHeader label="Health" column="healthScore" active={sortColumn === "healthScore"} direction={sortDirection} onClick={handleSort} />
             <SortableHeader label="検索CL" column="searchClicks" active={sortColumn === "searchClicks"} direction={sortDirection} onClick={handleSort} />
             <SortableHeader label="広告CL" column="affiliateClicks" active={sortColumn === "affiliateClicks"} direction={sortDirection} onClick={handleSort} />
             <SortableHeader label="広告CTR" column="affiliateCtr" active={sortColumn === "affiliateCtr"} direction={sortDirection} onClick={handleSort} />
@@ -299,6 +340,9 @@ export function ArticleTable({ articles, analytics, categories, updatedAtMap, gr
                 </td>
                 <td className="px-2 py-2 text-right tabular-nums text-slate-600 md:px-4 md:py-3">
                   <GrowthRateValue rate={growthRates?.get(article.id)?.growthRate} />
+                </td>
+                <td className="px-2 py-2 text-right tabular-nums text-slate-600 md:px-4 md:py-3">
+                  <HealthScoreValue score={healthScores?.get(article.id)} />
                 </td>
                 <td className="px-2 py-2 text-right tabular-nums text-slate-600 md:px-4 md:py-3">
                   {searchCl === 0 ? <ZeroValue /> : formatNumber(searchCl)}
