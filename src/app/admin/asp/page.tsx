@@ -3,6 +3,11 @@ import { getCategories } from "@/lib/microcms/client";
 import AspManagement from "@/components/admin/AspManagement";
 import type { CategoryOption } from "@/components/admin/AspManagement";
 
+/** PPR プリレンダリング時の connection() 拒否はエラーではないため、ログをスキップ */
+function isPprRejection(err: unknown): boolean {
+  return (err instanceof Error && (err as { digest?: string }).digest === "HANGING_PROMISE_REJECTION");
+}
+
 // ------------------------------------------------------------------
 // Data fetching — microCMS からカテゴリ取得
 // ------------------------------------------------------------------
@@ -20,7 +25,7 @@ async function fetchCategories(): Promise<CategoryOption[]> {
       name: cat.name,
     }));
   } catch (err) {
-    console.error("[admin/asp] Failed to fetch categories:", err);
+    if (!isPprRejection(err)) console.error("[admin/asp] Failed to fetch categories:", err);
     return [
       { slug: "aga", name: "AGA・薄毛" },
       { slug: "hair-removal", name: "メンズ脱毛" },

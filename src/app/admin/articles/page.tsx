@@ -1,6 +1,11 @@
 import { Suspense, cache } from "react";
 import { connection } from "next/server";
 import { AdminHeader } from "@/components/admin/AdminHeader";
+
+/** PPR プリレンダリング時の connection() 拒否はエラーではないため、ログをスキップ */
+function isPprRejection(err: unknown): boolean {
+  return (err instanceof Error && (err as { digest?: string }).digest === "HANGING_PROMISE_REJECTION");
+}
 import { AnalyticsSummaryCards } from "@/components/admin/AnalyticsSummaryCards";
 import { TrendChart } from "@/components/admin/TrendChart";
 import { ArticleRanking } from "@/components/admin/ArticleRanking";
@@ -133,7 +138,7 @@ async function fetchAnalyticsFromGA4(
       entry.searchClicks += row.clicks;
     }
   } catch (err) {
-    console.error("[admin/articles] GA4/GSC fetch error:", err);
+    if (!isPprRejection(err)) console.error("[admin/articles] GA4/GSC fetch error:", err);
   }
 
   return map;
@@ -202,7 +207,7 @@ async function fetchAnalyticsData(
       }
     }
   } catch (err) {
-    console.error("[admin/articles] Analytics fetch error:", err);
+    if (!isPprRejection(err)) console.error("[admin/articles] Analytics fetch error:", err);
   }
 
   return map;
@@ -339,7 +344,7 @@ async function fetchCategoryPvData(
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([, v]) => v);
   } catch (err) {
-    console.error("[admin/articles] Category PV fetch error:", err);
+    if (!isPprRejection(err)) console.error("[admin/articles] Category PV fetch error:", err);
     return [];
   }
 }
@@ -408,7 +413,7 @@ async function fetchTrendData(days: number): Promise<TrendDataPoint[]> {
         .map(([, v]) => v);
     }
   } catch (err) {
-    console.error("[admin/articles] GA4 trend fetch error:", err);
+    if (!isPprRejection(err)) console.error("[admin/articles] GA4 trend fetch error:", err);
   }
 
   // Supabase フォールバック
@@ -456,7 +461,7 @@ async function fetchTrendData(days: number): Promise<TrendDataPoint[]> {
 
     return [...byDate.values()];
   } catch (err) {
-    console.error("[admin/articles] Trend fetch error:", err);
+    if (!isPprRejection(err)) console.error("[admin/articles] Trend fetch error:", err);
     return [];
   }
 }
@@ -517,7 +522,7 @@ async function fetchGrowthRates(
       });
     }
   } catch (err) {
-    console.error("[admin/articles] Growth rate fetch error:", err);
+    if (!isPprRejection(err)) console.error("[admin/articles] Growth rate fetch error:", err);
   }
 
   return map;

@@ -83,9 +83,12 @@ async function fetchProgramsFromSupabase(category: ContentCategory): Promise<Asp
     .order('priority', { ascending: true })
 
   if (error) {
-    console.warn(
-      `[asp/repository] Supabase query failed for category="${category}": ${error.message}. Falling back to static config.`
-    )
+    // PPR プリレンダリング時の fetch() 拒否はログ不要
+    if (!error.message?.includes("prerender")) {
+      console.warn(
+        `[asp/repository] Supabase query failed for category="${category}": ${error.message}. Falling back to static config.`
+      )
+    }
     return getProgramsByCategory(category)
   }
 

@@ -2,6 +2,11 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { headers } from "next/headers";
 import { AdminHeader } from "@/components/admin/AdminHeader";
+
+/** PPR プリレンダリング時の connection() 拒否はエラーではないため、ログをスキップ */
+function isPprRejection(err: unknown): boolean {
+  return (err instanceof Error && (err as { digest?: string }).digest === "HANGING_PROMISE_REJECTION");
+}
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { ArticleDetailTabs } from "@/components/admin/ArticleDetailTabs";
 import type { ArticleReviewDetail, AffiliateLinkPerformance } from "@/types/admin";
@@ -232,7 +237,7 @@ async function fetchArticleDetail(id: string): Promise<ArticleReviewDetail | nul
       };
     }
   } catch (err) {
-    console.error(`[admin/articles/${id}] microCMS fetch error:`, err);
+    if (!isPprRejection(err)) console.error(`[admin/articles/${id}] microCMS fetch error:`, err);
   }
 
   // Supabase未設定時はモックにフォールバック
@@ -272,7 +277,7 @@ async function fetchArticleDetail(id: string): Promise<ArticleReviewDetail | nul
     const data = await res.json() as { article: ArticleReviewDetail };
     return data.article ?? null;
   } catch (err) {
-    console.error(`[admin/articles/${id}] Fetch error:`, err);
+    if (!isPprRejection(err)) console.error(`[admin/articles/${id}] Fetch error:`, err);
     return MOCK_ARTICLES[id] ?? null;
   }
 }
@@ -337,7 +342,7 @@ async function fetchArticleAnalytics(
       result.affiliateClicks += row.clickCount;
     }
   } catch (err) {
-    console.error(`[admin/articles/${articleId}] GA4 analytics error:`, err);
+    if (!isPprRejection(err)) console.error(`[admin/articles/${articleId}] GA4 analytics error:`, err);
   }
 
   // Supabase: affiliate_links + revenue (article_id はスラッグまたはmicroCMS IDで検索)
@@ -379,7 +384,7 @@ async function fetchArticleAnalytics(
     const { getProgramsByCategoryFromDB } = await import("@/lib/asp/repository");
     result.aspPrograms = await getProgramsByCategoryFromDB(category);
   } catch (err) {
-    console.error(`[admin/articles/${articleId}] ASP programs error:`, err);
+    if (!isPprRejection(err)) console.error(`[admin/articles/${articleId}] ASP programs error:`, err);
   }
 
   return result;
