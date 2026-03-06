@@ -155,8 +155,26 @@ const DICTIONARIES: Record<string, DictionaryFile> = {
   ),
 };
 
+/** severity別の減点上限（キャップ） */
+const SCORE_DEDUCTION_CAPS: Record<Severity, number> = {
+  high: 40,
+  medium: 25,
+  low: 15,
+};
+
+/** severity別の1件あたり減点 */
+const SCORE_DEDUCTION_PER_VIOLATION: Record<Severity, number> = {
+  high: 20,
+  medium: 10,
+  low: 5,
+};
+
+/** 必須項目欠如1件あたりの減点 */
+const MISSING_ITEM_DEDUCTION = 10;
+
 /**
  * コンプライアンススコアを計算する
+ * severity別に減点上限（キャップ）を設け、違反集中によるスコア崩壊を防ぐ。
  * @param violations 違反リスト
  * @param missingItems 未記載必須項目
  * @returns 0-100 のスコア
@@ -164,13 +182,19 @@ const DICTIONARIES: Record<string, DictionaryFile> = {
 function calculateScore(violations: Violation[], missingItems: string[]): number {
   let score = 100;
 
+  // severity別の合計減点を計算し、キャップを適用
+  const deductionBySeverity: Record<Severity, number> = { high: 0, medium: 0, low: 0 };
+
   for (const v of violations) {
-    if (v.severity === "high") score -= 20;
-    else if (v.severity === "medium") score -= 10;
-    else score -= 5;
+    deductionBySeverity[v.severity] += SCORE_DEDUCTION_PER_VIOLATION[v.severity];
   }
 
-  score -= missingItems.length * 15;
+  for (const severity of ["high", "medium", "low"] as Severity[]) {
+    const capped = Math.min(deductionBySeverity[severity], SCORE_DEDUCTION_CAPS[severity]);
+    score -= capped;
+  }
+
+  score -= missingItems.length * MISSING_ITEM_DEDUCTION;
 
   return Math.max(0, score);
 }

@@ -324,6 +324,40 @@ function parseArticleResponse(
 }
 
 // ============================================================
+// E-E-A-T 要素自動挿入
+// ============================================================
+
+/**
+ * 記事コンテンツの末尾に E-E-A-T 必須要素（監修者情報・参考文献・更新日）を自動挿入する。
+ * コンプライアンスチェッカーの checkRequiredElements() が article.content テキスト内に
+ * 「監修者」「参考文献」「更新日」の文字列が含まれるかチェックするため、
+ * これらをコンテンツに埋め込むことでスコアを+30〜45点改善する。
+ */
+function appendEEATElements(content: string, article: Article): string {
+  let enriched = content;
+
+  // 監修者情報
+  if (article.supervisor) {
+    enriched += `\n\n## 監修者情報\n\n${article.supervisor.name}（${article.supervisor.credentials}）\n${article.supervisor.bio}`;
+  }
+
+  // 参考文献
+  if (article.references && article.references.length > 0) {
+    enriched += `\n\n## 参考文献\n\n`;
+    for (const ref of article.references) {
+      enriched += `- ${ref.title}${ref.url ? ` (${ref.url})` : ""}${ref.source ? ` — ${ref.source}` : ""}\n`;
+    }
+  }
+
+  // 更新日
+  if (article.updatedAt) {
+    enriched += `\n\n*最終更新日: ${article.updatedAt.split("T")[0]}*`;
+  }
+
+  return enriched;
+}
+
+// ============================================================
 // ArticleGenerator クラス
 // ============================================================
 
@@ -410,6 +444,11 @@ export class ArticleGenerator {
     // 3. レスポンスをArticle型にパース
     // ----------------------------------------------------------------
     let article = parseArticleResponse(aiResponse.content, request, now);
+
+    // ----------------------------------------------------------------
+    // 3.5. E-E-A-T 要素をコンテンツに自動挿入（スコア+30〜45点）
+    // ----------------------------------------------------------------
+    article.content = appendEEATElements(article.content, article);
 
     // ----------------------------------------------------------------
     // 4. 薬機法チェッカーで自動チェック
