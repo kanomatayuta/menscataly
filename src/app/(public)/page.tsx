@@ -3,26 +3,8 @@ import { Suspense } from "react";
 import { Card } from "@/components/ui/Card";
 import { ButtonLink } from "@/components/ui/Button";
 import { getArticles } from "@/lib/microcms/client";
-import type { MicroCMSArticle } from "@/types/microcms";
+import { articleToCardData } from "@/lib/utils/article";
 import type { ArticleCategory } from "@/components/ui/Badge";
-
-/** MicroCMSArticle を Card コンポーネント用データに変換 */
-function articleToCardData(article: MicroCMSArticle) {
-  const category = (article.category?.slug ?? "aga") as ArticleCategory;
-  return {
-    slug: article.slug ?? article.id,
-    title: article.title,
-    excerpt: article.excerpt ?? "",
-    category,
-    publishedAt: article.publishedAt,
-    updatedAt: article.updatedAt,
-    eyecatch: (() => {
-      const url = article.thumbnail?.url || (article.thumbnail_url && !article.thumbnail_url.includes('via.placeholder.com') ? article.thumbnail_url : null);
-      if (!url) return undefined;
-      return { url, width: article.thumbnail?.width ?? 1200, height: article.thumbnail?.height ?? 630 };
-    })(),
-  };
-}
 
 const CATEGORIES: { value: ArticleCategory; label: string; description: string; href: string }[] = [
   {

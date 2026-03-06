@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Suspense } from "react";
 import { draftMode } from "next/headers";
 import { Badge } from "@/components/ui/Badge";
@@ -25,7 +26,7 @@ import { getSupervisorsByCategory } from "@/lib/seo/supervisors-data";
 import { ArticleSidebar } from "@/components/article/ArticleSidebar";
 import { AdSidebar } from "@/components/article/AdSidebar";
 import { ShareButtons } from "@/components/article/ShareButtons";
-import { formatDate, getImageUrl } from "@/lib/utils/article";
+import { formatDate, getImageUrl, hasAffiliateLinks, estimateReadingTime } from "@/lib/utils/article";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -193,8 +194,10 @@ async function ArticleContent({
       {/* 構造化データ (JSON-LD) */}
       <ArticleJsonLd article={article} />
 
-      {/* PR表記 (景表法・ステマ規制対応) */}
-      {article.is_pr && <PRDisclosure variant="default" className="mb-6" />}
+      {/* PR表記 (景表法・ステマ規制対応) — is_prフラグ OR コンテンツ内にアフィリエイトリンク存在で表示 */}
+      {(article.is_pr || hasAffiliateLinks(enrichedContent)) && (
+        <PRDisclosure variant="default" className="mb-6" />
+      )}
 
       {/* 目次 (TOC) — モバイルのみ表示 */}
       <div className="lg:hidden">
@@ -324,14 +327,14 @@ export default async function ArticleDetailPage({ params, searchParams }: Props)
             <div className="article-hero">
               {getImageUrl(article) && (
                 <div className="article-hero-image">
-                  <img
+                  <Image
                     src={getImageUrl(article)!}
                     alt={article.title}
                     width={article.thumbnail?.width ?? 1200}
                     height={article.thumbnail?.height ?? 630}
                     className="w-full h-full object-cover rounded-lg"
-                    loading="eager"
-                    decoding="async"
+                    priority
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 720px"
                   />
                 </div>
               )}
@@ -362,6 +365,12 @@ export default async function ArticleDetailPage({ params, searchParams }: Props)
                       最終更新: {formatDate(article.updatedAt)}
                     </time>
                   )}
+                  <span className="inline-flex items-center gap-1">
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    約{estimateReadingTime(article)}分で読めます
+                  </span>
                 </div>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 flex-wrap">
                   {(article.supervisor_name || article.author_name) && (
