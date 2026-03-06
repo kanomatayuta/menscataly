@@ -142,6 +142,8 @@ async function main(): Promise<void> {
     }
 
     console.log('[pipeline] パイプラインが正常に完了しました')
+    // 明示的にプロセスを終了（Supabase/Slack等のオープンハンドルが残るため）
+    process.exit(0)
   } catch (error) {
     console.error('[pipeline] 致命的エラー:', error)
     process.exit(1)
