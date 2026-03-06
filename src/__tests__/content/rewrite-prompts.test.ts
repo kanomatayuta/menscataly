@@ -15,7 +15,6 @@ import {
   getAllRewriteReasons,
   type RewriteReason,
   type RewritePromptOptions,
-  type RewritePromptResult,
 } from '@/lib/content/rewrite-prompts'
 import type { Article } from '@/types/content'
 

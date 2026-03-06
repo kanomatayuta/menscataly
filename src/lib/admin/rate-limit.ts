@@ -133,6 +133,54 @@ export class RateLimiter {
   }
 
   /**
+   * カウンタをインクリメントせずにレート制限状態を取得する
+   * レスポンスヘッダー付与など、副作用なしで状態確認したい場合に使用
+   * @param key 識別キー (IP / APIキー / ユーザーID など)
+   */
+  peek(key: string): RateLimitResult {
+    const now = Date.now()
+    const windowStart = now - this.config.windowMs
+
+    const entry = this.windows.get(key)
+    if (!entry) {
+      return {
+        allowed: true,
+        remaining: this.config.maxRequests,
+        resetMs: this.config.windowMs,
+        limit: this.config.maxRequests,
+      }
+    }
+
+    // ウィンドウ内のタイムスタンプだけをカウント (配列自体は変更しない)
+    const activeTimestamps = entry.timestamps.filter(ts => ts > windowStart)
+    const currentCount = activeTimestamps.length
+    const remaining = Math.max(0, this.config.maxRequests - currentCount)
+
+    const oldestInWindow = activeTimestamps[0]
+    const resetMs = oldestInWindow
+      ? Math.max(0, oldestInWindow + this.config.windowMs - now)
+      : this.config.windowMs
+
+    if (currentCount >= this.config.maxRequests) {
+      const retryAfterSeconds = Math.ceil(resetMs / 1000)
+      return {
+        allowed: false,
+        remaining: 0,
+        resetMs,
+        limit: this.config.maxRequests,
+        retryAfterSeconds,
+      }
+    }
+
+    return {
+      allowed: true,
+      remaining,
+      resetMs,
+      limit: this.config.maxRequests,
+    }
+  }
+
+  /**
    * 指定キーのウィンドウをリセットする
    */
   reset(key: string): void {
@@ -276,11 +324,9 @@ export function addRateLimitHeaders(
   limiter: RateLimiter = defaultAdminLimiter
 ): void {
   const key = extractRateLimitKey(request)
-  const result = limiter.check(key)
+  const result = limiter.peek(key)
 
-  // check() で2回カウントされるのを防ぐため、直前の check で
-  // 既にカウントアップされている。ここでは remaining を +1 して返す
   headers.set('X-RateLimit-Limit', String(result.limit))
-  headers.set('X-RateLimit-Remaining', String(Math.min(result.remaining + 1, result.limit)))
+  headers.set('X-RateLimit-Remaining', String(result.remaining))
   headers.set('X-RateLimit-Reset', String(Math.ceil(Date.now() / 1000 + (result.resetMs / 1000))))
 }

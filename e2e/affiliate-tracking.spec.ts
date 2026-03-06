@@ -25,7 +25,7 @@ test.describe('アフィリエイトトラッキング', () => {
       )
 
       // トラッキングスクリプトが存在する場合、ASPドメインを含むこと
-      const hasTrackingScript = scripts.some(src =>
+      const _hasTrackingScript = scripts.some(src =>
         ASP_DOMAINS.some(domain => src?.includes(domain))
       )
 

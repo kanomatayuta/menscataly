@@ -60,8 +60,8 @@ function ToggleGroup<T extends string>({
           onClick={() => onChange(opt.value)}
           className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
             value === opt.value
-              ? "bg-neutral-900 text-white"
-              : "bg-white text-neutral-500 hover:bg-neutral-100"
+              ? "bg-slate-900 text-white"
+              : "bg-white text-slate-500 hover:bg-slate-100"
           }`}
         >
           {opt.label}
@@ -107,10 +107,10 @@ export function CategoryChart({
   const tooltipUnit = metricMode === "pv" ? "PV" : "記事";
 
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white py-4 shadow-sm">
+    <div className="rounded-lg border border-slate-200 bg-white py-4 shadow-sm">
       <div className="mb-4 flex items-center justify-between px-3">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-semibold text-neutral-700">カテゴリ別</h3>
+          <h3 className="text-sm font-semibold text-slate-700">カテゴリ別</h3>
           <ToggleGroup
             options={[
               { value: "count" as MetricMode, label: "記事数" },
@@ -131,7 +131,7 @@ export function CategoryChart({
           />
           {metricMode === "count" && (
             <>
-              <span className="text-neutral-300">|</span>
+              <span className="text-slate-300">|</span>
               <ToggleGroup
                 options={[
                   { value: "created" as DateMode, label: "作成" },
@@ -147,8 +147,8 @@ export function CategoryChart({
 
       {activeData.length === 0 ? (
         <div className="flex h-[280px] flex-col items-center justify-center gap-2">
-          <p className="text-sm font-medium text-neutral-600">まだデータがありません</p>
-          <p className="text-xs text-neutral-400">
+          <p className="text-sm font-medium text-slate-600">まだデータがありません</p>
+          <p className="text-xs text-slate-400">
             {metricMode === "pv" ? "GA4連携後、PVデータが表示されます" : "記事が投稿されるとデータが表示されます"}
           </p>
         </div>
@@ -257,16 +257,16 @@ export function CategoryChart({
             <a
               key={cat.slug}
               href={`/admin/articles?category=${cat.slug}`}
-              className="flex flex-col items-center rounded-md border border-neutral-100 px-1 py-2 text-center transition-colors hover:bg-neutral-50"
+              className="flex flex-col items-center rounded-md border border-slate-100 px-1 py-2 text-center transition-colors hover:bg-blue-50/40"
             >
               <span
                 className="mb-1 inline-block h-2 w-2 rounded-sm"
                 style={{ backgroundColor: catColorMap.get(cat.slug) ?? "#6b7280" }}
               />
-              <span className="text-xs font-medium leading-tight text-neutral-700">
+              <span className="text-xs font-medium leading-tight text-slate-700">
                 {cat.name}
               </span>
-              <span className="mt-0.5 text-xs font-semibold text-neutral-600">
+              <span className="mt-0.5 text-xs font-semibold text-slate-600">
                 {articleCount}記事
               </span>
             </a>

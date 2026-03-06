@@ -20,7 +20,7 @@ vi.mock('next/script', () => ({
     src,
     strategy,
     onReady,
-    ...rest
+    ..._rest
   }: {
     id?: string
     src?: string

@@ -3,7 +3,7 @@
  * Phase 3b: スライディングウィンドウ方式、ミドルウェアヘルパー
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 import { RateLimiter, extractRateLimitKey, checkAdminRateLimit } from '../rate-limit'
 
 // ============================================================

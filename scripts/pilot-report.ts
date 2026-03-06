@@ -10,7 +10,7 @@
 
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
-import { readFileSync, writeFileSync, existsSync, readdirSync } from "fs";
+import { readFileSync, writeFileSync, existsSync } from "fs";
 
 // ============================================================
 // パス解決

@@ -27,7 +27,7 @@ export function A8LinkManager() {
       strategy="afterInteractive"
       onReady={() => {
         // onReady fires after the script loads AND on every subsequent client-side navigation
-        (window as unknown as Record<string, Function>).a8linkmgr({
+        (window as unknown as Record<string, (...args: unknown[]) => void>).a8linkmgr({
           config_id: CONFIG_ID,
         });
       }}

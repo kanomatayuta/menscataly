@@ -13,7 +13,6 @@ import {
   getAvailableFAQCategories,
   getFAQThemes,
   type FAQItem,
-  type FAQGenerationResult,
 } from '@/lib/content/faq-generator'
 
 // ==============================================================

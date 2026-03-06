@@ -69,8 +69,8 @@ export function ReviewActions({ articleId, currentStatus, onStatusChange }: Revi
   const isTerminal = status === "published";
 
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-5">
-      <h3 className="mb-3 text-sm font-semibold text-neutral-800">
+    <div className="rounded-lg border border-slate-200 bg-white p-5">
+      <h3 className="mb-3 text-sm font-semibold text-slate-800">
         レビューアクション
       </h3>
 
@@ -86,7 +86,7 @@ export function ReviewActions({ articleId, currentStatus, onStatusChange }: Revi
           <div className="mb-4">
             <label
               htmlFor={`review-notes-${articleId}`}
-              className="mb-1.5 block text-sm font-medium text-neutral-700"
+              className="mb-1.5 block text-sm font-medium text-slate-700"
             >
               レビューコメント
             </label>
@@ -96,7 +96,7 @@ export function ReviewActions({ articleId, currentStatus, onStatusChange }: Revi
               onChange={(e) => setNotes(e.target.value)}
               placeholder="レビューコメントを入力（却下・修正依頼時は必須）..."
               rows={4}
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-900 placeholder-neutral-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
             />
           </div>
 

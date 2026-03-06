@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connection } from "next/server";
+import { validateAdminAuth } from "@/lib/admin/auth";
 
 /**
  * GET /api/admin/heatmap?slug=xxx
@@ -29,6 +30,11 @@ export interface HeatmapData {
 }
 
 export async function GET(req: NextRequest) {
+  const auth = await validateAdminAuth(req);
+  if (!auth.authorized) {
+    return NextResponse.json({ error: auth.error }, { status: 401 });
+  }
+
   const slug = req.nextUrl.searchParams.get("slug");
   if (!slug) {
     return NextResponse.json({ error: "slug required" }, { status: 400 });

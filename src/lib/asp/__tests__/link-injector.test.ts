@@ -346,7 +346,7 @@ describe('injectAffiliateLinksByCategory — forbidden tag protection', () => {
 
     // alreadyLinked regex catches this, so no additional link should be injected for this anchor
     // Check that the original link is preserved and no double-wrapping
-    const linkCount = (result.match(/<a /g) || []).length
+    const _linkCount = (result.match(/<a /g) || []).length
     // The first anchor's already linked, so it moves to the next program
     expect(result).not.toContain('<a href="https://t.afi-b.com/visit.php?guid=ON&a=aga-skin-001"')
   })

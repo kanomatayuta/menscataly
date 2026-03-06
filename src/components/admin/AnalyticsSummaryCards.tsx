@@ -87,7 +87,7 @@ function TrendCard({
 }: TrendCardProps) {
   return (
     <div className={`rounded-lg border p-4 shadow-sm ${borderColor} ${bgColor}`}>
-      <p className="text-xs font-medium text-neutral-500">{title}</p>
+      <p className="text-xs font-medium text-slate-500">{title}</p>
       <p className={`mt-0.5 text-xl font-bold tabular-nums ${valueColor}`}>
         {value}
       </p>
@@ -128,12 +128,12 @@ export function AnalyticsSummaryCards({
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
       {/* 総記事数 — スパークラインなし（日次データなし） */}
-      <div className="flex flex-col justify-center rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
-        <p className="text-xs font-medium text-neutral-500">総記事数</p>
-        <p className="mt-0.5 text-xl font-bold tabular-nums text-neutral-900">
+      <div className="flex flex-col justify-center rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <p className="text-xs font-medium text-slate-500">総記事数</p>
+        <p className="mt-0.5 text-xl font-bold tabular-nums text-slate-900">
           {totalArticles.toLocaleString("ja-JP")}
         </p>
-        <p className="mt-1 text-[10px] text-neutral-400">公開済み記事</p>
+        <p className="mt-1 text-[10px] text-slate-400">公開済み記事</p>
       </div>
 
       {/* 総PV */}
@@ -174,11 +174,11 @@ export function AnalyticsSummaryCards({
 
       {/* 総収益 */}
       <div className={`rounded-lg border p-4 shadow-sm ${totalRevenue > 0 ? "border-green-300" : "border-amber-200"} bg-white`}>
-        <p className="text-xs font-medium text-neutral-500">総収益</p>
+        <p className="text-xs font-medium text-slate-500">総収益</p>
         <p className={`mt-0.5 text-xl font-bold tabular-nums ${totalRevenue > 0 ? "text-green-700" : "text-amber-700"}`}>
           ¥{totalRevenue.toLocaleString("ja-JP")}
         </p>
-        <p className="mt-1 text-[10px] text-neutral-400">
+        <p className="mt-1 text-[10px] text-slate-400">
           {totalRevenue > 0 ? "過去30日間" : "ASP承認後に計上"}
         </p>
       </div>

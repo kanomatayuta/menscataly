@@ -11,7 +11,6 @@ import {
   getPhase2KeywordsByDifficulty,
   getPhase2KeywordsByVolume,
   getPhase2KeywordById,
-  type Phase2Keyword,
   type SearchIntent,
 } from '@/lib/content/keywords/phase2-keywords'
 

@@ -11,8 +11,6 @@ import {
   getRecommendedReferencesForCategory,
   getMinimumReferenceCount,
   getAllSupervisorTemplates,
-  type SupervisorTemplate,
-  type FormattedReference,
 } from '@/lib/content/templates/supervisor-info'
 import type { Reference } from '@/types/content'
 

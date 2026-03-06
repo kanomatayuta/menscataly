@@ -22,7 +22,7 @@ const VALID_SEVERITIES = ['high', 'medium', 'low'] as const;
 const VALID_CATEGORIES = ['aga', 'ed', 'hair_removal', 'skincare'] as const;
 
 describe('NGワード辞書 整合性テスト', () => {
-  describe.each(ALL_DICTS)('$name 辞書', ({ name, data }) => {
+  describe.each(ALL_DICTS)('$name 辞書', ({ name: _name, data }) => {
     test('categoryフィールドが有効値であること', () => {
       expect(VALID_CATEGORIES).toContain(data.category);
     });
@@ -119,7 +119,7 @@ describe('NGワード辞書 整合性テスト', () => {
 
     test('全エントリのok表現に「確実」「必ず」「完全」「100%」が含まれないこと', () => {
       const forbiddenInOk = ['確実', '必ず', '完全に', '100%'];
-      ALL_DICTS.forEach(({ name, data }) => {
+      ALL_DICTS.forEach(({ name: _name, data }) => {
         data.entries.forEach((entry) => {
           forbiddenInOk.forEach((forbidden) => {
             // ok表現にNG断定表現が混入していないことを確認

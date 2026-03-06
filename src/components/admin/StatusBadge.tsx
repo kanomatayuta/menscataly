@@ -6,7 +6,7 @@ interface StatusBadgeProps {
 }
 
 const STATUS_CONFIG: Record<ReviewStatus, { label: string; bg: string; text: string; dot: string }> = {
-  draft: { label: "下書き", bg: "bg-neutral-100", text: "text-neutral-700", dot: "bg-neutral-400" },
+  draft: { label: "下書き", bg: "bg-slate-100", text: "text-slate-700", dot: "bg-slate-400" },
   pending: { label: "レビュー待ち", bg: "bg-yellow-100", text: "text-yellow-800", dot: "bg-yellow-500" },
   revision: { label: "修正依頼", bg: "bg-orange-100", text: "text-orange-800", dot: "bg-orange-500" },
   approved: { label: "承認済み", bg: "bg-green-100", text: "text-green-800", dot: "bg-green-500" },
@@ -38,8 +38,8 @@ export function StatusWorkflow({ current }: { current: ReviewStatus }) {
   );
 
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-5">
-      <h3 className="mb-4 text-sm font-semibold text-neutral-800">
+    <div className="rounded-lg border border-slate-200 bg-white p-5">
+      <h3 className="mb-4 text-sm font-semibold text-slate-800">
         ワークフロー
       </h3>
 
@@ -60,7 +60,7 @@ export function StatusWorkflow({ current }: { current: ReviewStatus }) {
                       ? `${config.bg} ${config.text} ring-2 ring-offset-2 ${config.dot.replace("bg-", "ring-")}`
                       : isPast
                         ? "bg-green-100 text-green-700"
-                        : "bg-neutral-100 text-neutral-400"
+                        : "bg-slate-100 text-slate-400"
                   }`}
                 >
                   {isPast ? (
@@ -73,7 +73,7 @@ export function StatusWorkflow({ current }: { current: ReviewStatus }) {
                 </div>
                 <span
                   className={`mt-1.5 text-xs font-medium ${
-                    isActive ? config.text : isFuture ? "text-neutral-400" : "text-neutral-600"
+                    isActive ? config.text : isFuture ? "text-slate-400" : "text-slate-600"
                   }`}
                 >
                   {config.label}
@@ -84,7 +84,7 @@ export function StatusWorkflow({ current }: { current: ReviewStatus }) {
               {index < WORKFLOW_ORDER.length - 1 && (
                 <div
                   className={`mx-2 h-0.5 w-8 sm:w-12 ${
-                    index < currentIndex ? "bg-green-300" : "bg-neutral-200"
+                    index < currentIndex ? "bg-green-300" : "bg-slate-200"
                   }`}
                 />
               )}

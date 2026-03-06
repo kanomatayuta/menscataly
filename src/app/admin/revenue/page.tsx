@@ -214,15 +214,15 @@ async function fetchRevenueData(): Promise<RevenueResponse> {
         });
       }
       const entry = aspMap.get(aspName)!;
-      entry.clicks += Number(link.click_count ?? 0);
-      entry.conversions += Number(link.conversion_count ?? 0);
-      entry.revenue += Number(link.revenue ?? 0);
+      entry.clicks += (Number(link.click_count) || 0);
+      entry.conversions += (Number(link.conversion_count) || 0);
+      entry.revenue += (Number(link.revenue) || 0);
 
       // 記事別コンバージョン集計 (topArticles用)
       if (link.article_id) {
         const artKey = link.article_id as string;
         const existing = entry.articleConversions.get(artKey);
-        const cv = Number(link.conversion_count ?? 0);
+        const cv = (Number(link.conversion_count) || 0);
         if (existing) {
           existing.conversions += cv;
         } else {

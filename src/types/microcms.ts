@@ -83,6 +83,7 @@ export interface MicroCMSArticle extends MicroCMSDate {
   thumbnail_url?: string       // 外部画像URL (Cloudinary等) — AI自動生成時に使用
   // SEO
   seo_title?: string           // 検索結果用タイトル (最大60文字)
+  seo_description?: string     // 検索結果用ディスクリプション (最大160文字)
   target_keyword?: string      // メインキーワード (管理用)
   reading_time?: number        // 読了時間 (分)
   // 著者・監修者 (E-E-A-T)

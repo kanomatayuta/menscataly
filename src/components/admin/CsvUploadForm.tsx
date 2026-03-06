@@ -32,7 +32,13 @@ export function CsvUploadForm() {
         body: formData,
       });
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        setError("サーバーからの応答を解析できませんでした");
+        return;
+      }
 
       if (!res.ok) {
         setError(data.error || "アップロードに失敗しました");

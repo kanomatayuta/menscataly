@@ -19,7 +19,6 @@ import {
   type HealthScoreInput,
   type HealthScore,
   type EEATScoreInput,
-  type EEATScoreResult,
 } from '@/lib/content/health-score'
 
 // ==============================================================

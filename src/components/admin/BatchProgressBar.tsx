@@ -39,21 +39,21 @@ export function BatchProgressBar({
       statusColor = "text-red-700";
       break;
     default:
-      barColor = "bg-neutral-400";
-      statusColor = "text-neutral-600";
+      barColor = "bg-slate-400";
+      statusColor = "text-slate-600";
   }
 
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-5">
+    <div className="rounded-lg border border-slate-200 bg-white p-5">
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-sm font-medium text-neutral-700">進捗</span>
+        <span className="text-sm font-medium text-slate-700">進捗</span>
         <span className={`text-sm font-semibold ${statusColor}`}>
           {STATUS_LABELS[status] ?? status}
         </span>
       </div>
 
       {/* プログレスバー */}
-      <div className="mb-2 h-3 w-full overflow-hidden rounded-full bg-neutral-100">
+      <div className="mb-2 h-3 w-full overflow-hidden rounded-full bg-slate-100">
         <div className="flex h-full">
           <div
             className={`h-full transition-all duration-300 ${barColor}`}
@@ -69,7 +69,7 @@ export function BatchProgressBar({
       </div>
 
       {/* 統計 */}
-      <div className="flex items-center justify-between text-xs text-neutral-500">
+      <div className="flex items-center justify-between text-xs text-slate-500">
         <span>
           {completed} / {total} 完了
         </span>

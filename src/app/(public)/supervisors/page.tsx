@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { Breadcrumb } from "@/components/navigation/Breadcrumb";
 import {
@@ -103,7 +104,7 @@ export default function SupervisorsPage() {
                   <div className="flex items-start gap-4">
                     {/* プロフィール画像 */}
                     {supervisor.imageUrl ? (
-                      <img
+                      <Image
                         src={supervisor.imageUrl}
                         alt={`${supervisor.name}のプロフィール画像`}
                         width={64}

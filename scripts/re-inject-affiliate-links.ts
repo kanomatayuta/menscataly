@@ -192,7 +192,7 @@ async function main() {
     const category = categorySlug as ContentCategory
 
     try {
-      let content = article.content
+      const content = article.content
 
       // 既存のアフィリエイトリンクがあるか確認
       const existingLinkCount = (content.match(/rel="sponsored/g) || []).length

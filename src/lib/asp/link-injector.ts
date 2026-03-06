@@ -195,7 +195,7 @@ export function resolveTextCreatives(
  * バナーHTMLを生成する
  * rawHtml がある場合はそのまま返す（ASP発行のトラッキングピクセル保持）
  */
-export function generateBannerHtml(creative: AdCreative, aspName: string, programId: string, category: string): string {
+export function generateBannerHtml(creative: AdCreative, _aspName: string, _programId: string, _category: string): string {
   if (creative.type !== 'banner') return ''
   // rawHtml がある場合はそのまま返す（トラッキングピクセル含む）
   if (creative.rawHtml) return creative.rawHtml

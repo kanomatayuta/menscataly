@@ -16,29 +16,29 @@ export function AdminHeader({ title, breadcrumbs }: AdminHeaderProps) {
       {/* Breadcrumbs */}
       {breadcrumbs && breadcrumbs.length > 0 && (
         <nav aria-label="Breadcrumb" className="mb-2">
-          <ol className="flex items-center gap-1.5 text-sm text-neutral-500">
+          <ol className="flex items-center gap-1.5 text-sm text-slate-500">
             <li>
               <Link
                 href="/admin"
-                className="hover:text-neutral-700 hover:underline"
+                className="hover:text-slate-700 hover:underline"
               >
                 管理画面
               </Link>
             </li>
             {breadcrumbs.map((crumb, index) => (
               <li key={index} className="flex items-center gap-1.5">
-                <span aria-hidden="true" className="text-neutral-300">
+                <span aria-hidden="true" className="text-slate-300">
                   /
                 </span>
                 {crumb.href ? (
                   <Link
                     href={crumb.href}
-                    className="hover:text-neutral-700 hover:underline"
+                    className="hover:text-slate-700 hover:underline"
                   >
                     {crumb.label}
                   </Link>
                 ) : (
-                  <span className="text-neutral-700">{crumb.label}</span>
+                  <span className="text-slate-700">{crumb.label}</span>
                 )}
               </li>
             ))}
@@ -47,7 +47,7 @@ export function AdminHeader({ title, breadcrumbs }: AdminHeaderProps) {
       )}
 
       {/* Page title */}
-      <h1 className="text-2xl font-bold text-neutral-900">{title}</h1>
+      <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
     </div>
   );
 }

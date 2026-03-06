@@ -15,7 +15,7 @@ interface PipelineRunTableProps {
 }
 
 const STATUS_STYLES: Record<PipelineStatus, { bg: string; text: string }> = {
-  idle: { bg: "bg-neutral-100", text: "text-neutral-700" },
+  idle: { bg: "bg-slate-100", text: "text-slate-700" },
   running: { bg: "bg-blue-100", text: "text-blue-700" },
   success: { bg: "bg-green-100", text: "text-green-700" },
   failed: { bg: "bg-red-100", text: "text-red-700" },
@@ -48,36 +48,36 @@ function formatDuration(ms: number | null): string {
 export function PipelineRunTable({ runs }: PipelineRunTableProps) {
   if (runs.length === 0) {
     return (
-      <div className="rounded-lg border border-neutral-200 bg-white p-8 text-center">
-        <p className="text-sm text-neutral-500">実行履歴がありません</p>
+      <div className="rounded-lg border border-slate-200 bg-white p-8 text-center">
+        <p className="text-sm text-slate-500">実行履歴がありません</p>
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white shadow-sm">
+    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
       <table className="w-full text-left text-sm">
         <thead>
-          <tr className="border-b border-neutral-200 bg-neutral-50">
-            <th className="px-4 py-3 font-medium text-neutral-600">実行ID</th>
-            <th className="px-4 py-3 font-medium text-neutral-600">種別</th>
-            <th className="px-4 py-3 font-medium text-neutral-600">ステータス</th>
-            <th className="px-4 py-3 font-medium text-neutral-600">開始時刻</th>
-            <th className="px-4 py-3 font-medium text-neutral-600">
+          <tr className="border-b border-slate-200 bg-slate-50">
+            <th className="px-4 py-3 font-medium text-slate-600">実行ID</th>
+            <th className="px-4 py-3 font-medium text-slate-600">種別</th>
+            <th className="px-4 py-3 font-medium text-slate-600">ステータス</th>
+            <th className="px-4 py-3 font-medium text-slate-600">開始時刻</th>
+            <th className="px-4 py-3 font-medium text-slate-600">
               所要時間
             </th>
-            <th className="px-4 py-3 font-medium text-neutral-600">エラー</th>
+            <th className="px-4 py-3 font-medium text-slate-600">エラー</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-neutral-100">
+        <tbody className="divide-y divide-slate-100">
           {runs.map((run) => {
             const style = STATUS_STYLES[run.status];
             return (
-              <tr key={run.id} className="hover:bg-neutral-50">
-                <td className="px-4 py-3 font-mono text-xs text-neutral-700">
+              <tr key={run.id} className="hover:bg-slate-50">
+                <td className="px-4 py-3 font-mono text-xs text-slate-700">
                   {run.id.slice(0, 8)}
                 </td>
-                <td className="px-4 py-3 text-neutral-600">
+                <td className="px-4 py-3 text-slate-600">
                   {TYPE_LABELS[run.type] ?? run.type}
                 </td>
                 <td className="px-4 py-3">
@@ -87,10 +87,10 @@ export function PipelineRunTable({ runs }: PipelineRunTableProps) {
                     {STATUS_LABELS[run.status] ?? run.status}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-neutral-500">
+                <td className="px-4 py-3 text-slate-500">
                   {new Date(run.startedAt).toLocaleString("ja-JP")}
                 </td>
-                <td className="px-4 py-3 text-neutral-500">
+                <td className="px-4 py-3 text-slate-500">
                   {formatDuration(run.durationMs)}
                 </td>
                 <td className="max-w-xs truncate px-4 py-3 text-xs text-red-600">

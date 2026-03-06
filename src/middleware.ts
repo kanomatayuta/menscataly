@@ -163,8 +163,10 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 
   if (existingCookie) {
     try {
-      const data = JSON.parse(existingCookie.value) as AffiliateTrackingData
-      activeAsps = data.asps.map((a) => a.aspName)
+      const data = JSON.parse(existingCookie.value)
+      if (data && Array.isArray(data.asps)) {
+        activeAsps = data.asps.map((a: { aspName?: string }) => a.aspName).filter(Boolean)
+      }
     } catch {
       // Cookie パース失敗は無視
     }

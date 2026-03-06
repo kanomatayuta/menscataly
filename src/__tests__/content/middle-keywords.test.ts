@@ -15,7 +15,6 @@ import {
   getMiddleKeywordsByDifficulty,
   getMiddleKeywordsByVolume,
   getMiddleKeywordById,
-  type MiddleKeyword,
 } from '@/lib/content/keywords/middle-keywords'
 
 // ==============================================================

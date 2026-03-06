@@ -77,36 +77,36 @@ function CustomTooltip({
   const color = getAspColor(data.aspName);
 
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white px-4 py-3 shadow-lg">
+    <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-lg">
       <p
         className="mb-2 text-sm font-semibold"
         style={{ color }}
       >
         {data.displayName}
       </p>
-      <div className="space-y-1 text-xs text-neutral-600">
+      <div className="space-y-1 text-xs text-slate-600">
         <div className="flex items-center justify-between gap-6">
-          <span className="text-neutral-500">売上</span>
-          <span className="font-medium text-neutral-900">
+          <span className="text-slate-500">売上</span>
+          <span className="font-medium text-slate-900">
             ¥{data.revenue.toLocaleString()}
           </span>
         </div>
         <div className="flex items-center justify-between gap-6">
-          <span className="text-neutral-500">クリック数</span>
-          <span className="font-medium text-neutral-900">
+          <span className="text-slate-500">クリック数</span>
+          <span className="font-medium text-slate-900">
             {data.clicks.toLocaleString()}
           </span>
         </div>
         <div className="flex items-center justify-between gap-6">
-          <span className="text-neutral-500">CV数</span>
-          <span className="font-medium text-neutral-900">
+          <span className="text-slate-500">CV数</span>
+          <span className="font-medium text-slate-900">
             {data.conversions.toLocaleString()}
           </span>
         </div>
-        <div className="mt-1 border-t border-neutral-100 pt-1">
+        <div className="mt-1 border-t border-slate-100 pt-1">
           <div className="flex items-center justify-between gap-6">
-            <span className="text-neutral-500">CVR</span>
-            <span className="font-medium text-neutral-900">
+            <span className="text-slate-500">CVR</span>
+            <span className="font-medium text-slate-900">
               {data.conversionRate.toFixed(1)}%
             </span>
           </div>
@@ -146,9 +146,9 @@ function BarLabel(props: {
 export function RevenueChart({ summaries }: RevenueChartProps) {
   if (summaries.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-neutral-300 bg-neutral-50 px-8 py-12">
+      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 px-8 py-12">
         <svg
-          className="mb-3 h-10 w-10 text-neutral-300"
+          className="mb-3 h-10 w-10 text-slate-300"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -160,10 +160,10 @@ export function RevenueChart({ summaries }: RevenueChartProps) {
             d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"
           />
         </svg>
-        <p className="text-sm font-medium text-neutral-500">
+        <p className="text-sm font-medium text-slate-500">
           表示する売上データがありません
         </p>
-        <p className="mt-1 text-xs text-neutral-400">
+        <p className="mt-1 text-xs text-slate-400">
           ASP連携後にデータが表示されます
         </p>
       </div>
@@ -180,7 +180,7 @@ export function RevenueChart({ summaries }: RevenueChartProps) {
   }));
 
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
+    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <ResponsiveContainer width="100%" height={320}>
         <BarChart
           data={data}

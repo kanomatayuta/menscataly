@@ -6,7 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { complianceGateStep, updateQueueEntryStatus } from '../compliance-gate'
 import type { ComplianceGateOutput, ComplianceQueueEntry } from '../compliance-gate'
-import type { GeneratedArticleData, PipelineContext } from '../../types'
+import type { GeneratedArticleData } from '../../types'
 import { createMockPipelineContext } from '@/test/helpers'
 
 // ============================================================

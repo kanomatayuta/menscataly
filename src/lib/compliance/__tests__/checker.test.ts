@@ -3,9 +3,9 @@
  * ComplianceChecker クラス + PR表記テンプレート + アフィリエイトリンク処理
  */
 
-import { describe, test, expect, beforeEach } from "vitest";
+import { describe, test, expect } from "vitest";
 import { ComplianceChecker } from "../checker";
-import { insertPRDisclosure, hasPRDisclosure } from "../templates/pr-disclosure";
+import { insertPRDisclosure } from "../templates/pr-disclosure";
 import { processAffiliateLinks } from "../utils/affiliate-links";
 import aGA from "../dictionaries/aga.json";
 import eD from "../dictionaries/ed.json";

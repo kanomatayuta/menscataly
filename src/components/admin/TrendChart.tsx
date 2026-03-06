@@ -44,9 +44,9 @@ export function TrendChart({ data }: TrendChartProps) {
   const filtered = data.slice(-period);
 
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white py-4 shadow-sm">
+    <div className="rounded-lg border border-slate-200 bg-white py-4 shadow-sm">
       <div className="mb-4 flex items-center justify-between px-3">
-        <h3 className="text-sm font-semibold text-neutral-700">トレンド</h3>
+        <h3 className="text-sm font-semibold text-slate-700">トレンド</h3>
         <div className="flex gap-1">
           {PERIODS.map((p) => (
             <button
@@ -55,8 +55,8 @@ export function TrendChart({ data }: TrendChartProps) {
               aria-pressed={period === p.value}
               className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                 period === p.value
-                  ? "bg-neutral-900 text-white"
-                  : "bg-white text-neutral-600 hover:bg-neutral-100"
+                  ? "bg-slate-900 text-white"
+                  : "bg-white text-slate-600 hover:bg-slate-100"
               }`}
             >
               {p.label}
@@ -67,8 +67,8 @@ export function TrendChart({ data }: TrendChartProps) {
 
       {filtered.length === 0 ? (
         <div className="flex h-[300px] flex-col items-center justify-center gap-2">
-          <p className="text-sm font-medium text-neutral-600">まだデータがありません</p>
-          <p className="text-xs text-neutral-400">
+          <p className="text-sm font-medium text-slate-600">まだデータがありません</p>
+          <p className="text-xs text-slate-400">
             GA4・GSC連携後、翌日以降からデータが表示されます
           </p>
         </div>

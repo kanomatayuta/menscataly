@@ -28,9 +28,9 @@ function getScoreTextColor(score: number): string {
 
 export function ComplianceBreakdown({ breakdown, overall }: ComplianceBreakdownProps) {
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-5">
+    <div className="rounded-lg border border-slate-200 bg-white p-5">
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-neutral-800">
+        <h3 className="text-sm font-semibold text-slate-800">
           コンプライアンススコア内訳
         </h3>
         <span
@@ -47,10 +47,10 @@ export function ComplianceBreakdown({ breakdown, overall }: ComplianceBreakdownP
             <div key={key}>
               <div className="mb-1 flex items-center justify-between">
                 <div>
-                  <span className="text-sm font-medium text-neutral-700">
+                  <span className="text-sm font-medium text-slate-700">
                     {label}
                   </span>
-                  <span className="ml-2 text-xs text-neutral-400">
+                  <span className="ml-2 text-xs text-slate-400">
                     {description}
                   </span>
                 </div>
@@ -60,7 +60,7 @@ export function ComplianceBreakdown({ breakdown, overall }: ComplianceBreakdownP
                   {score}%
                 </span>
               </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-100">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${getScoreColor(score)}`}
                   style={{ width: `${score}%` }}

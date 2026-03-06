@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { ArticleDetailStats } from "./ArticleDetailStats";
 import { HeatmapOverlay } from "./HeatmapOverlay";
-import { ComplianceScoreBadge } from "./ComplianceScoreBadge";
 import { ComplianceBreakdown } from "./ComplianceBreakdown";
 import { ReviewActions } from "./ReviewActions";
 import { ReviewCommentHistory } from "./ReviewCommentHistory";

@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { validateAdminAuth } from '@/lib/admin/auth'
+import { safeParseInt } from '@/lib/utils/safe-parse'
 import type { ArticleReviewItem } from '@/types/admin'
 // ============================================================
 // モックデータ
@@ -61,8 +62,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const { searchParams } = new URL(request.url)
   const status = searchParams.get('status')
   const category = searchParams.get('category')
-  const limit = parseInt(searchParams.get('limit') ?? '20', 10)
-  const offset = parseInt(searchParams.get('offset') ?? '0', 10)
+  const limit = safeParseInt(searchParams.get('limit'), 20, 1, 100)
+  const offset = safeParseInt(searchParams.get('offset'), 0, 0)
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY

@@ -12,7 +12,7 @@
  * - 正規表現のedgeケースマッチ失敗
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface TocHeading {
   level: number;
@@ -20,37 +20,47 @@ interface TocHeading {
   id: string;
 }
 
+function readHeadingsFromDOM(): TocHeading[] {
+  const articleBody = document.querySelector(".article-body");
+  if (!articleBody) return [];
+
+  const elements = articleBody.querySelectorAll("h2, h3");
+  const items: TocHeading[] = [];
+
+  elements.forEach((el) => {
+    const text = el.textContent?.trim() ?? "";
+    if (!text) return;
+
+    if (!el.id) {
+      el.id = text
+        .toLowerCase()
+        .replace(/[^\w\u3000-\u9fff\uff00-\uffef]+/g, "-")
+        .replace(/^-|-$/g, "");
+    }
+
+    items.push({
+      level: el.tagName === "H2" ? 2 : 3,
+      text,
+      id: el.id,
+    });
+  });
+
+  return items;
+}
+
 export function TableOfContents() {
   const [headings, setHeadings] = useState<TocHeading[]>([]);
+  const didRun = useRef(false);
 
   useEffect(() => {
-    // ArticleBody がレンダリングした .article-body 内の h2/h3 を取得
-    const articleBody = document.querySelector(".article-body");
-    if (!articleBody) return;
-
-    const elements = articleBody.querySelectorAll("h2, h3");
-    const items: TocHeading[] = [];
-
-    elements.forEach((el) => {
-      const text = el.textContent?.trim() ?? "";
-      if (!text) return;
-
-      // ID がなければ生成して付与
-      if (!el.id) {
-        el.id = text
-          .toLowerCase()
-          .replace(/[^\w\u3000-\u9fff\uff00-\uffef]+/g, "-")
-          .replace(/^-|-$/g, "");
-      }
-
-      items.push({
-        level: el.tagName === "H2" ? 2 : 3,
-        text,
-        id: el.id,
-      });
-    });
-
-    setHeadings(items);
+    if (didRun.current) return;
+    didRun.current = true;
+    const items = readHeadingsFromDOM();
+    if (items.length > 0) {
+      // DOM読み取り結果をstateに反映 (マウント時1回のみ)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setHeadings(items);
+    }
   }, []);
 
   // h2 が 2 つ未満なら目次不要

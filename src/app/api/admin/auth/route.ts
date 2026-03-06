@@ -22,7 +22,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       )
     }
 
-    let response = NextResponse.json({ success: true })
+    const response = NextResponse.json({ success: true })
     const supabase = createSSRServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 }
 
 export async function DELETE(request: NextRequest): Promise<NextResponse> {
-  let response = NextResponse.json({ success: true })
+  const response = NextResponse.json({ success: true })
   const supabase = createSSRServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

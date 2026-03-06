@@ -10,7 +10,6 @@
 import { describe, it, expect } from 'vitest'
 import comparisonTermsDictionary from '@/lib/compliance/dictionaries/comparison-terms'
 import { ComplianceChecker } from '@/lib/compliance/checker'
-import type { DictionaryFile, NGEntry } from '@/lib/compliance/types'
 
 // ==============================================================
 // 辞書構造テスト

@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { publishToMicroCMSStep } from '../publish-to-microcms'
-import type { GeneratedArticleData, PipelineContext } from '../../types'
+import type { GeneratedArticleData } from '../../types'
 import type { ComplianceGateOutput } from '../compliance-gate'
 import { createMockPipelineContext } from '@/test/helpers'
 

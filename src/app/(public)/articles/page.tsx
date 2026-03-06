@@ -6,6 +6,9 @@ export const metadata: Metadata = {
   title: "記事一覧",
   description:
     "メンズカタリの記事一覧です。AGA治療・医療脱毛・スキンケア・ED治療に関する情報を専門医監修のもとお届けします。",
+  alternates: {
+    canonical: "/articles",
+  },
 };
 
 type SearchParams = Promise<{

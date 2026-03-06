@@ -9,7 +9,7 @@
  * - generateUpdateInfo(): 更新日・免責事項の生成
  */
 
-import type { ContentCategory, AuthorInfo, Reference } from '@/types/content'
+import type { AuthorInfo, Reference } from '@/types/content'
 
 // ============================================================
 // 型定義

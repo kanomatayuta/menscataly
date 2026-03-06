@@ -76,7 +76,6 @@ export async function POST(req: NextRequest) {
   const signature =
     req.headers.get('X-MICROCMS-Signature') ??
     req.headers.get('x-microcms-signature') ??
-    req.headers.get('x-webhook-secret') ??
     ''
 
   const isValid = await verifySignature(webhookSecret, signature, rawBody)

@@ -73,8 +73,8 @@ export function AlertsList({ alerts: initialAlerts }: AlertsListProps) {
 
   if (alerts.length === 0) {
     return (
-      <div className="rounded-lg border border-neutral-200 bg-white p-6 text-center">
-        <p className="text-sm text-neutral-500">No active alerts</p>
+      <div className="rounded-lg border border-slate-200 bg-white p-6 text-center">
+        <p className="text-sm text-slate-500">No active alerts</p>
       </div>
     );
   }
@@ -99,10 +99,10 @@ export function AlertsList({ alerts: initialAlerts }: AlertsListProps) {
                   <p className={`text-sm font-medium ${styles.text}`}>
                     {alert.title}
                   </p>
-                  <p className="mt-0.5 text-xs text-neutral-600">
+                  <p className="mt-0.5 text-xs text-slate-600">
                     {alert.message}
                   </p>
-                  <p className="mt-1 text-xs text-neutral-400">
+                  <p className="mt-1 text-xs text-slate-400">
                     {new Date(alert.createdAt).toLocaleString("ja-JP")}
                   </p>
                 </div>
@@ -112,13 +112,13 @@ export function AlertsList({ alerts: initialAlerts }: AlertsListProps) {
                   type="button"
                   onClick={() => handleAcknowledge(alert.id)}
                   disabled={isPending}
-                  className="flex-shrink-0 rounded-md border border-neutral-300 bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex-shrink-0 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isPending ? "..." : "Acknowledge"}
                 </button>
               )}
               {alert.status === "acknowledged" && (
-                <span className="flex-shrink-0 text-xs text-neutral-400">
+                <span className="flex-shrink-0 text-xs text-slate-400">
                   Acknowledged
                 </span>
               )}

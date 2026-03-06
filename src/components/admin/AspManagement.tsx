@@ -1041,102 +1041,83 @@ export default function AspManagement({ categories }: AspManagementProps) {
       </div>
 
       {/* Programs table */}
-      <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white shadow-sm">
+      <div className="max-h-[70vh] overflow-auto rounded-lg border border-slate-200 bg-white shadow-sm">
         <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-neutral-200 bg-neutral-50">
-              <th className="px-4 py-3 font-medium text-neutral-600">プログラム名</th>
-              <th className="px-4 py-3 font-medium text-neutral-600">広告主</th>
-              <th className="px-4 py-3 font-medium text-neutral-600">ASP</th>
-              <th className="px-4 py-3 font-medium text-neutral-600">カテゴリ</th>
-              <th className="px-4 py-3 font-medium text-neutral-600">提携</th>
-              <th className="px-4 py-3 font-medium text-neutral-600">優先度</th>
-              <th className="px-4 py-3 font-medium text-neutral-600">報酬</th>
-              <th className="px-4 py-3 font-medium text-neutral-600">成果条件</th>
-              <th className="px-4 py-3 font-medium text-neutral-600">承認率</th>
-              <th className="px-4 py-3 font-medium text-neutral-600">EPC</th>
-              <th className="px-4 py-3 font-medium text-neutral-600">ITP</th>
-              <th className="px-4 py-3 font-medium text-neutral-600">有効</th>
-              <th className="px-4 py-3 font-medium text-neutral-600">操作</th>
+          <thead className="sticky top-0 z-20">
+            <tr className="border-b border-slate-200 bg-slate-50">
+              <th className="sticky left-0 z-30 min-w-[200px] bg-slate-50 px-4 py-3 font-medium text-slate-600 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]">プログラム名</th>
+              <th className="whitespace-nowrap px-4 py-3 font-medium text-slate-600">広告主</th>
+              <th className="whitespace-nowrap px-4 py-3 font-medium text-slate-600">ASP</th>
+              <th className="whitespace-nowrap px-4 py-3 font-medium text-slate-600">カテゴリ</th>
+              <th className="whitespace-nowrap px-4 py-3 font-medium text-slate-600">提携</th>
+              <th className="whitespace-nowrap px-4 py-3 font-medium text-slate-600">優先度</th>
+              <th className="whitespace-nowrap px-4 py-3 font-medium text-slate-600">報酬</th>
+              <th className="whitespace-nowrap px-4 py-3 font-medium text-slate-600">成果条件</th>
+              <th className="whitespace-nowrap px-4 py-3 font-medium text-slate-600">承認率</th>
+              <th className="whitespace-nowrap px-4 py-3 font-medium text-slate-600">EPC</th>
+              <th className="whitespace-nowrap px-4 py-3 font-medium text-slate-600">ITP</th>
+              <th className="whitespace-nowrap px-4 py-3 font-medium text-slate-600">有効</th>
+              <th className="whitespace-nowrap px-4 py-3 font-medium text-slate-600">操作</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-100">
+          <tbody className="divide-y divide-slate-100">
             {filteredPrograms.map((program) => {
-              const aspColor = ({
-                afb: "bg-purple-100 text-purple-700",
-                a8: "bg-orange-100 text-orange-700",
-                accesstrade: "bg-cyan-100 text-cyan-700",
-                valuecommerce: "bg-emerald-100 text-emerald-700",
-                felmat: "bg-pink-100 text-pink-700",
-                moshimo: "bg-teal-100 text-teal-700",
-              } as Record<AspName, string>)[program.aspName];
-
               return (
-                <tr key={program.id} className={`hover:bg-neutral-50 ${!program.isActive ? "opacity-60" : ""}`}>
-                  <td className="max-w-[200px] px-4 py-3 font-medium text-neutral-900">
+                <tr key={program.id} className={`group hover:bg-blue-50/40 ${!program.isActive ? "opacity-60" : ""}`}>
+                  <td className="sticky left-0 z-10 min-w-[200px] max-w-[200px] bg-white px-4 py-3 font-medium text-slate-800 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)] group-hover:bg-[#eff5fb]">
                     <div className="flex items-center gap-1.5">
                       <p className="truncate">{program.programName}</p>
                       {program.adCreatives && program.adCreatives.length > 0 && (
-                        <span className="shrink-0 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-700" title="広告クリエイティブ数">
+                        <span className="shrink-0 rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-500" title="広告クリエイティブ数">
                           {program.adCreatives.length}素材
                         </span>
                       )}
                     </div>
-                    <p className="mt-0.5 truncate text-xs text-neutral-400">{program.advertiserName || program.programId}</p>
+                    <p className="mt-0.5 truncate text-xs text-slate-400">{program.advertiserName || program.programId}</p>
                   </td>
-                  <td className="max-w-[120px] truncate px-4 py-3 text-xs text-neutral-500">{program.advertiserName || "-"}</td>
+                  <td className="max-w-[120px] truncate px-4 py-3 text-xs text-slate-500">{program.advertiserName || "-"}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${aspColor}`}>{ASP_DISPLAY_NAMES[program.aspName]}</span>
+                    <span className="inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">{ASP_DISPLAY_NAMES[program.aspName]}</span>
                   </td>
-                  <td className="px-4 py-3 text-neutral-600">{CATEGORY_LABELS[program.category]}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                      program.partnershipStatus === "active" ? "bg-green-100 text-green-700" :
-                      program.partnershipStatus === "pending" ? "bg-yellow-100 text-yellow-700" :
-                      program.partnershipStatus === "ended" ? "bg-neutral-100 text-neutral-500" :
-                      "bg-neutral-100 text-neutral-500"
-                    }`}>{PARTNERSHIP_STATUS_LABELS[program.partnershipStatus ?? "active"] ?? program.partnershipStatus}</span>
+                  <td className="whitespace-nowrap px-4 py-3 text-slate-600">{CATEGORY_LABELS[program.category] ?? program.category}</td>
+                  <td className="whitespace-nowrap px-4 py-3">
+                    <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">{PARTNERSHIP_STATUS_LABELS[program.partnershipStatus ?? "active"] ?? program.partnershipStatus}</span>
                   </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-bold ${
-                      (program.priority ?? 3) <= 1 ? "bg-red-100 text-red-700" :
-                      (program.priority ?? 3) <= 2 ? "bg-orange-100 text-orange-700" :
-                      (program.priority ?? 3) <= 3 ? "bg-neutral-100 text-neutral-700" :
-                      "bg-neutral-50 text-neutral-400"
-                    }`}>{program.priority ?? 3}</span>
+                  <td className="whitespace-nowrap px-4 py-3">
+                    <span className="inline-flex items-center justify-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-700">{program.priority ?? 3}</span>
                   </td>
-                  <td className="px-4 py-3 font-medium text-neutral-900">
+                  <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-800">
                     {(() => {
                       const tiers = program.rewardTiers ?? [];
                       if (tiers.length === 0) return "-";
                       const maxTier = tiers.reduce((max, t) => (t.amount > max.amount ? t : max), tiers[0]);
                       const display = maxTier.type === "percentage" ? `${maxTier.amount}%` : `${maxTier.amount.toLocaleString()}円`;
-                      return tiers.length > 1 ? <>{display} <span className="text-xs text-neutral-400">+他{tiers.length - 1}件</span></> : display;
+                      return tiers.length > 1 ? <>{display} <span className="text-xs text-slate-400">+他{tiers.length - 1}件</span></> : display;
                     })()}
                   </td>
-                  <td className="max-w-[120px] truncate px-4 py-3 text-xs text-neutral-500">{program.rewardTiers?.[0]?.condition || "-"}</td>
-                  <td className="px-4 py-3">
+                  <td className="max-w-[150px] truncate whitespace-nowrap px-4 py-3 text-xs text-slate-500">{program.rewardTiers?.[0]?.condition || "-"}</td>
+                  <td className="whitespace-nowrap px-4 py-3">
                     {program.approvalRate != null ? (
-                      <span className={`text-sm font-medium ${program.approvalRate >= 80 ? "text-green-700" : program.approvalRate >= 60 ? "text-yellow-700" : "text-red-700"}`}>{program.approvalRate}%</span>
-                    ) : <span className="text-neutral-400">-</span>}
+                      <span className="text-sm font-medium text-slate-700">{program.approvalRate}%</span>
+                    ) : <span className="text-slate-400">-</span>}
                   </td>
-                  <td className="px-4 py-3 text-neutral-600">{program.epc != null ? `${program.epc}円` : "-"}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-slate-600">{program.epc != null ? `${program.epc}円` : "-"}</td>
                   <td className="px-4 py-3">
-                    <button type="button" onClick={() => handleToggleItp(program.id)} className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${program.itpSupport ? "bg-blue-500" : "bg-neutral-300"}`} aria-label={`ITP対応を${program.itpSupport ? "無効" : "有効"}にする`}>
+                    <button type="button" onClick={() => handleToggleItp(program.id)} className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${program.itpSupport ? "bg-blue-500" : "bg-slate-300"}`} aria-label={`ITP対応を${program.itpSupport ? "無効" : "有効"}にする`}>
                       <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${program.itpSupport ? "translate-x-4.5" : "translate-x-0.5"}`} />
                     </button>
                   </td>
                   <td className="px-4 py-3">
-                    <button type="button" onClick={() => handleToggleActive(program.id)} className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${program.isActive ? "bg-green-500" : "bg-neutral-300"}`} aria-label={`プログラムを${program.isActive ? "無効" : "有効"}にする`}>
+                    <button type="button" onClick={() => handleToggleActive(program.id)} className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${program.isActive ? "bg-blue-500" : "bg-slate-300"}`} aria-label={`プログラムを${program.isActive ? "無効" : "有効"}にする`}>
                       <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${program.isActive ? "translate-x-4.5" : "translate-x-0.5"}`} />
                     </button>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      <button type="button" onClick={() => handleEdit(program)} className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-blue-600" title="編集">
+                      <button type="button" onClick={() => handleEdit(program)} className="rounded p-1 text-slate-400 hover:bg-blue-50 hover:text-blue-600" title="編集">
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                       </button>
-                      <button type="button" onClick={() => setDeletingId(program.id)} className="rounded p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600" title="削除">
+                      <button type="button" onClick={() => setDeletingId(program.id)} className="rounded p-1 text-slate-400 hover:bg-blue-50 hover:text-blue-600" title="削除">
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                       </button>
                     </div>

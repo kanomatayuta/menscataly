@@ -19,8 +19,7 @@ const FOOTER_LINKS = {
   ],
 } as const;
 
-// Next.js 16 PPR: new Date() は Server Component で使用不可のため定数で管理
-const CURRENT_YEAR = 2026;
+const CURRENT_YEAR = new Date().getFullYear();
 
 export function Footer() {
   return (

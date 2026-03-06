@@ -167,6 +167,7 @@ async function fetchAnalyticsData(
     };
 
     // affiliate_links 集計
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: affData } = await (supabase as any)
       .from("affiliate_links")
       .select("article_id, click_count, conversion_count, revenue");
@@ -187,6 +188,7 @@ async function fetchAnalyticsData(
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const since = thirtyDaysAgo.toISOString().split("T")[0];
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: dailyData } = await (supabase as any)
       .from("analytics_daily")
       .select("article_id, pageviews")
@@ -423,6 +425,7 @@ async function fetchTrendData(days: number): Promise<TrendDataPoint[]> {
     since.setDate(since.getDate() - days);
     const sinceStr = since.toISOString().split("T")[0];
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data } = await (supabase as any)
       .from("analytics_daily")
       .select("date, pageviews, ctr, conversions")
@@ -575,25 +578,25 @@ function SummaryCardsSkeleton() {
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
       {[...Array(5)].map((_, i) => (
-        <div key={i} className="h-24 animate-pulse rounded-lg bg-neutral-200" />
+        <div key={i} className="h-24 animate-pulse rounded-lg bg-slate-200" />
       ))}
     </div>
   );
 }
 
 function ChartSkeleton() {
-  return <div className="h-[380px] animate-pulse rounded-lg bg-neutral-200" />;
+  return <div className="h-[380px] animate-pulse rounded-lg bg-slate-200" />;
 }
 
 function RankingSkeleton() {
-  return <div className="h-[380px] animate-pulse rounded-lg bg-neutral-200" />;
+  return <div className="h-[380px] animate-pulse rounded-lg bg-slate-200" />;
 }
 
 function TableSkeleton() {
   return (
     <div className="space-y-2">
       {[...Array(5)].map((_, i) => (
-        <div key={i} className="h-12 animate-pulse rounded bg-neutral-200" />
+        <div key={i} className="h-12 animate-pulse rounded bg-slate-200" />
       ))}
     </div>
   );
@@ -699,7 +702,7 @@ async function ArticlesTableSection() {
 
   return (
     <>
-      <h3 className="mb-4 text-sm font-semibold text-neutral-700">記事一覧</h3>
+      <h3 className="mb-4 text-sm font-semibold text-slate-700">記事一覧</h3>
       <ArticleTable articles={articles} analytics={analytics} categories={categories} updatedAtMap={updatedAtMap} growthRates={growthRates} />
     </>
   );

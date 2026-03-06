@@ -76,9 +76,11 @@ export class PipelineExecutor {
         console.error(`[Pipeline] Step "${step.name}" failed — aborting pipeline`)
 
         // パイプライン失敗アラートを作成
-        this.createFailureAlert(step.name, stepResult.log.error, context.runId).catch(
-          (err) => console.error('[Pipeline] Failed to create alert:', err)
-        )
+        try {
+          await this.createFailureAlert(step.name, stepResult.log.error, context.runId)
+        } catch (err) {
+          console.error('[Pipeline] Failed to create alert:', err)
+        }
 
         break
       }

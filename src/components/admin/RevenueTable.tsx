@@ -61,10 +61,10 @@ const ASP_BADGE_COLORS: Record<
 };
 
 const DEFAULT_BADGE_COLORS = {
-  bg: "bg-neutral-50",
-  text: "text-neutral-700",
-  ring: "ring-neutral-600/20",
-  bar: "bg-neutral-400",
+  bg: "bg-slate-50",
+  text: "text-slate-700",
+  ring: "ring-slate-600/20",
+  bar: "bg-slate-400",
 };
 
 // ============================================================
@@ -116,7 +116,7 @@ function RevenueBar({
   const colors = getAspColors(aspName);
 
   return (
-    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
+    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
       <div
         className={`h-full rounded-full transition-all ${colors.bar}`}
         style={{ width: `${pct}%` }}
@@ -148,7 +148,7 @@ function TopArticlesList({
     <div className="mt-2 space-y-1">
       {articles.map((article) => (
         <div key={article.slug} className="flex items-center gap-1.5">
-          <span className="text-[10px] text-neutral-400">&#9654;</span>
+          <span className="text-[10px] text-slate-400">&#9654;</span>
           <Link
             href={`/admin/articles/${article.slug}`}
             className="truncate text-xs text-blue-600 hover:text-blue-800 hover:underline"
@@ -156,7 +156,7 @@ function TopArticlesList({
           >
             {article.title}
           </Link>
-          <span className="ml-auto shrink-0 text-[10px] font-medium text-neutral-500">
+          <span className="ml-auto shrink-0 text-[10px] font-medium text-slate-500">
             {article.conversions}CV
           </span>
         </div>
@@ -176,8 +176,8 @@ interface RevenueTableProps {
 export function RevenueTable({ summaries }: RevenueTableProps) {
   if (summaries.length === 0) {
     return (
-      <div className="rounded-lg border border-neutral-200 bg-white p-8 text-center">
-        <p className="text-sm text-neutral-500">売上データがありません</p>
+      <div className="rounded-lg border border-slate-200 bg-white p-8 text-center">
+        <p className="text-sm text-slate-500">売上データがありません</p>
       </div>
     );
   }
@@ -201,30 +201,30 @@ export function RevenueTable({ summaries }: RevenueTableProps) {
   const maxRevenue = Math.max(...summaries.map((s) => s.totalRevenue), 1);
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white shadow-sm">
+    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
       <table className="w-full text-left text-sm">
         <thead>
-          <tr className="border-b border-neutral-200 bg-neutral-50">
-            <th className="px-4 py-3 font-medium text-neutral-600">ASP</th>
-            <th className="px-4 py-3 text-right font-medium text-neutral-600">
+          <tr className="border-b border-slate-200 bg-slate-50">
+            <th className="px-4 py-3 font-medium text-slate-600">ASP</th>
+            <th className="px-4 py-3 text-right font-medium text-slate-600">
               クリック数
             </th>
-            <th className="px-4 py-3 text-right font-medium text-neutral-600">
+            <th className="px-4 py-3 text-right font-medium text-slate-600">
               CV数
             </th>
-            <th className="min-w-[140px] px-4 py-3 text-right font-medium text-neutral-600">
+            <th className="min-w-[140px] px-4 py-3 text-right font-medium text-slate-600">
               売上
             </th>
-            <th className="px-4 py-3 text-right font-medium text-neutral-600">
+            <th className="px-4 py-3 text-right font-medium text-slate-600">
               CVR
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-neutral-100">
+        <tbody className="divide-y divide-slate-100">
           {summaries.map((summary) => (
             <tr
               key={summary.aspName}
-              className="group transition-colors hover:bg-neutral-50/80"
+              className="group transition-colors hover:bg-slate-50/80"
             >
               {/* ASP name badge + top articles */}
               <td className="px-4 py-3 align-top">
@@ -233,18 +233,18 @@ export function RevenueTable({ summaries }: RevenueTableProps) {
               </td>
 
               {/* Clicks */}
-              <td className="px-4 py-3 text-right align-top tabular-nums text-neutral-600">
+              <td className="px-4 py-3 text-right align-top tabular-nums text-slate-600">
                 {summary.totalClicks.toLocaleString()}
               </td>
 
               {/* Conversions */}
-              <td className="px-4 py-3 text-right align-top tabular-nums text-neutral-600">
+              <td className="px-4 py-3 text-right align-top tabular-nums text-slate-600">
                 {summary.totalConversions.toLocaleString()}
               </td>
 
               {/* Revenue with progress bar */}
               <td className="px-4 py-3 text-right align-top">
-                <span className="font-semibold tabular-nums text-neutral-900">
+                <span className="font-semibold tabular-nums text-slate-900">
                   &yen;{summary.totalRevenue.toLocaleString()}
                 </span>
                 <RevenueBar
@@ -264,15 +264,15 @@ export function RevenueTable({ summaries }: RevenueTableProps) {
 
         {/* Totals footer */}
         <tfoot>
-          <tr className="border-t-2 border-neutral-300 bg-neutral-50">
-            <td className="px-4 py-3 font-bold text-neutral-900">合計</td>
-            <td className="px-4 py-3 text-right font-semibold tabular-nums text-neutral-900">
+          <tr className="border-t-2 border-slate-300 bg-slate-50">
+            <td className="px-4 py-3 font-bold text-slate-900">合計</td>
+            <td className="px-4 py-3 text-right font-semibold tabular-nums text-slate-900">
               {totals.clicks.toLocaleString()}
             </td>
-            <td className="px-4 py-3 text-right font-semibold tabular-nums text-neutral-900">
+            <td className="px-4 py-3 text-right font-semibold tabular-nums text-slate-900">
               {totals.conversions.toLocaleString()}
             </td>
-            <td className="px-4 py-3 text-right font-bold tabular-nums text-neutral-900">
+            <td className="px-4 py-3 text-right font-bold tabular-nums text-slate-900">
               &yen;{totals.revenue.toLocaleString()}
             </td>
             <td className="px-4 py-3 text-right">

@@ -1,6 +1,5 @@
 "use client";
 
-import { StatCard } from "./StatCard";
 import type { AffiliateLinkPerformance } from "@/types/admin";
 import type { AspProgram } from "@/types/asp-config";
 import {
@@ -40,6 +39,16 @@ interface ArticleDetailStatsProps {
 
 function formatNumber(n: number): string {
   return n.toLocaleString("ja-JP");
+}
+
+/** Blue/slate themed summary card for article analytics */
+function SummaryCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+      <p className="text-sm font-medium text-slate-500">{label}</p>
+      <p className="mt-1 text-2xl font-bold text-slate-800">{value}</p>
+    </div>
+  );
 }
 
 function PvTrendChart({ data }: { data: PvDataPoint[] }) {
@@ -82,23 +91,23 @@ function AffiliateLinkTable({ links }: { links: AffiliateLinkPerformance[] }) {
     <div className="overflow-auto">
       <table className="w-full text-left text-sm">
         <thead>
-          <tr className="border-b border-neutral-200 bg-neutral-50">
-            <th className="px-4 py-2 font-medium text-neutral-600">ASP</th>
-            <th className="px-4 py-2 font-medium text-neutral-600">プログラム</th>
-            <th className="px-4 py-2 text-right font-medium text-neutral-600">CL</th>
-            <th className="px-4 py-2 text-right font-medium text-neutral-600">CV</th>
-            <th className="px-4 py-2 text-right font-medium text-neutral-600">収益</th>
+          <tr className="border-b border-slate-200 bg-slate-50">
+            <th className="px-4 py-2 font-medium text-slate-600">ASP名</th>
+            <th className="px-4 py-2 font-medium text-slate-600">プログラム名</th>
+            <th className="px-4 py-2 text-right font-medium text-slate-600">CL数</th>
+            <th className="px-4 py-2 text-right font-medium text-slate-600">CV数</th>
+            <th className="px-4 py-2 text-right font-medium text-slate-600">収益</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-neutral-100">
+        <tbody className="divide-y divide-slate-100">
           {links.map((link, i) => (
-            <tr key={i} className="hover:bg-neutral-50">
-              <td className="whitespace-nowrap px-4 py-2 text-neutral-700">{link.aspName}</td>
-              <td className="px-4 py-2 text-neutral-700">{link.programName}</td>
-              <td className="px-4 py-2 text-right tabular-nums text-neutral-600">
+            <tr key={i} className="hover:bg-slate-50/60">
+              <td className="whitespace-nowrap px-4 py-2 text-slate-700">{link.aspName}</td>
+              <td className="px-4 py-2 text-slate-700">{link.programName}</td>
+              <td className="px-4 py-2 text-right tabular-nums text-slate-600">
                 {formatNumber(link.clickCount)}
               </td>
-              <td className="px-4 py-2 text-right tabular-nums text-neutral-600">
+              <td className="px-4 py-2 text-right tabular-nums text-slate-600">
                 {formatNumber(link.conversionCount)}
               </td>
               <td className="px-4 py-2 text-right tabular-nums font-medium text-green-700">
@@ -117,14 +126,14 @@ function AspProgramTable({ programs }: { programs: AspProgram[] }) {
     <div className="overflow-auto pb-1">
       <table className="w-full text-left text-sm">
         <thead>
-          <tr className="border-b border-neutral-200 bg-neutral-50">
-            <th className="whitespace-nowrap px-4 py-2 font-medium text-neutral-600">プログラム名</th>
-            <th className="whitespace-nowrap px-4 py-2 text-right font-medium text-neutral-600">報酬</th>
-            <th className="whitespace-nowrap px-4 py-2 text-right font-medium text-neutral-600">EPC</th>
-            <th className="whitespace-nowrap px-4 py-2 text-right font-medium text-neutral-600">承認率</th>
+          <tr className="border-b border-slate-200 bg-slate-50">
+            <th className="whitespace-nowrap px-4 py-2 font-medium text-slate-600">プログラム名</th>
+            <th className="whitespace-nowrap px-4 py-2 text-right font-medium text-slate-600">報酬</th>
+            <th className="whitespace-nowrap px-4 py-2 text-right font-medium text-slate-600">EPC</th>
+            <th className="whitespace-nowrap px-4 py-2 text-right font-medium text-slate-600">承認率</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-neutral-100">
+        <tbody className="divide-y divide-slate-100">
           {programs.map((prog) => {
             const reward = Array.isArray(prog.rewardTiers) && prog.rewardTiers.length > 0
               ? `¥${formatNumber(prog.rewardTiers[0].amount ?? 0)}`
@@ -135,21 +144,21 @@ function AspProgramTable({ programs }: { programs: AspProgram[] }) {
                 ? `${(prog.approvalRate * 100).toFixed(0)}%`
                 : "-";
             return (
-              <tr key={prog.id} className="hover:bg-neutral-50">
+              <tr key={prog.id} className="hover:bg-slate-50/60">
                 <td className="max-w-[300px] px-4 py-2">
                   <a
                     href={`/admin/asp?id=${encodeURIComponent(prog.id)}`}
-                    className="block truncate text-neutral-700 underline decoration-neutral-300 underline-offset-2 hover:text-blue-600 hover:decoration-blue-400"
+                    className="block truncate text-slate-700 underline decoration-slate-300 underline-offset-2 hover:text-blue-600 hover:decoration-blue-400"
                     title={prog.programName}
                   >
                     {prog.programName}
                   </a>
                 </td>
-                <td className="whitespace-nowrap px-4 py-2 text-right tabular-nums text-neutral-600">{reward}</td>
-                <td className="whitespace-nowrap px-4 py-2 text-right tabular-nums text-neutral-600">
+                <td className="whitespace-nowrap px-4 py-2 text-right tabular-nums text-slate-600">{reward}</td>
+                <td className="whitespace-nowrap px-4 py-2 text-right tabular-nums text-slate-600">
                   ¥{formatNumber(prog.epc)}
                 </td>
-                <td className="whitespace-nowrap px-4 py-2 text-right tabular-nums text-neutral-600">
+                <td className="whitespace-nowrap px-4 py-2 text-right tabular-nums text-slate-600">
                   {rate}
                 </td>
               </tr>
@@ -185,21 +194,17 @@ export function ArticleDetailStats({
       {/* Summary cards — only when there is data and not hidden by parent */}
       {showSummary && (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <StatCard title="PV (30日)" value={formatNumber(pv30d)} variant="blue" />
-          <StatCard title="広告CL" value={formatNumber(affiliateClicks)} variant="purple" />
-          <StatCard title="CV" value={formatNumber(conversions)} variant="default" />
-          <StatCard
-            title="収益"
-            value={`¥${formatNumber(revenue)}`}
-            variant={revenue > 0 ? "success" : "warning"}
-          />
+          <SummaryCard label="PV(30日)" value={formatNumber(pv30d)} />
+          <SummaryCard label="広告CL" value={formatNumber(affiliateClicks)} />
+          <SummaryCard label="CV" value={formatNumber(conversions)} />
+          <SummaryCard label="収益" value={`¥${formatNumber(revenue)}`} />
         </div>
       )}
 
       {/* PV Trend Chart — only if there's actual trend data */}
       {hasPvData && (
-        <div className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
-          <h3 className="mb-3 text-sm font-semibold text-neutral-800">
+        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="mb-3 text-sm font-semibold text-slate-800">
             PVトレンド (30日)
           </h3>
           <PvTrendChart data={pvTrend} />
@@ -208,8 +213,8 @@ export function ArticleDetailStats({
 
       {/* Affiliate Link Performance — only if links exist */}
       {hasAffiliateLinks && (
-        <div className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
-          <h3 className="mb-3 text-sm font-semibold text-neutral-800">
+        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="mb-3 text-sm font-semibold text-slate-800">
             広告リンクパフォーマンス
           </h3>
           <AffiliateLinkTable links={affiliateLinks} />
@@ -218,8 +223,8 @@ export function ArticleDetailStats({
 
       {/* ASP Program List — only if programs exist */}
       {hasAspPrograms && (
-        <div className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
-          <h3 className="mb-3 text-sm font-semibold text-neutral-800">
+        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="mb-3 text-sm font-semibold text-slate-800">
             カテゴリASPプログラム
           </h3>
           <AspProgramTable programs={aspPrograms} />

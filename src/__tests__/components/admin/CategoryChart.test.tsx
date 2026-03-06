@@ -99,35 +99,35 @@ describe("CategoryChart", () => {
 
   it("デフォルトで「記事数」「日別」「作成」がアクティブ", () => {
     renderChart();
-    expect(screen.getByRole("button", { name: "記事数" }).className).toContain("bg-neutral-900");
-    expect(screen.getByRole("button", { name: "日別" }).className).toContain("bg-neutral-900");
-    expect(screen.getByRole("button", { name: "作成" }).className).toContain("bg-neutral-900");
+    expect(screen.getByRole("button", { name: "記事数" }).className).toContain("bg-slate-900");
+    expect(screen.getByRole("button", { name: "日別" }).className).toContain("bg-slate-900");
+    expect(screen.getByRole("button", { name: "作成" }).className).toContain("bg-slate-900");
   });
 
   it("「月別」をクリックすると期間が切り替わる", () => {
     renderChart();
     fireEvent.click(screen.getByRole("button", { name: "月別" }));
-    expect(screen.getByRole("button", { name: "月別" }).className).toContain("bg-neutral-900");
-    expect(screen.getByRole("button", { name: "日別" }).className).not.toContain("bg-neutral-900");
+    expect(screen.getByRole("button", { name: "月別" }).className).toContain("bg-slate-900");
+    expect(screen.getByRole("button", { name: "日別" }).className).not.toContain("bg-slate-900");
     // 他のトグルは変わらない
-    expect(screen.getByRole("button", { name: "記事数" }).className).toContain("bg-neutral-900");
-    expect(screen.getByRole("button", { name: "作成" }).className).toContain("bg-neutral-900");
+    expect(screen.getByRole("button", { name: "記事数" }).className).toContain("bg-slate-900");
+    expect(screen.getByRole("button", { name: "作成" }).className).toContain("bg-slate-900");
   });
 
   it("「更新」をクリックすると日付種別が切り替わる", () => {
     renderChart();
     fireEvent.click(screen.getByRole("button", { name: "更新" }));
-    expect(screen.getByRole("button", { name: "更新" }).className).toContain("bg-neutral-900");
-    expect(screen.getByRole("button", { name: "作成" }).className).not.toContain("bg-neutral-900");
+    expect(screen.getByRole("button", { name: "更新" }).className).toContain("bg-slate-900");
+    expect(screen.getByRole("button", { name: "作成" }).className).not.toContain("bg-slate-900");
     // 他のトグルは変わらない
-    expect(screen.getByRole("button", { name: "日別" }).className).toContain("bg-neutral-900");
-    expect(screen.getByRole("button", { name: "記事数" }).className).toContain("bg-neutral-900");
+    expect(screen.getByRole("button", { name: "日別" }).className).toContain("bg-slate-900");
+    expect(screen.getByRole("button", { name: "記事数" }).className).toContain("bg-slate-900");
   });
 
   it("「PV」をクリックすると折れ線グラフに切り替わり、作成/更新トグルが非表示になる", () => {
     renderChart();
     fireEvent.click(screen.getByRole("button", { name: "PV" }));
-    expect(screen.getByRole("button", { name: "PV" }).className).toContain("bg-neutral-900");
+    expect(screen.getByRole("button", { name: "PV" }).className).toContain("bg-slate-900");
     expect(screen.getByTestId("line-chart")).toBeInTheDocument();
     expect(screen.queryByTestId("bar-chart")).not.toBeInTheDocument();
     // 作成/更新トグルが非表示
@@ -139,7 +139,7 @@ describe("CategoryChart", () => {
     renderChart();
     fireEvent.click(screen.getByRole("button", { name: "PV" }));
     fireEvent.click(screen.getByRole("button", { name: "月別" }));
-    expect(screen.getByRole("button", { name: "月別" }).className).toContain("bg-neutral-900");
+    expect(screen.getByRole("button", { name: "月別" }).className).toContain("bg-slate-900");
     expect(screen.getByTestId("line-chart")).toBeInTheDocument();
   });
 

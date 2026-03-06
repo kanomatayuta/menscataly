@@ -7,6 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { timingSafeEqual } from 'crypto'
 
 // ============================================================
 // サービスステータス型
@@ -43,6 +44,14 @@ interface DetailedHealthResponse {
 // 認証チェック (ADMIN_API_KEY or PIPELINE_API_KEY)
 // ============================================================
 
+/**
+ * タイミング攻撃対策: 定数時間で文字列を比較する
+ */
+function safeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b))
+}
+
 function isAuthenticated(request: NextRequest): boolean {
   const authHeader = request.headers.get('Authorization')
   if (!authHeader) return false
@@ -54,8 +63,8 @@ function isAuthenticated(request: NextRequest): boolean {
   const adminKey = process.env.ADMIN_API_KEY
   const pipelineKey = process.env.PIPELINE_API_KEY
 
-  if (adminKey && token === adminKey) return true
-  if (pipelineKey && token === pipelineKey) return true
+  if (adminKey && safeCompare(token, adminKey)) return true
+  if (pipelineKey && safeCompare(token, pipelineKey)) return true
 
   return false
 }

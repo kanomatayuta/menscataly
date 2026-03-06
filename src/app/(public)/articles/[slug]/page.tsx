@@ -20,10 +20,17 @@ import { RelatedArticles } from "@/components/article/RelatedArticles";
 import { enrichContentWithAffiliateLinks } from "@/lib/asp/enrich-content";
 import { HeatmapTracker } from "@/components/HeatmapTracker";
 import type { ContentCategory } from "@/types/content";
+import { getSupervisorsByCategory } from "@/lib/seo/supervisors-data";
 
 /** thumbnail_url (Cloudinary) → thumbnail (microCMS画像) → null のフォールバック */
 function getImageUrl(article: MicroCMSArticle): string | null {
-  return article.thumbnail_url || article.thumbnail?.url || null;
+  const url = article.thumbnail_url || article.thumbnail?.url || null;
+  if (!url) return null;
+  // Cloudinary URL の場合、自動フォーマット・品質最適化・幅指定を付与
+  if (url.includes('res.cloudinary.com') && url.includes('/upload/')) {
+    return url.replace('/upload/', '/upload/f_auto,q_auto,w_1200/');
+  }
+  return url;
 }
 
 type Props = {
@@ -49,7 +56,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const title = article.seo_title ?? article.title;
-  const description = article.excerpt ?? "";
+  const description = article.seo_description ?? article.excerpt ?? `${article.title} - メンズカタリ`;
   const articleSlug = article.slug ?? article.id;
 
   return {
@@ -70,7 +77,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
             url: getImageUrl(article)!,
             width: article.thumbnail?.width ?? 1200,
             height: article.thumbnail?.height ?? 630,
-            alt: title,
+            alt: article.title,
           },
         ],
       }),
@@ -162,6 +169,10 @@ async function ArticleContent({
   }
 
   const category = (article.category?.slug ?? "aga") as ArticleCategory;
+
+  // カテゴリに対応する監修者を取得（監修者詳細ページへのリンク用）
+  const supervisors = getSupervisorsByCategory(category);
+  const supervisor = supervisors[0] ?? null;
 
   // ASPアフィリエイトリンクを動的注入（最新のSupabaseデータを使用）
   const validCategories: ContentCategory[] = ['aga', 'hair-removal', 'skincare', 'ed', 'column']
@@ -257,10 +268,10 @@ async function ArticleContent({
               )}
             </div>
             <Link
-              href={`/supervisors#${category}`}
+              href={supervisor ? `/supervisors/${supervisor.id}` : `/supervisors#${category}`}
               className="ml-auto text-xs text-neutral-500 hover:text-neutral-700 hover:underline"
             >
-              監修者一覧
+              {supervisor ? "監修者プロフィール" : "監修者一覧"}
             </Link>
           </div>
         )}

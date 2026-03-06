@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { validateAdminAuth, getAuthErrorStatus } from '@/lib/admin/auth'
+import { safeParseInt } from '@/lib/utils/safe-parse'
 import { type AspProgramSeed } from '@/lib/asp/seed'
 import { mapRowToProgram } from '@/lib/asp/helpers'
 import type { AspProgramRow } from '@/types/database'
@@ -44,8 +45,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const aspName = searchParams.get('asp')
   const category = searchParams.get('category')
   const activeOnly = searchParams.get('active') !== 'false'
-  const limit = parseInt(searchParams.get('limit') ?? '50', 10)
-  const offset = parseInt(searchParams.get('offset') ?? '0', 10)
+  const limit = safeParseInt(searchParams.get('limit'), 50, 1, 100)
+  const offset = safeParseInt(searchParams.get('offset'), 0, 0)
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY

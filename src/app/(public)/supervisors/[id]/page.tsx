@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Breadcrumb } from "@/components/navigation/Breadcrumb";
@@ -88,7 +89,7 @@ export default async function SupervisorDetailPage({ params }: Props) {
           <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center">
             {/* プロフィール画像 */}
             {supervisor.imageUrl ? (
-              <img
+              <Image
                 src={supervisor.imageUrl}
                 alt={`${supervisor.name}のプロフィール画像`}
                 width={96}

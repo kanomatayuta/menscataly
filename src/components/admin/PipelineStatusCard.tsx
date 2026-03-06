@@ -16,7 +16,7 @@ function getStatusColor(status: string): { dot: string; label: string } {
     case "partial":
       return { dot: "bg-amber-500", label: "text-amber-700" };
     default:
-      return { dot: "bg-neutral-400", label: "text-neutral-600" };
+      return { dot: "bg-slate-400", label: "text-slate-600" };
   }
 }
 
@@ -28,9 +28,9 @@ export function PipelineStatusCard({
   const colors = getStatusColor(status);
 
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+    <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-neutral-500">
+        <h3 className="text-sm font-medium text-slate-500">
           Pipeline Status
         </h3>
         <div className="flex items-center gap-2">
@@ -46,23 +46,23 @@ export function PipelineStatusCard({
 
       <div className="mt-4 space-y-2">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-neutral-500">Last run</span>
-          <span className="font-medium text-neutral-700">
+          <span className="text-slate-500">Last run</span>
+          <span className="font-medium text-slate-700">
             {lastRunAt
               ? new Date(lastRunAt).toLocaleString("ja-JP")
               : "Never"}
           </span>
         </div>
         <div className="flex items-center justify-between text-sm">
-          <span className="text-neutral-500">Success rate (7d)</span>
-          <span className="font-medium text-neutral-700">
+          <span className="text-slate-500">Success rate (7d)</span>
+          <span className="font-medium text-slate-700">
             {successRate.toFixed(1)}%
           </span>
         </div>
 
         {/* Success rate bar */}
         <div className="mt-2">
-          <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-100">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
             <div
               className={`h-full rounded-full transition-all ${
                 successRate >= 90

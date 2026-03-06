@@ -10,8 +10,7 @@ import {
   createMockBatchGenerationProgress,
   createMockSupabaseQuery,
 } from '@/test/helpers'
-import type { KeywordTarget, BatchGenerationRequest, BatchGenerationProgress } from '@/types/batch-generation'
-import type { BatchGenerationJob } from '@/types/admin'
+import type { KeywordTarget, BatchGenerationRequest } from '@/types/batch-generation'
 
 // モックキーワード群
 const mockKeywords: KeywordTarget[] = [
@@ -23,7 +22,7 @@ const mockKeywords: KeywordTarget[] = [
 // 生成成功/失敗をシミュレートするモック
 const mockGenerateArticle = vi.fn()
 const mockRecordCost = vi.fn()
-const mockUpdateJob = vi.fn()
+const _mockUpdateJob = vi.fn()
 
 // ArticleGenerator モック
 vi.mock('@/lib/content/generator', () => ({
