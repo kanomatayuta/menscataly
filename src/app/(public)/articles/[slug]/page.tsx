@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { PRDisclosure } from "@/components/compliance/PRDisclosure";
 import { AspTrackingScripts } from "@/components/tracking/AspTrackingScripts";
 import { Breadcrumb } from "@/components/navigation/Breadcrumb";
-import { getArticleBySlug, getAllArticleSlugs } from "@/lib/microcms/client";
+import { getArticleBySlug, getAllArticleSlugs, getArticles } from "@/lib/microcms/client";
 import {
   generateArticleStructuredData,
   extractFAQsFromContent,
@@ -18,6 +18,7 @@ import { ArticleBody } from "@/components/article/ArticleBody";
 import { TableOfContents } from "@/components/article/TableOfContents";
 import { RelatedArticles } from "@/components/article/RelatedArticles";
 import { enrichContentWithAffiliateLinks } from "@/lib/asp/enrich-content";
+import { enrichContentWithInternalLinks } from "@/lib/content/enrich-internal-links";
 import { HeatmapTracker } from "@/components/HeatmapTracker";
 import type { ContentCategory } from "@/types/content";
 import { getSupervisorsByCategory } from "@/lib/seo/supervisors-data";
@@ -179,9 +180,33 @@ async function ArticleContent({
   const contentCategory = validCategories.includes(category as ContentCategory)
     ? (category as ContentCategory)
     : null
-  const enrichedContent = contentCategory
+  const afterAffiliateContent = contentCategory
     ? await enrichContentWithAffiliateLinks(article.content, contentCategory)
     : article.content
+
+  // 内部リンクを注入（同カテゴリ + クロスカテゴリの公開済み記事を取得）
+  // RelatedArticles コンポーネントと同じデータソースを利用
+  let enrichedContent = afterAffiliateContent
+  try {
+    const relatedResult = await getArticles({
+      category,
+      limit: 20,
+      orders: '-publishedAt',
+    })
+    const relatedArticles = relatedResult.contents.filter(
+      (a) => (a.slug ?? a.id) !== (article.slug ?? article.id)
+    )
+    if (relatedArticles.length > 0) {
+      enrichedContent = enrichContentWithInternalLinks(
+        afterAffiliateContent,
+        article,
+        relatedArticles,
+        5
+      )
+    }
+  } catch {
+    // 内部リンク注入失敗時はアフィリエイトリンクのみのコンテンツを返す
+  }
 
   return (
     <>

@@ -48,7 +48,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   if (!supabaseUrl || !supabaseKey) {
     return NextResponse.json({
       data: getMockOverviewData(),
-      source: 'mock',
+      source: 'mock' as const,
+      reason: 'Supabase credentials not configured',
     })
   }
 
@@ -65,10 +66,20 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       .gte('date', startDate)
       .lte('date', endDate)
 
-    if (error || !data || data.length === 0) {
+    if (error) {
+      console.error('[admin/analytics/overview] Query error:', error.message)
       return NextResponse.json({
         data: getMockOverviewData(),
-        source: error ? 'error' : 'empty',
+        source: 'mock' as const,
+        reason: `Supabase query error: ${error.message}`,
+      })
+    }
+
+    if (!data || data.length === 0) {
+      return NextResponse.json({
+        data: getMockOverviewData(),
+        source: 'empty' as const,
+        reason: 'No analytics data for the period',
       })
     }
 
@@ -119,12 +130,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       period: { startDate, endDate },
     }
 
-    return NextResponse.json({ data: overview, source: 'supabase' })
+    return NextResponse.json({ data: overview, source: 'live' as const })
   } catch (err) {
     console.error('[admin/analytics/overview] Error:', err)
     return NextResponse.json({
       data: getMockOverviewData(),
-      source: 'error',
+      source: 'mock' as const,
+      reason: err instanceof Error ? err.message : 'Unknown error',
     })
   }
 }

@@ -8,6 +8,8 @@
  * - Admin APIルートで使用可能なミドルウェアヘルパー
  */
 
+import { NextResponse } from 'next/server'
+
 // ============================================================
 // 型定義
 // ============================================================
@@ -329,4 +331,62 @@ export function addRateLimitHeaders(
   headers.set('X-RateLimit-Limit', String(result.limit))
   headers.set('X-RateLimit-Remaining', String(result.remaining))
   headers.set('X-RateLimit-Reset', String(Math.ceil(Date.now() / 1000 + (result.resetMs / 1000))))
+}
+
+// ============================================================
+// withRateLimit ヘルパー
+// ============================================================
+
+/**
+ * Admin API ルートに簡易にレート制限を適用するヘルパー関数
+ *
+ * レート制限を超過した場合は 429 NextResponse を返す。
+ * 超過していない場合は null を返すため、呼び出し元で early return として使用する。
+ *
+ * @param request リクエストオブジェクト
+ * @param identifier オプションの識別子。指定した場合、extractRateLimitKey の結果にプレフィックスとして追加される。
+ *                   ルートごとに独立したレート制限を実現したい場合に使用する。
+ * @param limiter カスタム RateLimiter インスタンス (省略時はデフォルトの 60req/min)
+ * @returns レート制限超過時は 429 NextResponse、許可時は null
+ *
+ * 使用例:
+ * ```ts
+ * import { withRateLimit } from '@/lib/admin/rate-limit'
+ *
+ * export async function POST(request: NextRequest) {
+ *   const rateLimited = withRateLimit(request, 'admin:asp:post')
+ *   if (rateLimited) return rateLimited
+ *   // ... 通常の処理
+ * }
+ * ```
+ */
+export function withRateLimit(
+  request: Request,
+  identifier?: string,
+  limiter: RateLimiter = defaultAdminLimiter
+): NextResponse | null {
+  const baseKey = extractRateLimitKey(request)
+  const key = identifier ? `${identifier}:${baseKey}` : baseKey
+  const result = limiter.check(key)
+
+  if (!result.allowed) {
+    return NextResponse.json(
+      {
+        error: 'Too Many Requests',
+        message: `レート制限超過: ${result.limit}リクエスト/${defaultAdminLimiter === limiter ? '分' : 'ウィンドウ'}`,
+        retryAfterSeconds: result.retryAfterSeconds,
+      },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(result.retryAfterSeconds ?? 60),
+          'X-RateLimit-Limit': String(result.limit),
+          'X-RateLimit-Remaining': '0',
+          'X-RateLimit-Reset': String(Math.ceil(Date.now() / 1000 + (result.resetMs / 1000))),
+        },
+      }
+    )
+  }
+
+  return null
 }

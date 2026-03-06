@@ -53,7 +53,7 @@ function SortableHeader({
 }) {
   return (
     <th
-      className="sticky top-0 z-20 cursor-pointer select-none whitespace-nowrap bg-slate-50 px-4 py-3 text-right font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+      className="sticky top-0 z-20 cursor-pointer select-none whitespace-nowrap bg-slate-50 px-2 py-2 text-right font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 md:px-4 md:py-3"
       onClick={() => onClick(column)}
     >
       {label}
@@ -181,7 +181,7 @@ export function ArticleTable({ articles, analytics, categories, updatedAtMap, gr
   return (
     <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
       {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-3 border-b border-slate-200 px-4 py-3">
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 px-3 py-2 md:gap-3 md:px-4 md:py-3">
         <div className="relative">
           <svg className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8" />
@@ -192,13 +192,13 @@ export function ArticleTable({ articles, analytics, categories, updatedAtMap, gr
             placeholder="タイトル検索..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-8 w-48 rounded-md border border-slate-200 bg-white pl-8 pr-3 text-xs text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
+            className="h-8 w-36 rounded-md border border-slate-200 bg-white pl-8 pr-3 text-xs text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-slate-400 focus:ring-1 focus:ring-slate-400 md:w-48"
           />
         </div>
         <select
           value={filterCategory}
           onChange={(e) => setFilterCategory(e.target.value)}
-          className="h-8 rounded-md border border-slate-200 bg-white px-2.5 text-xs text-slate-700 outline-none transition-colors focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
+          className="h-8 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-700 outline-none transition-colors focus:border-slate-400 focus:ring-1 focus:ring-slate-400 md:px-2.5"
         >
           <option value="">全カテゴリ</option>
           {categories?.map((cat) => (
@@ -208,7 +208,7 @@ export function ArticleTable({ articles, analytics, categories, updatedAtMap, gr
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
-          className="h-8 rounded-md border border-slate-200 bg-white px-2.5 text-xs text-slate-700 outline-none transition-colors focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
+          className="h-8 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-700 outline-none transition-colors focus:border-slate-400 focus:ring-1 focus:ring-slate-400 md:px-2.5"
         >
           <option value="">全ステータス</option>
           {Object.entries(STATUS_STYLES).map(([key, style]) => (
@@ -233,13 +233,13 @@ export function ArticleTable({ articles, analytics, categories, updatedAtMap, gr
           <p className="text-sm text-slate-500">条件に一致する記事がありません</p>
         </div>
       ) : (
-      <div className="max-h-[70vh] overflow-auto">
-      <table className="w-full text-left text-sm">
+      <div className="max-h-[70vh] overflow-auto -webkit-overflow-scrolling-touch">
+      <table className="w-full min-w-[900px] text-left text-xs md:text-sm">
         <thead>
           <tr className="border-b border-slate-200 bg-slate-50">
-            <th className="sticky left-0 top-0 z-30 max-w-[300px] bg-slate-50 px-4 py-3 font-medium text-slate-600 after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-slate-200">タイトル</th>
-            <th className="sticky top-0 z-20 whitespace-nowrap bg-slate-50 px-4 py-3 font-medium text-slate-600">カテゴリ</th>
-            <th className="sticky top-0 z-20 whitespace-nowrap bg-slate-50 px-4 py-3 font-medium text-slate-600">ステータス</th>
+            <th className="sticky left-0 top-0 z-30 max-w-[200px] bg-slate-50 px-2 py-2 font-medium text-slate-600 after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-slate-200 md:max-w-[300px] md:px-4 md:py-3">タイトル</th>
+            <th className="sticky top-0 z-20 whitespace-nowrap bg-slate-50 px-2 py-2 font-medium text-slate-600 md:px-4 md:py-3">カテゴリ</th>
+            <th className="sticky top-0 z-20 whitespace-nowrap bg-slate-50 px-2 py-2 font-medium text-slate-600 md:px-4 md:py-3">ステータス</th>
             <SortableHeader label="PV" column="pageviews" active={sortColumn === "pageviews"} direction={sortDirection} onClick={handleSort} />
             <SortableHeader label="伸び率" column="growthRate" active={sortColumn === "growthRate"} direction={sortDirection} onClick={handleSort} />
             <SortableHeader label="検索CL" column="searchClicks" active={sortColumn === "searchClicks"} direction={sortDirection} onClick={handleSort} />
@@ -247,9 +247,9 @@ export function ArticleTable({ articles, analytics, categories, updatedAtMap, gr
             <SortableHeader label="広告CTR" column="affiliateCtr" active={sortColumn === "affiliateCtr"} direction={sortDirection} onClick={handleSort} />
             <SortableHeader label="CV" column="conversions" active={sortColumn === "conversions"} direction={sortDirection} onClick={handleSort} />
             <SortableHeader label="収益" column="revenue" active={sortColumn === "revenue"} direction={sortDirection} onClick={handleSort} />
-            <th className="sticky top-0 z-20 whitespace-nowrap bg-slate-50 px-4 py-3 font-medium text-slate-600">コンプラ</th>
-            <th className="sticky top-0 z-20 whitespace-nowrap bg-slate-50 px-4 py-3 font-medium text-slate-600">作成日</th>
-            <th className="sticky top-0 z-20 whitespace-nowrap bg-slate-50 px-4 py-3 font-medium text-slate-600">更新日</th>
+            <th className="sticky top-0 z-20 whitespace-nowrap bg-slate-50 px-2 py-2 font-medium text-slate-600 md:px-4 md:py-3">コンプラ</th>
+            <th className="sticky top-0 z-20 whitespace-nowrap bg-slate-50 px-2 py-2 font-medium text-slate-600 md:px-4 md:py-3">作成日</th>
+            <th className="sticky top-0 z-20 whitespace-nowrap bg-slate-50 px-2 py-2 font-medium text-slate-600 md:px-4 md:py-3">更新日</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
@@ -263,10 +263,10 @@ export function ArticleTable({ articles, analytics, categories, updatedAtMap, gr
             const rev = stats?.revenue ?? 0;
             return (
               <tr key={article.id} className="group/row hover:bg-blue-50/40">
-                <td className="sticky left-0 z-10 max-w-[300px] bg-white px-4 py-2 font-medium after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-slate-200 group-hover/row:bg-blue-50/40">
+                <td className="sticky left-0 z-10 max-w-[200px] bg-white px-2 py-1.5 font-medium after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-slate-200 group-hover/row:bg-blue-50/40 md:max-w-[300px] md:px-4 md:py-2">
                   <Link
                     href={`/admin/articles/${article.id}`}
-                    className="flex items-center gap-2.5 text-slate-800 hover:text-blue-600 hover:underline"
+                    className="flex items-center gap-2 text-slate-800 hover:text-blue-600 hover:underline md:gap-2.5"
                   >
                     {article.thumbnailUrl ? (
                       <Image
@@ -274,54 +274,54 @@ export function ArticleTable({ articles, analytics, categories, updatedAtMap, gr
                         alt=""
                         width={56}
                         height={32}
-                        className="h-8 w-14 shrink-0 rounded object-cover"
+                        className="hidden h-8 w-14 shrink-0 rounded object-cover md:block"
                       />
                     ) : (
-                      <span className="flex h-8 w-14 shrink-0 items-center justify-center rounded bg-slate-100 text-xs text-slate-400">
+                      <span className="hidden h-8 w-14 shrink-0 items-center justify-center rounded bg-slate-100 text-xs text-slate-400 md:flex">
                         No
                       </span>
                     )}
                     <span className="truncate">{article.title}</span>
                   </Link>
                 </td>
-                <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                <td className="whitespace-nowrap px-2 py-2 text-slate-600 md:px-4 md:py-3">
                   {categoryLabels[article.category] ?? article.category}
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-2 py-2 md:px-4 md:py-3">
                   <span
                     className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${statusStyle.bg} ${statusStyle.text}`}
                   >
                     {statusStyle.label}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums text-slate-600">
+                <td className="px-2 py-2 text-right tabular-nums text-slate-600 md:px-4 md:py-3">
                   {pv === 0 ? <ZeroValue /> : formatNumber(pv)}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums text-slate-600">
+                <td className="px-2 py-2 text-right tabular-nums text-slate-600 md:px-4 md:py-3">
                   <GrowthRateValue rate={growthRates?.get(article.id)?.growthRate} />
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums text-slate-600">
+                <td className="px-2 py-2 text-right tabular-nums text-slate-600 md:px-4 md:py-3">
                   {searchCl === 0 ? <ZeroValue /> : formatNumber(searchCl)}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums text-slate-600">
+                <td className="px-2 py-2 text-right tabular-nums text-slate-600 md:px-4 md:py-3">
                   {affiliateCl === 0 ? <ZeroValue /> : formatNumber(affiliateCl)}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums text-slate-600">
+                <td className="px-2 py-2 text-right tabular-nums text-slate-600 md:px-4 md:py-3">
                   <AffiliateCtrValue affiliateClicks={affiliateCl} pageviews={pv} />
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums text-slate-600">
+                <td className="px-2 py-2 text-right tabular-nums text-slate-600 md:px-4 md:py-3">
                   {cv === 0 ? <ZeroValue /> : formatNumber(cv)}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums text-slate-600">
+                <td className="px-2 py-2 text-right tabular-nums text-slate-600 md:px-4 md:py-3">
                   <RevenueValue value={rev} />
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-2 py-2 md:px-4 md:py-3">
                   <ComplianceScoreBadge score={article.complianceScore} />
                 </td>
-                <td className="whitespace-nowrap px-4 py-3 text-slate-500">
+                <td className="whitespace-nowrap px-2 py-2 text-slate-500 md:px-4 md:py-3">
                   {formatDate(article.generatedAt)}
                 </td>
-                <td className="whitespace-nowrap px-4 py-3 text-slate-500">
+                <td className="whitespace-nowrap px-2 py-2 text-slate-500 md:px-4 md:py-3">
                   {updatedAtMap?.get(article.id) ? formatDate(updatedAtMap.get(article.id)!) : <ZeroValue />}
                 </td>
               </tr>

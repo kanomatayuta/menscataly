@@ -86,13 +86,13 @@ function TrendCard({
   sparkLabel,
 }: TrendCardProps) {
   return (
-    <div className={`rounded-lg border p-4 shadow-sm ${borderColor} ${bgColor}`}>
-      <p className="text-xs font-medium text-slate-500">{title}</p>
-      <p className={`mt-0.5 text-xl font-bold tabular-nums ${valueColor}`}>
+    <div className={`rounded-lg border p-3 shadow-sm md:p-4 ${borderColor} ${bgColor}`}>
+      <p className="text-[10px] font-medium text-slate-500 md:text-xs">{title}</p>
+      <p className={`mt-0.5 text-lg font-bold tabular-nums md:text-xl ${valueColor}`}>
         {value}
       </p>
       {sparkData.length >= 2 && (
-        <div className="mt-2">
+        <div className="mt-2 hidden sm:block">
           <Sparkline data={sparkData} dataKey={sparkLabel} color={color} />
         </div>
       )}
@@ -126,11 +126,11 @@ export function AnalyticsSummaryCards({
       : "-";
 
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
       {/* 総記事数 — スパークラインなし（日次データなし） */}
-      <div className="flex flex-col justify-center rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <p className="text-xs font-medium text-slate-500">総記事数</p>
-        <p className="mt-0.5 text-xl font-bold tabular-nums text-slate-900">
+      <div className="flex flex-col justify-center rounded-lg border border-slate-200 bg-white p-3 shadow-sm md:p-4">
+        <p className="text-[10px] font-medium text-slate-500 md:text-xs">総記事数</p>
+        <p className="mt-0.5 text-lg font-bold tabular-nums text-slate-900 md:text-xl">
           {totalArticles.toLocaleString("ja-JP")}
         </p>
         <p className="mt-1 text-[10px] text-slate-400">公開済み記事</p>
@@ -173,9 +173,9 @@ export function AnalyticsSummaryCards({
       />
 
       {/* 総収益 */}
-      <div className={`rounded-lg border p-4 shadow-sm ${totalRevenue > 0 ? "border-green-300" : "border-amber-200"} bg-white`}>
-        <p className="text-xs font-medium text-slate-500">総収益</p>
-        <p className={`mt-0.5 text-xl font-bold tabular-nums ${totalRevenue > 0 ? "text-green-700" : "text-amber-700"}`}>
+      <div className={`rounded-lg border p-3 shadow-sm md:p-4 ${totalRevenue > 0 ? "border-green-300" : "border-amber-200"} bg-white`}>
+        <p className="text-[10px] font-medium text-slate-500 md:text-xs">総収益</p>
+        <p className={`mt-0.5 text-lg font-bold tabular-nums md:text-xl ${totalRevenue > 0 ? "text-green-700" : "text-amber-700"}`}>
           ¥{totalRevenue.toLocaleString("ja-JP")}
         </p>
         <p className="mt-1 text-[10px] text-slate-400">

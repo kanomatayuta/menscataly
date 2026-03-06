@@ -69,11 +69,12 @@ describe('syncGA4ToSupabase', () => {
     },
   ]
 
-  it('全行を正常に upsert する', async () => {
+  it('全行をバッチ upsert で正常に同期する', async () => {
+    const upsertFn = vi.fn().mockResolvedValue({ error: null })
     const mockSupabase = {
       from: () => ({
         select: vi.fn(),
-        upsert: vi.fn().mockResolvedValue({ error: null }),
+        upsert: upsertFn,
         update: vi.fn(),
       }),
     }
@@ -82,13 +83,23 @@ describe('syncGA4ToSupabase', () => {
     expect(result.synced).toBe(2)
     expect(result.skipped).toBe(0)
     expect(result.errors).toHaveLength(0)
+    // バッチ upsert: 1回の呼び出しで配列を渡す
+    expect(upsertFn).toHaveBeenCalledTimes(1)
+    expect(upsertFn).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ article_id: 'uuid-1' }),
+        expect.objectContaining({ article_id: 'uuid-2' }),
+      ]),
+      { onConflict: 'article_id,date' }
+    )
   })
 
   it('slug が見つからない行はスキップする', async () => {
+    const upsertFn = vi.fn().mockResolvedValue({ error: null })
     const mockSupabase = {
       from: () => ({
         select: vi.fn(),
-        upsert: vi.fn().mockResolvedValue({ error: null }),
+        upsert: upsertFn,
         update: vi.fn(),
       }),
     }
@@ -109,9 +120,13 @@ describe('syncGA4ToSupabase', () => {
     const result = await syncGA4ToSupabase(dataWithUnknown, slugMap, mockSupabase)
     expect(result.synced).toBe(2)
     expect(result.skipped).toBe(1) // unknown-article がスキップ
+    // バッチ upsert には有効な2行のみ含まれる
+    expect(upsertFn).toHaveBeenCalledTimes(1)
+    const upsertArg = upsertFn.mock.calls[0][0] as Record<string, unknown>[]
+    expect(upsertArg).toHaveLength(2)
   })
 
-  it('upsert エラー時はスキップしてエラーログに記録する', async () => {
+  it('バッチ upsert エラー時は全行をスキップしてエラーログに記録する', async () => {
     const mockSupabase = {
       from: () => ({
         select: vi.fn(),
@@ -122,16 +137,17 @@ describe('syncGA4ToSupabase', () => {
 
     const result = await syncGA4ToSupabase(ga4Data, slugMap, mockSupabase)
     expect(result.synced).toBe(0)
-    expect(result.skipped).toBe(2)
-    expect(result.errors).toHaveLength(2)
+    expect(result.skipped).toBe(2) // バッチ失敗で全行スキップ
+    expect(result.errors).toHaveLength(1) // バッチエラーは1件
     expect(result.errors[0]).toContain('DB error')
   })
 
   it('/articles/ 以外のパスはスキップする', async () => {
+    const upsertFn = vi.fn().mockResolvedValue({ error: null })
     const mockSupabase = {
       from: () => ({
         select: vi.fn(),
-        upsert: vi.fn().mockResolvedValue({ error: null }),
+        upsert: upsertFn,
         update: vi.fn(),
       }),
     }
@@ -151,6 +167,8 @@ describe('syncGA4ToSupabase', () => {
     const result = await syncGA4ToSupabase(nonArticleData, slugMap, mockSupabase)
     expect(result.synced).toBe(0)
     expect(result.skipped).toBe(1)
+    // 有効な行がないので upsert は呼ばれない
+    expect(upsertFn).not.toHaveBeenCalled()
   })
 })
 
@@ -159,24 +177,21 @@ describe('syncGA4ToSupabase', () => {
 // ============================================================
 
 describe('mergeGSCData', () => {
-  it('GSC の CTR データをマージする', async () => {
-    const updateFn = vi.fn().mockReturnValue({
-      eq: vi.fn().mockReturnValue({
-        eq: vi.fn().mockResolvedValue({ error: null }),
-      }),
-    })
+  it('GSC の CTR データをバッチ upsert でマージする', async () => {
+    const upsertFn = vi.fn().mockResolvedValue({ error: null })
 
     const mockSupabase = {
       from: () => ({
         select: vi.fn(),
-        upsert: vi.fn(),
-        update: updateFn,
+        upsert: upsertFn,
+        update: vi.fn(),
       }),
     }
 
     const gscData: GSCRow[] = [
       {
         page: 'https://menscataly.com/articles/aga-clinic-ranking',
+        date: '2026-03-04',
         clicks: 50,
         impressions: 1000,
         ctr: 0.05,
@@ -187,7 +202,40 @@ describe('mergeGSCData', () => {
     const slugMap: SlugToIdMap = { 'aga-clinic-ranking': 'uuid-1' }
 
     await mergeGSCData(gscData, slugMap, mockSupabase, '2026-03-04')
-    expect(updateFn).toHaveBeenCalledWith({ ctr: 0.05 })
+    // バッチ upsert: 1回の呼び出しで配列を渡す
+    expect(upsertFn).toHaveBeenCalledTimes(1)
+    expect(upsertFn).toHaveBeenCalledWith(
+      [{ article_id: 'uuid-1', date: '2026-03-04', ctr: 0.05 }],
+      { onConflict: 'article_id,date' }
+    )
+  })
+
+  it('有効な行がない場合は upsert を呼ばない', async () => {
+    const upsertFn = vi.fn().mockResolvedValue({ error: null })
+
+    const mockSupabase = {
+      from: () => ({
+        select: vi.fn(),
+        upsert: upsertFn,
+        update: vi.fn(),
+      }),
+    }
+
+    const gscData: GSCRow[] = [
+      {
+        page: 'https://menscataly.com/unknown-page',
+        date: '2026-03-04',
+        clicks: 10,
+        impressions: 100,
+        ctr: 0.1,
+        position: 5.0,
+      },
+    ]
+
+    const slugMap: SlugToIdMap = { 'aga-clinic-ranking': 'uuid-1' }
+
+    await mergeGSCData(gscData, slugMap, mockSupabase, '2026-03-04')
+    expect(upsertFn).not.toHaveBeenCalled()
   })
 })
 

@@ -9,8 +9,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient as createSSRServerClient } from '@supabase/ssr'
 import { writeAdminAuditLog, extractIpFromRequest } from '@/lib/admin/audit-log'
+import { withRateLimit } from '@/lib/admin/rate-limit'
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  // ログイン試行にはレート制限を適用 (ブルートフォース対策)
+  const rateLimited = withRateLimit(request, 'admin:auth:login')
+  if (rateLimited) return rateLimited
+
   try {
     const body = await request.json()
     const { email, password } = body as { email?: string; password?: string }

@@ -8,6 +8,13 @@
 import { connection } from 'next/server'
 import type { AdminDashboardData, MonitoringAlert } from '@/types/admin'
 
+/** Wrapper type that carries data source metadata */
+export interface DashboardDataWithSource {
+  data: AdminDashboardData
+  source: 'live' | 'mock' | 'empty'
+  reason?: string
+}
+
 // ============================================================
 // モックダッシュボードデータ
 // ============================================================

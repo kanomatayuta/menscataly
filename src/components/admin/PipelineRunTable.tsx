@@ -56,17 +56,17 @@ export function PipelineRunTable({ runs }: PipelineRunTableProps) {
 
   return (
     <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
-      <table className="w-full text-left text-sm">
+      <table className="w-full min-w-[600px] text-left text-xs md:text-sm">
         <thead>
           <tr className="border-b border-slate-200 bg-slate-50">
-            <th className="px-4 py-3 font-medium text-slate-600">実行ID</th>
-            <th className="px-4 py-3 font-medium text-slate-600">種別</th>
-            <th className="px-4 py-3 font-medium text-slate-600">ステータス</th>
-            <th className="px-4 py-3 font-medium text-slate-600">開始時刻</th>
-            <th className="px-4 py-3 font-medium text-slate-600">
+            <th className="whitespace-nowrap px-2 py-2 font-medium text-slate-600 md:px-4 md:py-3">実行ID</th>
+            <th className="whitespace-nowrap px-2 py-2 font-medium text-slate-600 md:px-4 md:py-3">種別</th>
+            <th className="whitespace-nowrap px-2 py-2 font-medium text-slate-600 md:px-4 md:py-3">ステータス</th>
+            <th className="whitespace-nowrap px-2 py-2 font-medium text-slate-600 md:px-4 md:py-3">開始時刻</th>
+            <th className="whitespace-nowrap px-2 py-2 font-medium text-slate-600 md:px-4 md:py-3">
               所要時間
             </th>
-            <th className="px-4 py-3 font-medium text-slate-600">エラー</th>
+            <th className="whitespace-nowrap px-2 py-2 font-medium text-slate-600 md:px-4 md:py-3">エラー</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
@@ -74,26 +74,26 @@ export function PipelineRunTable({ runs }: PipelineRunTableProps) {
             const style = STATUS_STYLES[run.status];
             return (
               <tr key={run.id} className="hover:bg-slate-50">
-                <td className="px-4 py-3 font-mono text-xs text-slate-700">
+                <td className="whitespace-nowrap px-2 py-2 font-mono text-xs text-slate-700 md:px-4 md:py-3">
                   {run.id.slice(0, 8)}
                 </td>
-                <td className="px-4 py-3 text-slate-600">
+                <td className="whitespace-nowrap px-2 py-2 text-slate-600 md:px-4 md:py-3">
                   {TYPE_LABELS[run.type] ?? run.type}
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-2 py-2 md:px-4 md:py-3">
                   <span
                     className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${style.bg} ${style.text}`}
                   >
                     {STATUS_LABELS[run.status] ?? run.status}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-slate-500">
+                <td className="whitespace-nowrap px-2 py-2 text-slate-500 md:px-4 md:py-3">
                   {new Date(run.startedAt).toLocaleString("ja-JP")}
                 </td>
-                <td className="px-4 py-3 text-slate-500">
+                <td className="whitespace-nowrap px-2 py-2 text-slate-500 md:px-4 md:py-3">
                   {formatDuration(run.durationMs)}
                 </td>
-                <td className="max-w-xs truncate px-4 py-3 text-xs text-red-600">
+                <td className="max-w-[150px] truncate px-2 py-2 text-xs text-red-600 md:max-w-xs md:px-4 md:py-3">
                   {run.error ?? "-"}
                 </td>
               </tr>

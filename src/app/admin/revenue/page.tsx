@@ -111,8 +111,10 @@ function getMockRevenueSummary(): RevenueSummary[] {
 }
 
 // ------------------------------------------------------------------
-// Data fetching (直接 Supabase クエリ)
+// Data fetching (Supabase revenue_daily + asp_programs フォールバック)
 // ------------------------------------------------------------------
+
+type DataSource = "live" | "mock" | "empty";
 
 interface RevenueResponse {
   revenue: RevenueSummary[];
@@ -120,15 +122,17 @@ interface RevenueResponse {
     startDate: string;
     endDate: string;
   };
+  source: DataSource;
+  reason?: string;
 }
 
 async function fetchRevenueData(): Promise<RevenueResponse> {
   await connection();
 
+  const endDate = new Date().toISOString().split("T")[0];
   const startDate = new Date(
     Date.now() - 30 * 24 * 60 * 60 * 1000,
-  ).toISOString();
-  const endDate = new Date().toISOString();
+  ).toISOString().split("T")[0];
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -137,6 +141,8 @@ async function fetchRevenueData(): Promise<RevenueResponse> {
     return {
       revenue: getMockRevenueSummary(),
       period: { startDate, endDate },
+      source: "mock",
+      reason: "Supabase credentials not configured",
     };
   }
 
@@ -146,152 +152,252 @@ async function fetchRevenueData(): Promise<RevenueResponse> {
     );
     const supabase = createServerSupabaseClient();
 
-    // affiliate_links テーブルからASP別にクリック数・コンバージョン・収益を集計
+    // 1. revenue_daily テーブルから期間内データを取得
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: linkData, error: linkError } = await (supabase as any)
-      .from("affiliate_links")
-      .select(
-        "asp_name, click_count, conversion_count, revenue, program_name, article_id",
-      );
+    const { data: revenueRows, error: revenueError } = await (supabase as any)
+      .from("revenue_daily")
+      .select("asp_name, clicks, conversions_confirmed, conversions_pending, revenue_confirmed, revenue_pending, article_slug")
+      .gte("date", startDate)
+      .lte("date", endDate);
 
-    if (linkError) {
-      console.error("[admin/revenue] affiliate_links query error:", linkError.message);
-      return {
-        revenue: getMockRevenueSummary(),
-        period: { startDate, endDate },
-      };
+    if (revenueError) {
+      console.error("[admin/revenue] revenue_daily query error:", revenueError.message);
+      // テーブル未作成等のエラー → affiliate_links フォールバック
+      return await fetchFromAffiliateLinks(supabase, startDate, endDate);
     }
 
-    // リンクデータが存在しない場合は asp_programs からASP名一覧を取得してゼロデータを返す
-    if (!linkData || linkData.length === 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: programs, error: progError } = await (supabase as any)
-        .from("asp_programs")
-        .select("asp_name")
-        .eq("is_active", true);
+    // revenue_daily にデータがある場合 → 実データから集計
+    if (revenueRows && revenueRows.length > 0) {
+      const aspMap = new Map<
+        string,
+        {
+          clicks: number;
+          conversions: number;
+          revenue: number;
+          articleConversions: Map<string, number>;
+        }
+      >();
 
-      if (progError || !programs || programs.length === 0) {
-        return { revenue: [], period: { startDate, endDate } };
-      }
+      for (const row of revenueRows) {
+        const aspName = row.asp_name as string;
+        if (!aspMap.has(aspName)) {
+          aspMap.set(aspName, { clicks: 0, conversions: 0, revenue: 0, articleConversions: new Map() });
+        }
+        const entry = aspMap.get(aspName)!;
+        entry.clicks += Number(row.clicks) || 0;
+        entry.conversions += (Number(row.conversions_confirmed) || 0) + (Number(row.conversions_pending) || 0);
+        entry.revenue += (Number(row.revenue_confirmed) || 0) + (Number(row.revenue_pending) || 0);
 
-      // ASP名の重複を除去してゼロデータとして返す
-      const aspNames = Array.from(
-        new Set(programs.map((p: { asp_name: string }) => p.asp_name as string)),
-      ) as string[];
-      const revenue: RevenueSummary[] = aspNames.map((aspName) => ({
-        aspName,
-        totalClicks: 0,
-        totalConversions: 0,
-        totalRevenue: 0,
-        conversionRate: 0,
-        monthlyConversions: 0,
-        monthlyRevenueJpy: 0,
-        monthOverMonthChange: 0,
-        topArticles: [],
-      }));
-      return { revenue, period: { startDate, endDate } };
-    }
-
-    // ASP名でグループ化して集計
-    const aspMap = new Map<
-      string,
-      {
-        clicks: number;
-        conversions: number;
-        revenue: number;
-        articleConversions: Map<string, { article_id: string; conversions: number }>;
-      }
-    >();
-
-    for (const link of linkData) {
-      const aspName = link.asp_name as string;
-      if (!aspMap.has(aspName)) {
-        aspMap.set(aspName, {
-          clicks: 0,
-          conversions: 0,
-          revenue: 0,
-          articleConversions: new Map(),
-        });
-      }
-      const entry = aspMap.get(aspName)!;
-      entry.clicks += (Number(link.click_count) || 0);
-      entry.conversions += (Number(link.conversion_count) || 0);
-      entry.revenue += (Number(link.revenue) || 0);
-
-      // 記事別コンバージョン集計 (topArticles用)
-      if (link.article_id) {
-        const artKey = link.article_id as string;
-        const existing = entry.articleConversions.get(artKey);
-        const cv = (Number(link.conversion_count) || 0);
-        if (existing) {
-          existing.conversions += cv;
-        } else {
-          entry.articleConversions.set(artKey, {
-            article_id: artKey,
-            conversions: cv,
-          });
+        if (row.article_slug) {
+          const slug = row.article_slug as string;
+          entry.articleConversions.set(
+            slug,
+            (entry.articleConversions.get(slug) ?? 0) + (Number(row.conversions_confirmed) || 0),
+          );
         }
       }
-    }
 
-    // 記事タイトルを取得 (上位記事表示用)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: articles } = await (supabase as any)
-      .from("articles")
-      .select("id, title, slug");
+      // 前月データ取得 (monthOverMonthChange 計算用)
+      const prevEndDate = new Date(startDate);
+      prevEndDate.setDate(prevEndDate.getDate() - 1);
+      const prevStartDate = new Date(prevEndDate);
+      prevStartDate.setDate(prevStartDate.getDate() - 30);
+      const prevStartStr = prevStartDate.toISOString().split("T")[0];
+      const prevEndStr = prevEndDate.toISOString().split("T")[0];
 
-    const articleMap = new Map<string, { title: string; slug: string }>();
-    for (const article of articles ?? []) {
-      articleMap.set(article.id as string, {
-        title: article.title as string,
-        slug: article.slug as string,
-      });
-    }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: prevRows } = await (supabase as any)
+        .from("revenue_daily")
+        .select("asp_name, revenue_confirmed, revenue_pending")
+        .gte("date", prevStartStr)
+        .lte("date", prevEndStr);
 
-    // RevenueSummary配列を構築
-    const revenue: RevenueSummary[] = Array.from(aspMap.entries()).map(
-      ([aspName, agg]) => {
-        const conversionRate =
-          agg.clicks > 0 ? (agg.conversions / agg.clicks) * 100 : 0;
+      const prevRevenueByAsp = new Map<string, number>();
+      if (prevRows) {
+        for (const row of prevRows) {
+          const aspName = row.asp_name as string;
+          prevRevenueByAsp.set(
+            aspName,
+            (prevRevenueByAsp.get(aspName) ?? 0) + (Number(row.revenue_confirmed) || 0) + (Number(row.revenue_pending) || 0),
+          );
+        }
+      }
 
-        // topArticles: コンバージョン数の多い上位3件
-        const topArticles = Array.from(agg.articleConversions.values())
-          .sort((a, b) => b.conversions - a.conversions)
+      const revenue: RevenueSummary[] = Array.from(aspMap.entries()).map(([aspName, agg]) => {
+        const cvr = agg.clicks > 0 ? (agg.conversions / agg.clicks) * 100 : 0;
+        const prevRev = prevRevenueByAsp.get(aspName) ?? 0;
+        const momChange = prevRev > 0 ? ((agg.revenue - prevRev) / prevRev) * 100 : 0;
+
+        const topArticles = Array.from(agg.articleConversions.entries())
+          .sort(([, a], [, b]) => b - a)
           .slice(0, 3)
-          .map((art) => {
-            const meta = articleMap.get(art.article_id);
-            return {
-              slug: meta?.slug ?? art.article_id,
-              title: meta?.title ?? "—",
-              conversions: art.conversions,
-            };
-          });
+          .map(([slug, conversions]) => ({
+            slug,
+            title: slug,
+            conversions,
+          }));
 
         return {
           aspName,
           totalClicks: agg.clicks,
           totalConversions: agg.conversions,
           totalRevenue: Math.round(agg.revenue),
-          conversionRate: Math.round(conversionRate * 100) / 100,
+          conversionRate: Math.round(cvr * 100) / 100,
           monthlyConversions: agg.conversions,
           monthlyRevenueJpy: Math.round(agg.revenue),
-          monthOverMonthChange: 0, // 前月比は履歴データがないため0
+          monthOverMonthChange: Math.round(momChange * 10) / 10,
           topArticles,
         };
-      },
-    );
+      });
 
-    // 収益の多い順にソート
-    revenue.sort((a, b) => b.totalRevenue - a.totalRevenue);
+      revenue.sort((a, b) => b.totalRevenue - a.totalRevenue);
+      return { revenue, period: { startDate, endDate }, source: "live" };
+    }
 
-    return { revenue, period: { startDate, endDate } };
+    // revenue_daily にデータがない → affiliate_links フォールバック
+    return await fetchFromAffiliateLinks(supabase, startDate, endDate);
   } catch (err) {
     console.error("[admin/revenue] Error:", err);
     return {
       revenue: getMockRevenueSummary(),
       period: { startDate, endDate },
+      source: "mock",
+      reason: err instanceof Error ? err.message : "Unknown error",
     };
   }
+}
+
+/**
+ * affiliate_links テーブルからのフォールバック集計
+ * revenue_daily にデータがない初期段階で使用
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchFromAffiliateLinks(supabase: any, startDate: string, endDate: string): Promise<RevenueResponse> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: linkData, error: linkError } = await (supabase as any)
+    .from("affiliate_links")
+    .select("asp_name, click_count, conversion_count, revenue, program_name, article_id");
+
+  if (linkError) {
+    console.error("[admin/revenue] affiliate_links query error:", linkError.message);
+    // affiliate_links もエラー → asp_programs からゼロデータ
+    return await fetchEmptyFromAspPrograms(supabase, startDate, endDate);
+  }
+
+  if (!linkData || linkData.length === 0) {
+    return await fetchEmptyFromAspPrograms(supabase, startDate, endDate);
+  }
+
+  // ASP名でグループ化して集計
+  const aspMap = new Map<
+    string,
+    {
+      clicks: number;
+      conversions: number;
+      revenue: number;
+      articleConversions: Map<string, { article_id: string; conversions: number }>;
+    }
+  >();
+
+  for (const link of linkData) {
+    const aspName = link.asp_name as string;
+    if (!aspMap.has(aspName)) {
+      aspMap.set(aspName, { clicks: 0, conversions: 0, revenue: 0, articleConversions: new Map() });
+    }
+    const entry = aspMap.get(aspName)!;
+    entry.clicks += Number(link.click_count) || 0;
+    entry.conversions += Number(link.conversion_count) || 0;
+    entry.revenue += Number(link.revenue) || 0;
+
+    if (link.article_id) {
+      const artKey = link.article_id as string;
+      const existing = entry.articleConversions.get(artKey);
+      const cv = Number(link.conversion_count) || 0;
+      if (existing) {
+        existing.conversions += cv;
+      } else {
+        entry.articleConversions.set(artKey, { article_id: artKey, conversions: cv });
+      }
+    }
+  }
+
+  // 記事タイトル取得
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: articles } = await (supabase as any)
+    .from("articles")
+    .select("id, title, slug");
+
+  const articleMap = new Map<string, { title: string; slug: string }>();
+  for (const article of articles ?? []) {
+    articleMap.set(article.id as string, {
+      title: article.title as string,
+      slug: article.slug as string,
+    });
+  }
+
+  const revenue: RevenueSummary[] = Array.from(aspMap.entries()).map(([aspName, agg]) => {
+    const conversionRate = agg.clicks > 0 ? (agg.conversions / agg.clicks) * 100 : 0;
+    const topArticles = Array.from(agg.articleConversions.values())
+      .sort((a, b) => b.conversions - a.conversions)
+      .slice(0, 3)
+      .map((art) => {
+        const meta = articleMap.get(art.article_id);
+        return {
+          slug: meta?.slug ?? art.article_id,
+          title: meta?.title ?? "-",
+          conversions: art.conversions,
+        };
+      });
+
+    return {
+      aspName,
+      totalClicks: agg.clicks,
+      totalConversions: agg.conversions,
+      totalRevenue: Math.round(agg.revenue),
+      conversionRate: Math.round(conversionRate * 100) / 100,
+      monthlyConversions: agg.conversions,
+      monthlyRevenueJpy: Math.round(agg.revenue),
+      monthOverMonthChange: 0,
+      topArticles,
+    };
+  });
+
+  revenue.sort((a, b) => b.totalRevenue - a.totalRevenue);
+  return { revenue, period: { startDate, endDate }, source: "live" };
+}
+
+/**
+ * asp_programs からASP名だけ取得してゼロデータを返す
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchEmptyFromAspPrograms(supabase: any, startDate: string, endDate: string): Promise<RevenueResponse> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: programs, error: progError } = await (supabase as any)
+    .from("asp_programs")
+    .select("asp_name")
+    .eq("is_active", true);
+
+  if (progError || !programs || programs.length === 0) {
+    return { revenue: [], period: { startDate, endDate }, source: "empty", reason: "No ASP programs or revenue data found" };
+  }
+
+  const aspNames = Array.from(
+    new Set(programs.map((p: { asp_name: string }) => p.asp_name as string)),
+  ) as string[];
+
+  const revenue: RevenueSummary[] = aspNames.map((aspName) => ({
+    aspName,
+    totalClicks: 0,
+    totalConversions: 0,
+    totalRevenue: 0,
+    conversionRate: 0,
+    monthlyConversions: 0,
+    monthlyRevenueJpy: 0,
+    monthOverMonthChange: 0,
+    topArticles: [],
+  }));
+
+  return { revenue, period: { startDate, endDate }, source: "empty", reason: "No revenue data yet" };
 }
 
 // ------------------------------------------------------------------
@@ -299,7 +405,7 @@ async function fetchRevenueData(): Promise<RevenueResponse> {
 // ------------------------------------------------------------------
 
 async function RevenueContent() {
-  const { revenue: summaries } = await fetchRevenueData();
+  const { revenue: summaries, source, reason } = await fetchRevenueData();
 
   const hasData = summaries.length > 0;
   const hasActualData =
@@ -321,15 +427,28 @@ async function RevenueContent() {
 
   return (
     <>
+      {/* データソース表示 */}
+      {source === "mock" && (
+        <div className="mb-4 flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
+          <svg className="h-4 w-4 shrink-0 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.072 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+          <p className="text-xs text-amber-700">
+            モックデータを表示中です。{reason ? `(${reason})` : ""}
+            Supabase の revenue_daily テーブルにデータが蓄積されると実データが表示されます。
+          </p>
+        </div>
+      )}
+
       {/* データなしの場合はインフォバナーを表示 */}
-      {!hasActualData && (
+      {source !== "mock" && !hasActualData && (
         <div className="mb-4 flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2">
           <svg className="h-4 w-4 shrink-0 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
           </svg>
           <p className="text-xs text-blue-700">
             {hasData
-              ? "まだアフィリエイトリンクのクリック・コンバージョンデータがありません。affiliate_links テーブルにデータが蓄積されると自動的に反映されます。"
+              ? "まだ収益データがありません。revenue_daily テーブルにデータが蓄積されると自動的に反映されます。"
               : "ASPプログラムが登録されていません。Supabase の asp_programs テーブルにデータを投入してください。"}
           </p>
         </div>
@@ -389,7 +508,7 @@ async function RevenueContent() {
           <div className="border-b border-neutral-100 px-5 py-3">
             <h2 className="text-sm font-semibold text-neutral-800">ASP別売上</h2>
           </div>
-          <div className="p-4">
+          <div className="overflow-x-auto p-4">
             <RevenueChart summaries={summaries} />
           </div>
         </div>

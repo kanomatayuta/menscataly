@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { validateAdminAuth, getAuthErrorStatus } from '@/lib/admin/auth'
+import { withRateLimit } from '@/lib/admin/rate-limit'
 import { type AspProgramSeed } from '@/lib/asp/seed'
 import { mapRowToProgram } from '@/lib/asp/helpers'
 import type { AspProgramRow } from '@/types/database'
@@ -118,6 +119,9 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
+  const rateLimited = withRateLimit(request, 'admin:asp:put')
+  if (rateLimited) return rateLimited
+
   const auth = await validateAdminAuth(request)
   if (!auth.authorized) {
     return NextResponse.json(
@@ -319,6 +323,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
+  const rateLimited = withRateLimit(request, 'admin:asp:delete')
+  if (rateLimited) return rateLimited
+
   const auth = await validateAdminAuth(request)
   if (!auth.authorized) {
     return NextResponse.json(

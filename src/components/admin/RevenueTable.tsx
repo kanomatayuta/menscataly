@@ -202,20 +202,20 @@ export function RevenueTable({ summaries }: RevenueTableProps) {
 
   return (
     <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
-      <table className="w-full text-left text-sm">
+      <table className="w-full min-w-[480px] text-left text-xs md:text-sm">
         <thead>
           <tr className="border-b border-slate-200 bg-slate-50">
-            <th className="px-4 py-3 font-medium text-slate-600">ASP</th>
-            <th className="px-4 py-3 text-right font-medium text-slate-600">
+            <th className="px-2 py-2 font-medium text-slate-600 md:px-4 md:py-3">ASP</th>
+            <th className="px-2 py-2 text-right font-medium text-slate-600 md:px-4 md:py-3">
               クリック数
             </th>
-            <th className="px-4 py-3 text-right font-medium text-slate-600">
+            <th className="px-2 py-2 text-right font-medium text-slate-600 md:px-4 md:py-3">
               CV数
             </th>
-            <th className="min-w-[140px] px-4 py-3 text-right font-medium text-slate-600">
+            <th className="min-w-[120px] px-2 py-2 text-right font-medium text-slate-600 md:min-w-[140px] md:px-4 md:py-3">
               売上
             </th>
-            <th className="px-4 py-3 text-right font-medium text-slate-600">
+            <th className="px-2 py-2 text-right font-medium text-slate-600 md:px-4 md:py-3">
               CVR
             </th>
           </tr>
@@ -227,23 +227,25 @@ export function RevenueTable({ summaries }: RevenueTableProps) {
               className="group transition-colors hover:bg-slate-50/80"
             >
               {/* ASP name badge + top articles */}
-              <td className="px-4 py-3 align-top">
+              <td className="px-2 py-2 align-top md:px-4 md:py-3">
                 <AspBadge aspName={summary.aspName} />
-                <TopArticlesList articles={summary.topArticles} />
+                <div className="hidden md:block">
+                  <TopArticlesList articles={summary.topArticles} />
+                </div>
               </td>
 
               {/* Clicks */}
-              <td className="px-4 py-3 text-right align-top tabular-nums text-slate-600">
+              <td className="px-2 py-2 text-right align-top tabular-nums text-slate-600 md:px-4 md:py-3">
                 {summary.totalClicks.toLocaleString()}
               </td>
 
               {/* Conversions */}
-              <td className="px-4 py-3 text-right align-top tabular-nums text-slate-600">
+              <td className="px-2 py-2 text-right align-top tabular-nums text-slate-600 md:px-4 md:py-3">
                 {summary.totalConversions.toLocaleString()}
               </td>
 
               {/* Revenue with progress bar */}
-              <td className="px-4 py-3 text-right align-top">
+              <td className="px-2 py-2 text-right align-top md:px-4 md:py-3">
                 <span className="font-semibold tabular-nums text-slate-900">
                   &yen;{summary.totalRevenue.toLocaleString()}
                 </span>
@@ -255,7 +257,7 @@ export function RevenueTable({ summaries }: RevenueTableProps) {
               </td>
 
               {/* CVR with color coding */}
-              <td className="px-4 py-3 text-right align-top">
+              <td className="px-2 py-2 text-right align-top md:px-4 md:py-3">
                 <CvrBadge cvr={summary.conversionRate} />
               </td>
             </tr>
@@ -265,17 +267,17 @@ export function RevenueTable({ summaries }: RevenueTableProps) {
         {/* Totals footer */}
         <tfoot>
           <tr className="border-t-2 border-slate-300 bg-slate-50">
-            <td className="px-4 py-3 font-bold text-slate-900">合計</td>
-            <td className="px-4 py-3 text-right font-semibold tabular-nums text-slate-900">
+            <td className="px-2 py-2 font-bold text-slate-900 md:px-4 md:py-3">合計</td>
+            <td className="px-2 py-2 text-right font-semibold tabular-nums text-slate-900 md:px-4 md:py-3">
               {totals.clicks.toLocaleString()}
             </td>
-            <td className="px-4 py-3 text-right font-semibold tabular-nums text-slate-900">
+            <td className="px-2 py-2 text-right font-semibold tabular-nums text-slate-900 md:px-4 md:py-3">
               {totals.conversions.toLocaleString()}
             </td>
-            <td className="px-4 py-3 text-right font-bold tabular-nums text-slate-900">
+            <td className="px-2 py-2 text-right font-bold tabular-nums text-slate-900 md:px-4 md:py-3">
               &yen;{totals.revenue.toLocaleString()}
             </td>
-            <td className="px-4 py-3 text-right">
+            <td className="px-2 py-2 text-right md:px-4 md:py-3">
               <CvrBadge cvr={totalCvr} />
             </td>
           </tr>

@@ -726,7 +726,7 @@ export default function AdminArticlesPage() {
         <ArticlesSummarySection />
       </Suspense>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-12">
+      <div className="mt-6 grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-12">
         <div className="lg:col-span-5">
           <Suspense fallback={<ChartSkeleton />}>
             <TrendChartSection />

@@ -1,6 +1,10 @@
 /**
  * GET /api/admin/revenue
  * ASP別収益サマリー取得
+ *
+ * 1. revenue_daily テーブルから期間内の実データを取得
+ * 2. データがなければ asp_programs から ASP 名一覧をゼロデータとして返す
+ * 3. Supabase 未設定 or エラー時はモックにフォールバック（source: 'mock'）
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -86,10 +90,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   const { searchParams } = new URL(request.url)
+  const endDate = searchParams.get('endDate') ?? new Date().toISOString().split('T')[0]
   const startDate =
     searchParams.get('startDate') ??
-    new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-  const endDate = searchParams.get('endDate') ?? new Date().toISOString()
+    new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -98,6 +102,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({
       revenue: getMockRevenueSummary(),
       period: { startDate, endDate },
+      source: 'mock' as const,
+      reason: 'Supabase credentials not configured',
     })
   }
 
@@ -105,51 +111,163 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const { createServerSupabaseClient } = await import('@/lib/supabase/client')
     const supabase = createServerSupabaseClient()
 
-    // asp_programs テーブルからASP別集計を取得
+    // revenue_daily テーブルから期間内データを取得
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any)
-      .from('asp_programs')
-      .select('*')
-      .eq('is_active', true)
+    const { data: revenueRows, error: revenueError } = await (supabase as any)
+      .from('revenue_daily')
+      .select('asp_name, clicks, conversions_confirmed, conversions_pending, revenue_confirmed, revenue_pending, article_slug')
+      .gte('date', startDate)
+      .lte('date', endDate)
 
-    if (error) {
-      console.error('[admin/revenue] Query error:', error.message)
+    if (revenueError) {
+      console.error('[admin/revenue] revenue_daily query error:', revenueError.message)
+      // revenue_daily テーブルが存在しない場合も含めてフォールバック
       return NextResponse.json({
         revenue: getMockRevenueSummary(),
         period: { startDate, endDate },
+        source: 'mock' as const,
+        reason: `revenue_daily query error: ${revenueError.message}`,
       })
     }
 
-    // ASP名でグループ化
-    const aspGroups = new Map<string, typeof data>()
-    for (const program of data ?? []) {
-      const aspName = program.asp_name as string
-      if (!aspGroups.has(aspName)) {
-        aspGroups.set(aspName, [])
+    // revenue_daily にデータがある場合 → 実データから集計
+    if (revenueRows && revenueRows.length > 0) {
+      const aspMap = new Map<
+        string,
+        {
+          clicks: number
+          conversions: number
+          revenue: number
+          articleConversions: Map<string, number>
+        }
+      >()
+
+      for (const row of revenueRows) {
+        const aspName = row.asp_name as string
+        if (!aspMap.has(aspName)) {
+          aspMap.set(aspName, { clicks: 0, conversions: 0, revenue: 0, articleConversions: new Map() })
+        }
+        const entry = aspMap.get(aspName)!
+        entry.clicks += Number(row.clicks) || 0
+        entry.conversions += (Number(row.conversions_confirmed) || 0) + (Number(row.conversions_pending) || 0)
+        entry.revenue += (Number(row.revenue_confirmed) || 0) + (Number(row.revenue_pending) || 0)
+
+        if (row.article_slug) {
+          const slug = row.article_slug as string
+          entry.articleConversions.set(
+            slug,
+            (entry.articleConversions.get(slug) ?? 0) + (Number(row.conversions_confirmed) || 0)
+          )
+        }
       }
-      aspGroups.get(aspName)!.push(program)
+
+      // 前月データ取得 (monthOverMonthChange 計算用)
+      const prevEndDate = new Date(startDate)
+      prevEndDate.setDate(prevEndDate.getDate() - 1)
+      const prevStartDate = new Date(prevEndDate)
+      prevStartDate.setDate(prevStartDate.getDate() - 30)
+      const prevStartStr = prevStartDate.toISOString().split('T')[0]
+      const prevEndStr = prevEndDate.toISOString().split('T')[0]
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: prevRows } = await (supabase as any)
+        .from('revenue_daily')
+        .select('asp_name, revenue_confirmed, revenue_pending')
+        .gte('date', prevStartStr)
+        .lte('date', prevEndStr)
+
+      const prevRevenueByAsp = new Map<string, number>()
+      if (prevRows) {
+        for (const row of prevRows) {
+          const aspName = row.asp_name as string
+          prevRevenueByAsp.set(
+            aspName,
+            (prevRevenueByAsp.get(aspName) ?? 0) + (Number(row.revenue_confirmed) || 0) + (Number(row.revenue_pending) || 0)
+          )
+        }
+      }
+
+      const revenue: RevenueSummary[] = Array.from(aspMap.entries()).map(([aspName, agg]) => {
+        const cvr = agg.clicks > 0 ? (agg.conversions / agg.clicks) * 100 : 0
+        const prevRev = prevRevenueByAsp.get(aspName) ?? 0
+        const momChange = prevRev > 0 ? ((agg.revenue - prevRev) / prevRev) * 100 : 0
+
+        const topArticles = Array.from(agg.articleConversions.entries())
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 3)
+          .map(([slug, conversions]) => ({
+            slug,
+            title: slug, // slug をフォールバック表示名として使用
+            conversions,
+          }))
+
+        return {
+          aspName,
+          totalClicks: agg.clicks,
+          totalConversions: agg.conversions,
+          totalRevenue: Math.round(agg.revenue),
+          conversionRate: Math.round(cvr * 100) / 100,
+          monthlyConversions: agg.conversions,
+          monthlyRevenueJpy: Math.round(agg.revenue),
+          monthOverMonthChange: Math.round(momChange * 10) / 10,
+          topArticles,
+        }
+      })
+
+      revenue.sort((a, b) => b.totalRevenue - a.totalRevenue)
+
+      return NextResponse.json({
+        revenue,
+        period: { startDate, endDate },
+        source: 'live' as const,
+      })
     }
 
-    const revenue: RevenueSummary[] = Array.from(aspGroups.entries()).map(
-      ([aspName]) => ({
-        aspName,
-        totalClicks: 0,
-        totalConversions: 0,
-        totalRevenue: 0,
-        conversionRate: 0,
-        monthlyConversions: 0,
-        monthlyRevenueJpy: 0,
-        monthOverMonthChange: 0,
-        topArticles: [],
-      })
-    )
+    // revenue_daily にデータがない場合 → asp_programs からASP名一覧をゼロデータとして返す
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: programs, error: progError } = await (supabase as any)
+      .from('asp_programs')
+      .select('asp_name')
+      .eq('is_active', true)
 
-    return NextResponse.json({ revenue, period: { startDate, endDate } })
+    if (progError || !programs || programs.length === 0) {
+      return NextResponse.json({
+        revenue: [],
+        period: { startDate, endDate },
+        source: 'empty' as const,
+        reason: 'No revenue data or ASP programs found',
+      })
+    }
+
+    const aspNames = Array.from(
+      new Set(programs.map((p: { asp_name: string }) => p.asp_name as string))
+    ) as string[]
+
+    const revenue: RevenueSummary[] = aspNames.map((aspName) => ({
+      aspName,
+      totalClicks: 0,
+      totalConversions: 0,
+      totalRevenue: 0,
+      conversionRate: 0,
+      monthlyConversions: 0,
+      monthlyRevenueJpy: 0,
+      monthOverMonthChange: 0,
+      topArticles: [],
+    }))
+
+    return NextResponse.json({
+      revenue,
+      period: { startDate, endDate },
+      source: 'empty' as const,
+      reason: 'No revenue_daily data yet; showing ASP list with zero values',
+    })
   } catch (err) {
     console.error('[admin/revenue] Error:', err)
     return NextResponse.json({
       revenue: getMockRevenueSummary(),
       period: { startDate, endDate },
+      source: 'mock' as const,
+      reason: err instanceof Error ? err.message : 'Unknown error',
     })
   }
 }

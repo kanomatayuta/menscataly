@@ -22,11 +22,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   try {
     const dashboard = await fetchDashboardData()
-    return NextResponse.json(dashboard)
+    return NextResponse.json({ data: dashboard, source: 'live' as const })
   } catch (err) {
     console.error('[admin/dashboard] Error:', err)
     // エラー時はモックにフォールバック
     const { getMockDashboardData } = await import('@/lib/admin/dashboard-data')
-    return NextResponse.json(getMockDashboardData())
+    return NextResponse.json({
+      data: getMockDashboardData(),
+      source: 'mock' as const,
+      reason: err instanceof Error ? err.message : 'Unknown error',
+    })
   }
 }

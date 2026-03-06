@@ -25,25 +25,70 @@ export interface NotificationPayload {
 }
 
 // ============================================================
-// Email通知プレースホルダー
+// Email通知
 // ============================================================
 
 /**
- * メール通知を送信する（プレースホルダー実装）
- * 将来的に SendGrid / SES 等のメールサービスと連携する
+ * メール通知の設定状態を確認する
+ *
+ * メール通知を有効にするには、以下の環境変数を設定してください:
+ *   - ALERT_EMAIL_TO: 通知先メールアドレス
+ *   - SENDGRID_API_KEY: SendGrid APIキー (SendGrid利用時)
+ *   または
+ *   - SMTP_HOST: SMTPサーバーホスト (SMTP利用時)
+ *   - SMTP_PORT: SMTPサーバーポート
+ *   - SMTP_USER: SMTP認証ユーザー
+ *   - SMTP_PASS: SMTP認証パスワード
  */
-async function sendEmailNotification(payload: NotificationPayload): Promise<boolean> {
+function isEmailConfigured(): { configured: boolean; reason: string } {
   const emailTo = process.env.ALERT_EMAIL_TO
   if (!emailTo) {
-    console.info('[NotificationRouter] ALERT_EMAIL_TO が未設定 — メール通知をスキップします')
+    return { configured: false, reason: 'ALERT_EMAIL_TO が未設定' }
+  }
+
+  const hasSendGrid = !!process.env.SENDGRID_API_KEY
+  const hasSmtp = !!(process.env.SMTP_HOST && process.env.SMTP_USER)
+
+  if (!hasSendGrid && !hasSmtp) {
+    return {
+      configured: false,
+      reason: 'メール送信サービスが未設定 (SENDGRID_API_KEY または SMTP_HOST/SMTP_USER が必要)',
+    }
+  }
+
+  return { configured: true, reason: '' }
+}
+
+/**
+ * メール通知を送信する
+ *
+ * 現在はメール送信サービス (SendGrid / SES / SMTP) が未実装のため、
+ * 環境変数の設定状況に応じて適切なログを出力し false を返す。
+ *
+ * メール通知を有効にするには、以下の環境変数を設定してください:
+ *   - ALERT_EMAIL_TO: 通知先メールアドレス (必須)
+ *   - SENDGRID_API_KEY: SendGrid APIキー
+ *   または SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS
+ */
+async function sendEmailNotification(payload: NotificationPayload): Promise<boolean> {
+  const { configured, reason } = isEmailConfigured()
+
+  if (!configured) {
+    console.warn(
+      `[NotificationRouter] メール通知は無効です: ${reason}。` +
+      `対象: [${payload.severity}] ${payload.title}`
+    )
     return false
   }
 
-  // TODO: SendGrid / Amazon SES 連携を実装
-  console.log(
-    `[NotificationRouter] メール通知（プレースホルダー）: to=${emailTo}, subject=[${payload.severity}] ${payload.title}`
+  // メール送信サービスが設定されているが、実際の送信ロジックは未実装
+  // SendGrid / Amazon SES / SMTP クライアントをここに実装する
+  console.warn(
+    '[NotificationRouter] メール送信サービスのクライアント実装が必要です。' +
+    `環境変数は設定済みですが、送信ロジックが未実装のため送信できません。` +
+    `対象: to=${process.env.ALERT_EMAIL_TO}, subject=[${payload.severity}] ${payload.title}`
   )
-  return true
+  return false
 }
 
 // ============================================================

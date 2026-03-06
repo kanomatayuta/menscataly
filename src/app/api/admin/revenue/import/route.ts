@@ -5,10 +5,15 @@
 
 import { NextResponse } from 'next/server'
 import { validateAdminAuth, getAuthErrorStatus } from '@/lib/admin/auth'
+import { withRateLimit } from '@/lib/admin/rate-limit'
 import { A8ReportProvider } from '@/lib/asp/reports/a8-report-provider'
 import { ReportSyncOrchestrator } from '@/lib/asp/reports/sync-orchestrator'
 
 export async function POST(request: Request) {
+  // レート制限
+  const rateLimited = withRateLimit(request, 'admin:revenue:import')
+  if (rateLimited) return rateLimited
+
   // 認証
   const auth = await validateAdminAuth(request)
   if (!auth.authorized) {

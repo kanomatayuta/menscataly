@@ -321,13 +321,39 @@ export function generatePersonSchema(
 }
 
 // ============================================================
+// Organization スキーマ生成
+// ============================================================
+
+/**
+ * Organization 構造化データを生成する (サイト全体)
+ *
+ * メンズカタリのサイト情報を Organization スキーマとして出力。
+ * @graph に含めることで検索エンジンにサイト情報を伝達する。
+ *
+ * @returns Organization JSON-LD オブジェクト
+ */
+export function generateOrganizationSchema(): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "メンズカタリ",
+    url: BASE_URL,
+    logo: {
+      "@type": "ImageObject",
+      url: `${BASE_URL}/icon`,
+    },
+    sameAs: [],
+  };
+}
+
+// ============================================================
 // 記事用統合 JSON-LD 生成
 // ============================================================
 
 /**
  * 記事用の統合 JSON-LD @graph を生成する
  *
- * MedicalWebPage/Article + BreadcrumbList を @graph で統合。
+ * MedicalWebPage/Article + BreadcrumbList + Organization を @graph で統合。
  * FAQPage, HowTo は記事コンテンツから自動検出時に追加。
  *
  * @param article microCMS 記事データ
@@ -351,6 +377,8 @@ export function generateArticleStructuredData(
     stripContext(
       generateBreadcrumbSchema(categorySlug, categoryName, article.title, slug)
     ),
+    // Organization (サイト情報)
+    stripContext(generateOrganizationSchema()),
   ];
 
   // FAQ がある場合

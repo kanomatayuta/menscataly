@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { validateAdminAuth, getAuthErrorStatus } from '@/lib/admin/auth'
+import { withRateLimit } from '@/lib/admin/rate-limit'
 import { safeParseInt } from '@/lib/utils/safe-parse'
 import { type AspProgramSeed } from '@/lib/asp/seed'
 import { mapRowToProgram } from '@/lib/asp/helpers'
@@ -143,6 +144,9 @@ interface CreateAspProgramRequest {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  const rateLimited = withRateLimit(request, 'admin:asp:post')
+  if (rateLimited) return rateLimited
+
   const auth = await validateAdminAuth(request)
   if (!auth.authorized) {
     return NextResponse.json(

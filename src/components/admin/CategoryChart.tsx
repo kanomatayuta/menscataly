@@ -108,7 +108,7 @@ export function CategoryChart({
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white py-4 shadow-sm">
-      <div className="mb-4 flex items-center justify-between px-3">
+      <div className="mb-4 flex flex-col gap-2 px-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-semibold text-slate-700">カテゴリ別</h3>
           <ToggleGroup
@@ -120,7 +120,7 @@ export function CategoryChart({
             onChange={setMetricMode}
           />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <ToggleGroup
             options={[
               { value: "daily" as PeriodMode, label: "日別" },
@@ -249,7 +249,7 @@ export function CategoryChart({
       )}
 
       {/* Category summary cards */}
-      <div className="mt-4 grid gap-1 px-3" style={{ gridTemplateColumns: `repeat(${Math.min(categories.length, 6)}, 1fr)` }}>
+      <div className="mt-4 grid grid-cols-3 gap-1 px-3 md:grid-cols-6">
         {categories.map((cat) => {
           const articleCount = articleCountByCategory[cat.slug] ?? 0;
 
@@ -263,10 +263,10 @@ export function CategoryChart({
                 className="mb-1 inline-block h-2 w-2 rounded-sm"
                 style={{ backgroundColor: catColorMap.get(cat.slug) ?? "#6b7280" }}
               />
-              <span className="text-xs font-medium leading-tight text-slate-700">
+              <span className="text-[10px] font-medium leading-tight text-slate-700 md:text-xs">
                 {cat.name}
               </span>
-              <span className="mt-0.5 text-xs font-semibold text-slate-600">
+              <span className="mt-0.5 text-[10px] font-semibold text-slate-600 md:text-xs">
                 {articleCount}記事
               </span>
             </a>

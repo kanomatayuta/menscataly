@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { validateAdminAuth } from '@/lib/admin/auth'
+import { withRateLimit } from '@/lib/admin/rate-limit'
 import { AlertManager } from '@/lib/monitoring/alert-manager'
 
 // ============================================================
@@ -42,6 +43,9 @@ interface AlertActionRequest {
 }
 
 export async function PATCH(request: NextRequest): Promise<NextResponse> {
+  const rateLimited = withRateLimit(request, 'admin:alerts:patch')
+  if (rateLimited) return rateLimited
+
   const auth = await validateAdminAuth(request)
   if (!auth.authorized) {
     return NextResponse.json({ error: auth.error }, { status: 401 })

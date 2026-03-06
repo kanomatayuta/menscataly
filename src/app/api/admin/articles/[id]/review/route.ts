@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { validateAdminAuth } from '@/lib/admin/auth'
+import { withRateLimit } from '@/lib/admin/rate-limit'
 import type { ReviewComment } from '@/types/admin'
 
 // ============================================================
@@ -131,6 +132,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
+  const rateLimited = withRateLimit(request, 'admin:articles:review:post')
+  if (rateLimited) return rateLimited
+
   const auth = await validateAdminAuth(request)
   if (!auth.authorized) {
     return NextResponse.json({ error: auth.error }, { status: 401 })
@@ -282,6 +286,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
+  const rateLimited = withRateLimit(request, 'admin:articles:review:patch')
+  if (rateLimited) return rateLimited
+
   const auth = await validateAdminAuth(request)
   if (!auth.authorized) {
     return NextResponse.json({ error: auth.error }, { status: 401 })
