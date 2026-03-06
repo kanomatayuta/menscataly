@@ -286,17 +286,22 @@ export async function getAllArticleSlugs(): Promise<string[]> {
     return MOCK_ARTICLES.map((a) => a.slug)
   }
   // generateStaticParams から呼ばれるためリクエストスコープ外 — connection() 不使用
-  const client = getMicroCMSClient()
-  const response = await client.getList<MicroCMSArticle>({
-    endpoint: ENDPOINTS.articles,
-    queries: { fields: 'id,slug', limit: 100, orders: '-publishedAt' },
-  })
-  const slugs = response.contents.map((a) => a.slug ?? a.id)
-  // microCMS に記事が0件の場合はモックデータにフォールバック (ビルドエラー回避)
-  if (slugs.length === 0) {
+  try {
+    const client = getMicroCMSClient()
+    const response = await client.getList<MicroCMSArticle>({
+      endpoint: ENDPOINTS.articles,
+      queries: { fields: 'id,slug', limit: 100, orders: '-publishedAt' },
+    })
+    const slugs = response.contents.map((a) => a.slug ?? a.id)
+    // microCMS に記事が0件の場合はモックデータにフォールバック (ビルドエラー回避)
+    if (slugs.length === 0) {
+      return MOCK_ARTICLES.map((a) => a.slug)
+    }
+    return slugs
+  } catch (err) {
+    console.warn('[microCMS] getAllArticleSlugs failed, using mock data:', (err as Error).message)
     return MOCK_ARTICLES.map((a) => a.slug)
   }
-  return slugs
 }
 
 // ============================================================
