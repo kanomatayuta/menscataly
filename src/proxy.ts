@@ -1,5 +1,5 @@
 /**
- * Next.js ミドルウェア
+ * Next.js Proxy (旧 Middleware — Next.js 16 で proxy に移行)
  * - ASP ITPトラッキングスクリプト自動注入
  * - ファーストパーティ Cookie アフィリエイトトラッキング (Safari/Firefox ITP対策)
  *
@@ -72,10 +72,10 @@ const ITP_SCRIPT_MAP: Record<string, { url: string; attributes: Record<string, s
 }
 
 // ============================================================
-// ミドルウェア本体
+// Proxy 本体
 // ============================================================
 
-export async function middleware(request: NextRequest): Promise<NextResponse> {
+export async function proxy(request: NextRequest): Promise<NextResponse> {
   const { pathname, searchParams } = request.nextUrl
 
   // ============================================================

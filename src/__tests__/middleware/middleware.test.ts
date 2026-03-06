@@ -21,7 +21,7 @@ vi.mock('@supabase/ssr', () => ({
   })),
 }))
 
-import { middleware, generateItpScriptTags, getItpScriptConfigs, config } from '@/middleware'
+import { proxy as middleware, generateItpScriptTags, getItpScriptConfigs, config } from '@/proxy'
 
 // ==============================================================
 // ヘルパー
