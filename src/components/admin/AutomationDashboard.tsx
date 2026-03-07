@@ -242,8 +242,8 @@ export function AutomationDashboard() {
             </div>
           </div>
 
-          {/* Right: master toggle */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Right: toggle + execute button */}
+          <div className="flex items-center gap-3 flex-shrink-0">
             {saving && <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />}
             <button
               type="button"
@@ -262,8 +262,47 @@ export function AutomationDashboard() {
                 }`}
               />
             </button>
+            <button
+              type="button"
+              onClick={handleTriggerPipeline}
+              disabled={isTriggering}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition-all disabled:opacity-50 ${
+                isAutoEnabled
+                  ? "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                  : "bg-blue-600 text-white shadow-sm hover:bg-blue-700"
+              }`}
+            >
+              {isTriggering ? (
+                <>
+                  <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  実行中...
+                </>
+              ) : (
+                <>
+                  <PlayIcon />
+                  今すぐ実行
+                </>
+              )}
+            </button>
           </div>
         </div>
+
+        {/* Status messages */}
+        {(triggerMessage || saved || error) && (
+          <div className="mt-2 flex items-center gap-2">
+            {triggerMessage && (
+              <span className={`text-xs font-medium ${triggerMessage.includes("失敗") || triggerMessage.includes("エラー") ? "text-red-600" : "text-emerald-600"}`}>
+                {triggerMessage}
+              </span>
+            )}
+            {saved && (
+              <span className="text-xs text-emerald-600 flex items-center gap-1">
+                <CheckIcon /> 保存しました
+              </span>
+            )}
+            {error && <span className="text-xs text-red-600">{error}</span>}
+          </div>
+        )}
 
         {/* Partial warning */}
         {isPartial && (
@@ -274,45 +313,6 @@ export function AutomationDashboard() {
             </p>
           </div>
         )}
-      </div>
-
-      {/* Manual trigger + save status */}
-      <div className="flex items-center justify-between border-t border-black/5 px-5 py-3">
-        <div className="flex items-center gap-2">
-          {triggerMessage && (
-            <span className={`text-xs font-medium ${triggerMessage.includes("失敗") || triggerMessage.includes("エラー") ? "text-red-600" : "text-emerald-600"}`}>
-              {triggerMessage}
-            </span>
-          )}
-          {saved && (
-            <span className="text-xs text-emerald-600 flex items-center gap-1">
-              <CheckIcon /> 保存しました
-            </span>
-          )}
-          {error && <span className="text-xs text-red-600">{error}</span>}
-        </div>
-        <button
-          type="button"
-          onClick={handleTriggerPipeline}
-          disabled={isTriggering}
-          className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition-all disabled:opacity-50 ${
-            isAutoEnabled
-              ? "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
-              : "bg-blue-600 text-white shadow-sm hover:bg-blue-700"
-          }`}
-        >
-          {isTriggering ? (
-            <>
-              <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              実行中...
-            </>
-          ) : (
-            <>
-              <PlayIcon />
-              今すぐ実行
-            </>
-          )}
-        </button>
       </div>
 
       {/* Details: Accordion (inside same card) */}
