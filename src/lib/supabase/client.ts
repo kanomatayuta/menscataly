@@ -9,6 +9,7 @@
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { createServerClient as createSSRServerClient, createBrowserClient as createSSRBrowserClient } from '@supabase/ssr'
 import type { Database, ArticleInsert, ArticleUpdate, ArticleRow } from '@/types/database'
+// Note: categories テーブルは削除済み (microCMS に移行)
 
 // ============================================================
 // ブラウザ用クライアント (anon key — RLS適用)
@@ -226,17 +227,5 @@ export async function getArticles(
   return { articles: data ?? [], total: count ?? 0 }
 }
 
-/**
- * カテゴリ一覧を取得する
- */
-export async function getCategories(
-  supabase: SupabaseServerClient | SupabaseBrowserClient
-) {
-  const { data, error } = await supabase
-    .from('categories')
-    .select('*')
-    .order('display_order', { ascending: true })
-
-  if (error) throw error
-  return data ?? []
-}
+// categories テーブルは削除済み — microCMS の getCategories() を使用してください
+// import { getCategories } from '@/lib/microcms/client'

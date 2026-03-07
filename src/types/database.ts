@@ -1,6 +1,8 @@
 // Supabase PostgreSQL 型定義
-// schema.sql から手動生成 (src/lib/db/schema.sql 参照)
-// version: 2.0
+// version: 3.0 — 未使用テーブル削除、microCMS移行反映
+//
+// 削除済み: categories, compliance_logs, pipeline_logs,
+//           article_keywords, audit_log, schema_migrations
 
 export type Json = string | number | boolean | null | { [key: string]: Json } | Json[]
 
@@ -10,23 +12,11 @@ export type Json = string | number | boolean | null | { [key: string]: Json } | 
 
 export type ArticleStatus = 'draft' | 'published' | 'archived'
 
-export type ComplianceCheckType = 'yakuji_ho' | 'keihyo_ho' | 'ymyl' | 'stealth_marketing'
-
-export type ComplianceResult = 'passed' | 'warning' | 'failed'
+export type AdminAuditEventType = 'login_success' | 'login_failure' | 'logout' | 'session_expired' | 'unauthorized_access'
 
 // ============================================================
 // テーブル行型 (Row)
 // ============================================================
-
-export interface CategoryRow {
-  id: string
-  name: string
-  slug: string
-  description: string | null
-  display_order: number
-  created_at: string
-  updated_at: string
-}
 
 export interface ArticleRow {
   id: string
@@ -36,7 +26,6 @@ export interface ArticleRow {
   content: string | null
   excerpt: string | null
   category: string
-  category_id: string | null
   status: ArticleStatus
   seo_title: string | null
   seo_description: string | null
@@ -55,7 +44,6 @@ export interface KeywordRow {
   difficulty: number
   trend_score: number
   category: string
-  category_id: string | null
   tracked_at: string
   created_at: string
   updated_at: string
@@ -87,21 +75,56 @@ export interface AffiliateLinkRow {
   updated_at: string
 }
 
-export interface ComplianceViolation {
-  text: string
-  rule: string
-  suggestion: string
-}
+// ============================================================
+// Admin Audit Log テーブル
+// ============================================================
 
-export interface ComplianceLogRow {
+export interface AdminAuditLogRow {
   id: string
-  article_id: string | null
-  check_type: ComplianceCheckType
-  result: ComplianceResult
-  violations: ComplianceViolation[]
-  checked_at: string
+  event_type: AdminAuditEventType
+  actor: string | null
+  ip_address: string | null
+  user_agent: string | null
+  request_path: string | null
+  request_method: string | null
+  success: boolean
+  failure_reason: string | null
+  http_status: number | null
+  metadata: Json
   created_at: string
 }
+
+export type AdminAuditLogInsert = {
+  id?: string
+  event_type: AdminAuditEventType
+  actor?: string | null
+  ip_address?: string | null
+  user_agent?: string | null
+  request_path?: string | null
+  request_method?: string | null
+  success?: boolean
+  failure_reason?: string | null
+  http_status?: number | null
+  metadata?: Json
+}
+
+// ============================================================
+// App Config テーブル (key-value 設定)
+// ============================================================
+
+export interface AppConfigRow {
+  key: string
+  value: Json
+  updated_at: string
+}
+
+export type AppConfigInsert = {
+  key: string
+  value: Json
+  updated_at?: string
+}
+
+export type AppConfigUpdate = Partial<Omit<AppConfigRow, 'key'>>
 
 // ============================================================
 // Revenue Daily テーブル (ASP収益日次データ)
@@ -385,14 +408,6 @@ export type GenerationCostUpdate = Partial<Omit<GenerationCostRow, 'id' | 'creat
 // INSERT 型
 // ============================================================
 
-export type CategoryInsert = {
-  id?: string
-  name: string
-  slug: string
-  description?: string | null
-  display_order?: number
-}
-
 export type ArticleInsert = {
   id?: string
   microcms_id?: string | null
@@ -401,7 +416,6 @@ export type ArticleInsert = {
   content?: string | null
   excerpt?: string | null
   category?: string
-  category_id?: string | null
   status?: ArticleStatus
   seo_title?: string | null
   seo_description?: string | null
@@ -420,7 +434,6 @@ export type KeywordInsert = {
   difficulty?: number
   trend_score?: number
   category?: string
-  category_id?: string | null
   tracked_at?: string
 }
 
@@ -447,20 +460,9 @@ export type AffiliateLinkInsert = {
   revenue?: number
 }
 
-export type ComplianceLogInsert = {
-  id?: string
-  article_id?: string | null
-  check_type: ComplianceCheckType
-  result: ComplianceResult
-  violations?: ComplianceViolation[]
-  checked_at?: string
-}
-
 // ============================================================
 // UPDATE 型
 // ============================================================
-
-export type CategoryUpdate = Partial<Omit<CategoryRow, 'id' | 'created_at'>>
 
 export type ArticleUpdate = Partial<Omit<ArticleRow, 'id' | 'created_at'>>
 
@@ -490,15 +492,6 @@ export interface ArticlePerformanceView {
   updated_at: string
 }
 
-export interface ComplianceStatusView {
-  article_id: string
-  title: string
-  check_type: ComplianceCheckType
-  result: ComplianceResult
-  violations: ComplianceViolation[]
-  checked_at: string
-}
-
 // ============================================================
 // Supabase Database 型 (supabase-js v2 用)
 // ============================================================
@@ -506,39 +499,17 @@ export interface ComplianceStatusView {
 export interface Database {
   public: {
     Tables: {
-      categories: {
-        Row: CategoryRow
-        Insert: CategoryInsert
-        Update: CategoryUpdate
-        Relationships: []
-      }
       articles: {
         Row: ArticleRow
         Insert: ArticleInsert
         Update: ArticleUpdate
-        Relationships: [
-          {
-            foreignKeyName: 'articles_category_id_fkey'
-            columns: ['category_id']
-            isOneToOne: false
-            referencedRelation: 'categories'
-            referencedColumns: ['id']
-          },
-        ]
+        Relationships: []
       }
       keywords: {
         Row: KeywordRow
         Insert: KeywordInsert
         Update: KeywordUpdate
-        Relationships: [
-          {
-            foreignKeyName: 'keywords_category_id_fkey'
-            columns: ['category_id']
-            isOneToOne: false
-            referencedRelation: 'categories'
-            referencedColumns: ['id']
-          },
-        ]
+        Relationships: []
       }
       analytics_daily: {
         Row: AnalyticsDailyRow
@@ -568,20 +539,6 @@ export interface Database {
           },
         ]
       }
-      compliance_logs: {
-        Row: ComplianceLogRow
-        Insert: ComplianceLogInsert
-        Update: Partial<Omit<ComplianceLogRow, 'id' | 'created_at'>>
-        Relationships: [
-          {
-            foreignKeyName: 'compliance_logs_article_id_fkey'
-            columns: ['article_id']
-            isOneToOne: false
-            referencedRelation: 'articles'
-            referencedColumns: ['id']
-          },
-        ]
-      }
       asp_programs: {
         Row: AspProgramRow
         Insert: AspProgramInsert
@@ -600,13 +557,13 @@ export interface Database {
         Update: PipelineRunUpdate
         Relationships: []
       }
-      article_reviews: {
+      article_review_queue: {
         Row: ArticleReviewRow
         Insert: ArticleReviewInsert
         Update: ArticleReviewUpdate
         Relationships: [
           {
-            foreignKeyName: 'article_reviews_article_id_fkey'
+            foreignKeyName: 'article_review_queue_article_id_fkey'
             columns: ['article_id']
             isOneToOne: false
             referencedRelation: 'articles'
@@ -638,14 +595,22 @@ export interface Database {
         Update: RevenueDailyUpdate
         Relationships: []
       }
+      admin_audit_log: {
+        Row: AdminAuditLogRow
+        Insert: AdminAuditLogInsert
+        Update: Partial<Omit<AdminAuditLogRow, 'id' | 'created_at'>>
+        Relationships: []
+      }
+      app_config: {
+        Row: AppConfigRow
+        Insert: AppConfigInsert
+        Update: AppConfigUpdate
+        Relationships: []
+      }
     }
     Views: {
       v_article_performance: {
         Row: ArticlePerformanceView
-        Relationships: []
-      }
-      v_compliance_status: {
-        Row: ComplianceStatusView
         Relationships: []
       }
     }
