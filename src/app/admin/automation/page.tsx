@@ -1,8 +1,7 @@
 import { Suspense, cache } from "react";
 import { connection } from "next/server";
 import { AdminHeader } from "@/components/admin/AdminHeader";
-import { PipelineTriggerButton } from "@/components/admin/PipelineTriggerButton";
-import { AutomationToggle } from "@/components/admin/AutomationToggle";
+import { AutomationDashboard } from "@/components/admin/AutomationDashboard";
 import { StatCard } from "@/components/admin/StatCard";
 import { PipelineRunTable } from "@/components/admin/PipelineRunTable";
 import { PipelineStepTimeline } from "@/components/admin/PipelineStepTimeline";
@@ -930,16 +929,9 @@ export default function AutomationPage() {
         breadcrumbs={[{ label: "パイプライン・自動化" }]}
       />
 
-      <div className="mb-6 flex items-center justify-between">
-        <p className="text-sm text-slate-500">
-          パイプライン実行履歴・ヘルススコア・手動トリガー
-        </p>
-        <PipelineTriggerButton />
-      </div>
-
-      {/* 自動化ON/OFF設定 */}
+      {/* モードバナー + 自動化設定 + 手動実行 — 統合コンポーネント */}
       <div className="mb-6">
-        <AutomationToggle />
+        <AutomationDashboard />
       </div>
 
       {/* AI稼働ステータス + ステップタイムライン + 累計統計 */}
