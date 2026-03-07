@@ -37,7 +37,6 @@ export interface ArticlePayload {
   author_name?: string
   tags?: string[]
   is_pr?: boolean
-  review_status?: string[]
   compliance_score?: number
 }
 
@@ -189,7 +188,6 @@ function toArticlePayload(article: GeneratedArticleData): ArticlePayload {
     author_name: article.authorName,
     tags: article.tags,
     is_pr: article.isPr,
-    review_status: ['in_review'],
     compliance_score: article.complianceScore,
   }
 }
