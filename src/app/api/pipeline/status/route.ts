@@ -9,7 +9,19 @@ import { validatePipelineAuth, validateAdminAuth, getAuthErrorStatus } from '@/l
 import type { PipelineStatusResponse } from '@/lib/pipeline/types'
 import type { PipelineRunRow } from '@/types/database'
 
+let cleanupDone = false
+
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  // サーバーリロード後の孤立 running レコードを1回だけクリーンアップ
+  if (!cleanupDone) {
+    try {
+      const { cleanupOrphanedPipelines } = await import('@/lib/pipeline/executor')
+      await cleanupOrphanedPipelines()
+    } catch (err) {
+      console.error('[pipeline/status] Orphaned pipeline cleanup error:', err)
+    }
+    cleanupDone = true
+  }
   // Pipeline API Key → Admin Session のフォールバック認証
   const pipelineAuth = validatePipelineAuth(request)
   if (!pipelineAuth.authorized) {

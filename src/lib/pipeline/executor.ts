@@ -62,12 +62,67 @@ export function abortAllPipelines(): number {
   return count
 }
 
+/**
+ * Supabase から status='running' のパイプラインを検索し、
+ * まだ runningPipelines に登録されていないものを 'failed'（タイムアウト）として更新する。
+ * サーバーリロード後の孤立 running レコードをクリーンアップする。
+ */
+export async function cleanupOrphanedPipelines(): Promise<number> {
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!supabaseUrl || !serviceRoleKey) return 0
+
+    const { createServerSupabaseClient } = await import('@/lib/supabase/client')
+    const supabase = createServerSupabaseClient()
+
+    // status='running' のレコードを取得
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
+      .from('pipeline_runs')
+      .select('id')
+      .eq('status', 'running')
+
+    if (error || !data || data.length === 0) return 0
+
+    // メモリ内の runningPipelines に存在しないものは orphaned
+    const orphanedIds = data
+      .map((r: { id: string }) => r.id)
+      .filter((id: string) => !runningPipelines.has(id))
+
+    if (orphanedIds.length === 0) return 0
+
+    // orphaned レコードを 'failed' に更新
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: updateError } = await (supabase as any)
+      .from('pipeline_runs')
+      .update({
+        status: 'failed',
+        error: 'サーバー再起動により中断されました',
+        completed_at: new Date().toISOString(),
+      })
+      .in('id', orphanedIds)
+
+    if (updateError) {
+      console.error('[pipeline] Failed to cleanup orphaned pipelines:', updateError.message)
+      return 0
+    }
+
+    console.log(`[pipeline] Cleaned up ${orphanedIds.length} orphaned pipeline(s)`)
+    return orphanedIds.length
+  } catch (err) {
+    console.error('[pipeline] cleanupOrphanedPipelines error:', err)
+    return 0
+  }
+}
+
 // ============================================================
 // PipelineExecutor クラス
 // ============================================================
 
 export class PipelineExecutor {
   private config: PipelineConfig
+  private lastSharedData: Record<string, unknown> | null = null
 
   constructor(config: Partial<PipelineConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config }
@@ -89,13 +144,18 @@ export class PipelineExecutor {
     const abortController = new AbortController()
     runningPipelines.set(runId, abortController)
 
+    // initialInput がオブジェクトの場合、sharedData の初期値として使用
+    const initialSharedData = (initialInput && typeof initialInput === 'object' && !Array.isArray(initialInput))
+      ? { ...(initialInput as Record<string, unknown>) }
+      : {}
+
     const context: PipelineContext = {
       runId,
       type: this.config.type,
       startedAt,
       config: this.config,
       stepLogs: [],
-      sharedData: {},
+      sharedData: initialSharedData,
       signal: abortController.signal,
     }
 
@@ -106,80 +166,85 @@ export class PipelineExecutor {
       await this.recordRunningToSupabase(runId, startedAt)
     }
 
-    let currentInput: unknown = initialInput
-    let finalStatus: PipelineStatus = 'success'
-    let finalError: string | null = null
+    try {
+      let currentInput: unknown = initialInput
+      let finalStatus: PipelineStatus = 'success'
+      let finalError: string | null = null
 
-    for (const step of steps) {
-      // Check abort before each step
-      if (abortController.signal.aborted) {
-        finalStatus = 'failed'
-        finalError = 'パイプラインが手動で停止されました'
-        console.log(`[Pipeline] Run ${runId} was stopped by user`)
-        break
-      }
-
-      const stepResult = await this.executeStep(step, currentInput, context)
-      context.stepLogs.push(stepResult.log)
-
-      if (stepResult.log.status === 'failed') {
-        finalStatus = 'failed'
-        finalError = stepResult.log.error
-        console.error(`[Pipeline] Step "${step.name}" failed — aborting pipeline`)
-
-        // パイプライン失敗アラートを作成
-        try {
-          await this.createFailureAlert(step.name, stepResult.log.error, context.runId)
-        } catch (err) {
-          console.error('[Pipeline] Failed to create alert:', err)
+      for (const step of steps) {
+        // Check abort before each step
+        if (abortController.signal.aborted) {
+          finalStatus = 'failed'
+          finalError = 'パイプラインが手動で停止されました'
+          console.log(`[Pipeline] Run ${runId} was stopped by user`)
+          break
         }
 
-        break
+        const stepResult = await this.executeStep(step, currentInput, context)
+        context.stepLogs.push(stepResult.log)
+
+        if (stepResult.log.status === 'failed') {
+          finalStatus = 'failed'
+          finalError = stepResult.log.error
+          console.error(`[Pipeline] Step "${step.name}" failed — aborting pipeline`)
+
+          // パイプライン失敗アラートを作成
+          try {
+            await this.createFailureAlert(step.name, stepResult.log.error, context.runId)
+          } catch (err) {
+            console.error('[Pipeline] Failed to create alert:', err)
+          }
+
+          break
+        }
+
+        // 次のステップへの入力として出力を渡す
+        currentInput = stepResult.output
       }
 
-      // 次のステップへの入力として出力を渡す
-      currentInput = stepResult.output
-    }
+      const completedAt = new Date().toISOString()
+      const durationMs = new Date(completedAt).getTime() - new Date(startedAt).getTime()
 
-    const completedAt = new Date().toISOString()
-    const durationMs = new Date(completedAt).getTime() - new Date(startedAt).getTime()
-
-    const result: PipelineResult = {
-      runId,
-      type: this.config.type,
-      status: finalStatus,
-      startedAt,
-      completedAt,
-      durationMs,
-      stepLogs: context.stepLogs,
-      error: finalError,
-      metadata: {
-        totalSteps: steps.length,
-        completedSteps: context.stepLogs.filter(l => l.status === 'success').length,
-        failedSteps: context.stepLogs.filter(l => l.status === 'failed').length,
-        dryRun: this.config.dryRun,
-      },
-    }
-
-    // Supabaseへの記録
-    if (this.config.enableSupabaseLogging && !this.config.dryRun) {
-      await this.recordToSupabase(result)
-    }
-
-    // Slack完了通知（dryRun時はスキップ）
-    if (!this.config.dryRun) {
-      try {
-        await this.sendCompletionNotification(result)
-      } catch (err) {
-        console.error('[Pipeline] Failed to send completion notification:', err)
+      const result: PipelineResult = {
+        runId,
+        type: this.config.type,
+        status: finalStatus,
+        startedAt,
+        completedAt,
+        durationMs,
+        stepLogs: context.stepLogs,
+        error: finalError,
+        metadata: {
+          totalSteps: steps.length,
+          completedSteps: context.stepLogs.filter(l => l.status === 'success').length,
+          failedSteps: context.stepLogs.filter(l => l.status === 'failed').length,
+          dryRun: this.config.dryRun,
+        },
       }
+
+      // Supabaseへの記録
+      if (this.config.enableSupabaseLogging && !this.config.dryRun) {
+        await this.recordToSupabase(result)
+      }
+
+      // sharedData を保存（完了通知内でPDCAレポート生成に使用）
+      this.lastSharedData = context.sharedData
+
+      // Slack完了通知（dryRun時はスキップ）
+      if (!this.config.dryRun) {
+        try {
+          await this.sendCompletionNotification(result)
+        } catch (err) {
+          console.error('[Pipeline] Failed to send completion notification:', err)
+        }
+      }
+
+      console.log(`[Pipeline] Run ${runId} completed: ${finalStatus} (${durationMs}ms)`)
+      return result
+    } finally {
+      // Clean up from registry — always runs even if an unexpected error is thrown
+      runningPipelines.delete(runId)
     }
-
-    // Clean up from registry
-    runningPipelines.delete(runId)
-
-    console.log(`[Pipeline] Run ${runId} completed: ${finalStatus} (${durationMs}ms)`)
-    return result
   }
 
   /**
@@ -284,7 +349,7 @@ export class PipelineExecutor {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase as any)
         .from('pipeline_runs')
-        .insert({
+        .upsert({
           id: runId,
           type: this.config.type,
           status: 'running',
@@ -401,7 +466,72 @@ export class PipelineExecutor {
 
       const fallbackText = `[Pipeline] ${result.type} ${statusLabel} — ${result.metadata.completedSteps}/${result.metadata.totalSteps} steps (${durationSec}s)`
 
-      await notifier.sendMessage('#pipeline', fallbackText, blocks)
+      await notifier.sendMessage('#レポート', fallbackText, blocks)
+
+      // PDCAパイプラインの場合、詳細分析レポートも送信
+      if (result.type === 'pdca' && result.status === 'success') {
+        try {
+          const { buildPDCAReport } = await import('./pdca-report')
+          const report = buildPDCAReport({
+            result,
+            sharedData: this.lastSharedData ?? {},
+          })
+          await notifier.sendMessage('#レポート', report.text, report.blocks)
+        } catch (reportErr) {
+          console.error('[Pipeline] PDCA report error:', reportErr)
+        }
+      }
+
+      // Daily パイプラインの場合、生成記事の一覧をリンク付きで送信
+      if ((result.type === 'daily' || result.type === 'manual') && result.status === 'success') {
+        try {
+          const published = (this.lastSharedData?.['publishedArticles'] ?? []) as Array<{
+            title: string
+            slug: string
+          }>
+          if (published.length > 0) {
+            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://menscataly.com'
+            const articleLines = published
+              .map((a) => `• <${baseUrl}/articles/${a.slug}|${a.title}>`)
+              .join('\n')
+
+            const articleBlocks: SlackBlock[] = [
+              {
+                type: 'header',
+                text: {
+                  type: 'plain_text',
+                  text: `📝 新規記事 ${published.length}件を作成しました`,
+                  emoji: true,
+                },
+              },
+              {
+                type: 'section',
+                text: {
+                  type: 'mrkdwn',
+                  text: articleLines,
+                },
+              },
+              {
+                type: 'context',
+                elements: [
+                  {
+                    type: 'mrkdwn',
+                    text: {
+                      type: 'mrkdwn',
+                      text: `Run: ${result.runId} | ステータス: 下書き（microCMSで公開してください）`,
+                    },
+                  },
+                ],
+              },
+            ]
+
+            const articleFallback = `[記事作成] ${published.length}件: ${published.map((a) => a.title).join(', ')}`
+            await notifier.sendMessage('#記事', articleFallback, articleBlocks)
+          }
+        } catch (articleErr) {
+          console.error('[Pipeline] Article notification error:', articleErr)
+        }
+      }
     } catch (err) {
       console.error('[Pipeline] Completion notification error:', err)
     }

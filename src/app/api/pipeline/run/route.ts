@@ -21,6 +21,8 @@ import type { PipelineType, PipelineRunResponse } from '@/lib/pipeline/types'
 interface RunPipelineRequest {
   type?: PipelineType
   dryRun?: boolean
+  maxArticles?: number
+  enabledCategories?: string[]
 }
 
 // ============================================================
@@ -29,7 +31,8 @@ interface RunPipelineRequest {
 
 async function executePipeline(
   pipelineType: PipelineType,
-  dryRun: boolean
+  dryRun: boolean,
+  initialSharedData?: Record<string, unknown>
 ): Promise<NextResponse> {
   // パイプライン設定を取得
   const config = getPipelineConfig(pipelineType)
@@ -38,6 +41,16 @@ async function executePipeline(
   }
 
   console.log(`[pipeline/run] Starting pipeline: type=${pipelineType}, dryRun=${dryRun}`)
+
+  // 二重実行防止: 既に実行中のパイプラインがあれば 409 を返す
+  const { getRunningPipelineIds } = await import('@/lib/pipeline/executor')
+  const runningIds = getRunningPipelineIds()
+  if (runningIds.length > 0) {
+    return NextResponse.json(
+      { success: false, error: 'パイプラインが既に実行中です', runningIds },
+      { status: 409 }
+    )
+  }
 
   try {
     // ステップを取得
@@ -50,7 +63,7 @@ async function executePipeline(
 
     // バックグラウンドで実行（Vercel/Cloud Run はバックグラウンドタスクを制限するため
     // 実際の環境では Cloud Run Job を使用することを推奨）
-    const runPromise = executor.run(steps)
+    const runPromise = executor.run(steps, initialSharedData)
 
     // Cloud Run / Vercel では waitUntil を使用して非同期実行を保証する
     // ここでは即時レスポンスを返し、バックグラウンド実行を開始する
@@ -140,8 +153,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const pipelineType: PipelineType = body.type ?? 'manual'
   const dryRun = body.dryRun ?? false
+  const maxArticles = body.maxArticles
 
-  return executePipeline(pipelineType, dryRun)
+  const initialSharedData: Record<string, unknown> = {}
+  if (maxArticles && maxArticles >= 1 && maxArticles <= 10) {
+    initialSharedData['maxArticles'] = maxArticles
+  }
+  if (body.enabledCategories && Array.isArray(body.enabledCategories) && body.enabledCategories.length > 0) {
+    initialSharedData['enabledCategories'] = body.enabledCategories
+  }
+
+  return executePipeline(pipelineType, dryRun, initialSharedData)
 }
 
 // Vercel Cron Jobs サポート (GET リクエスト)
@@ -161,9 +183,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const pipelineType: PipelineType = typeParam === 'pdca' ? 'pdca' : 'daily'
 
   // 自動化設定をチェック（Cron実行時のみ）
+  // マスタースイッチ（両方ON）がOFFなら全Cronをスキップ
   try {
     const { getAutomationConfig } = await import('@/app/api/admin/automation-config/route')
     const automationConfig = await getAutomationConfig()
+
+    // マスタースイッチ: 両方ONでなければ自動実行しない
+    const isAutoEnabled = automationConfig.dailyPipeline && automationConfig.pdcaBatch
+    if (!isAutoEnabled) {
+      console.log(`[pipeline/run] Auto mode is OFF (daily=${automationConfig.dailyPipeline}, pdca=${automationConfig.pdcaBatch}) — skipping Cron`)
+      return NextResponse.json({ success: true, message: 'Auto mode is disabled', skipped: true })
+    }
 
     if (pipelineType === 'daily' && !automationConfig.dailyPipeline) {
       console.log('[pipeline/run] Daily pipeline is disabled — skipping')
@@ -174,8 +204,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ success: true, message: 'PDCA batch is disabled', skipped: true })
     }
   } catch (err) {
-    // 設定取得失敗時は実行を継続（安全側に倒す）
-    console.warn('[pipeline/run] Failed to check automation config, proceeding:', err)
+    // 設定取得失敗時はスキップ（安全側に倒す — 意図しない実行を防止）
+    console.warn('[pipeline/run] Failed to check automation config, skipping:', err)
+    return NextResponse.json({ success: true, message: 'Config unavailable — skipped for safety', skipped: true })
   }
 
   return executePipeline(pipelineType, false)

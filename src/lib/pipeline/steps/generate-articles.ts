@@ -146,7 +146,7 @@ export const generateArticlesStep: PipelineStep<AnalyticsData[], GeneratedArticl
     input: AnalyticsData[],
     context: PipelineContext
   ): Promise<GeneratedArticleData[]> {
-    const maxNewArticles = DEFAULT_MAX_NEW_ARTICLES
+    const maxNewArticles = (context.sharedData['maxArticles'] as number | undefined) ?? DEFAULT_MAX_NEW_ARTICLES
     console.log(
       `[generate-articles] 記事生成開始 (run: ${context.runId}, maxNewArticles: ${maxNewArticles}, analyticsRecords: ${input.length})`
     )
@@ -165,18 +165,29 @@ export const generateArticlesStep: PipelineStep<AnalyticsData[], GeneratedArticl
     console.log(`[generate-articles] 既存記事スラッグ: ${existingSlugs.size}件`)
 
     // ----------------------------------------------------------------
-    // 3. ArticlePlanner でキーワード選定
+    // 3. ArticlePlanner でキーワード選定（カテゴリフィルタ対応）
     // ----------------------------------------------------------------
+    const enabledCategories = context.sharedData['enabledCategories'] as string[] | undefined
+
     const planner = new ArticlePlanner({
       maxNewArticles,
       excludeExistingKeywords: true,
     })
 
+    // カテゴリフィルタ: enabledCategories が指定されていればキーワードを絞り込む
+    let customKeywords: import('@/types/batch-generation').KeywordTarget[] | undefined
+    if (enabledCategories && enabledCategories.length > 0) {
+      const { KEYWORD_TARGETS } = await import('@/lib/content/keywords/targets')
+      customKeywords = KEYWORD_TARGETS.filter((kw) =>
+        enabledCategories.includes(kw.category)
+      )
+      console.log(`[generate-articles] カテゴリフィルタ: ${enabledCategories.join(', ')} → ${customKeywords.length}キーワード`)
+    }
+
     const plan = await planner.planDailyArticles({
       trendData: trendInputs,
-      // 既存記事情報は AnalyticsData からは取得できないため空配列
-      // (改善記事は将来の拡張で対応)
       existingArticles: [],
+      ...(customKeywords ? { customKeywords } : {}),
     })
 
     console.log(`[generate-articles] プラン作成完了: ${plan.summary}`)

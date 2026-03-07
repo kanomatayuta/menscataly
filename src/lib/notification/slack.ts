@@ -74,6 +74,24 @@ const SEVERITY_EMOJI: Record<AlertLevel, string> = {
 // SlackNotifier クラス
 // ============================================================
 
+/**
+ * チャンネル名からWebhook URLを解決する
+ * 環境変数 SLACK_WEBHOOK_URL_<SUFFIX> で上書き可能
+ */
+const CHANNEL_WEBHOOK_MAP: Record<string, string> = {
+  '#レポート': 'SLACK_WEBHOOK_URL_REPORT',
+  '#記事': 'SLACK_WEBHOOK_URL',
+}
+
+function resolveWebhookUrl(channel: string, defaultUrl: string | null): string | null {
+  const envKey = CHANNEL_WEBHOOK_MAP[channel]
+  if (envKey) {
+    const url = process.env[envKey]
+    if (url) return url
+  }
+  return defaultUrl
+}
+
 export class SlackNotifier {
   private webhookUrl: string | null
 
@@ -83,7 +101,7 @@ export class SlackNotifier {
 
   /**
    * Slackメッセージを送信する
-   * @param channel チャンネル名（Webhook設定で固定の場合は無視される）
+   * @param channel チャンネル名（チャンネル別Webhook URLが設定されていればそちらを使用）
    * @param text メッセージテキスト（フォールバック用）
    * @param blocks Block Kit ブロック（省略可）
    */
@@ -92,8 +110,9 @@ export class SlackNotifier {
     text: string,
     blocks?: SlackBlock[]
   ): Promise<boolean> {
-    if (!this.webhookUrl) {
-      console.warn('[SlackNotifier] SLACK_WEBHOOK_URL が未設定 — 通知をスキップします')
+    const webhookUrl = resolveWebhookUrl(channel, this.webhookUrl)
+    if (!webhookUrl) {
+      console.warn(`[SlackNotifier] Webhook URL が未設定 (${channel}) — 通知をスキップします`)
       return false
     }
 
@@ -104,7 +123,7 @@ export class SlackNotifier {
     }
 
     try {
-      const response = await fetch(this.webhookUrl, {
+      const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

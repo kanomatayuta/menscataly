@@ -11,8 +11,6 @@ interface AutomationConfig {
   pdcaBatch: boolean;
   autoRewrite: boolean;
   enabledCategories: string[];
-  dailyPipelineTime?: string; // "HH:MM" format, default "06:00"
-  pdcaBatchTime?: string;     // "HH:MM" format, default "23:00"
 }
 
 interface CategoryItem {
@@ -29,8 +27,8 @@ const FALLBACK_CATEGORIES: CategoryItem[] = [
 ];
 
 const DEFAULT_CONFIG: AutomationConfig = {
-  dailyPipeline: true,
-  pdcaBatch: true,
+  dailyPipeline: false,
+  pdcaBatch: false,
   autoRewrite: false,
   enabledCategories: FALLBACK_CATEGORIES.map((c) => c.id),
 };
@@ -86,6 +84,8 @@ export function AutomationDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const savedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const triggerTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const configRef = useRef(config);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
   // Pipeline trigger state
@@ -93,6 +93,7 @@ export function AutomationDashboard() {
   const [pipelineRunning, setPipelineRunning] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
   const [triggerMessage, setTriggerMessage] = useState("");
+  const [maxArticles, setMaxArticles] = useState(1);
 
   // Derived: master switch = both main jobs ON
   const isAutoEnabled = config.dailyPipeline && config.pdcaBatch;
@@ -112,7 +113,10 @@ export function AutomationDashboard() {
     });
   }, []);
 
+  useEffect(() => { configRef.current = config; }, [config]);
+
   const saveConfig = useCallback(async (newConfig: AutomationConfig) => {
+    const prevConfig = configRef.current;
     setConfig(newConfig);
     setSaving(true);
     setError(null);
@@ -127,16 +131,19 @@ export function AutomationDashboard() {
         body: JSON.stringify(newConfig),
       });
       if (!res.ok) {
+        setConfig(prevConfig);
         setError("保存に失敗しました");
       } else {
         setSaved(true);
         savedTimer.current = setTimeout(() => setSaved(false), 2000);
       }
     } catch {
+      setConfig(prevConfig);
       setError("保存に失敗しました");
     } finally {
       setSaving(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Master switch: toggle both dailyPipeline + pdcaBatch
@@ -221,7 +228,7 @@ export function AutomationDashboard() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ type: "manual" }),
+        body: JSON.stringify({ type: "manual", maxArticles, enabledCategories: config.enabledCategories }),
       });
       if (res.ok) {
         setTriggerMessage("パイプラインを実行しました");
@@ -234,6 +241,8 @@ export function AutomationDashboard() {
       setTriggerMessage("ネットワークエラーが発生しました");
     } finally {
       setIsTriggering(false);
+      clearTimeout(triggerTimer.current);
+      triggerTimer.current = setTimeout(() => setTriggerMessage(""), 5000);
     }
   }, []);
 
@@ -256,6 +265,8 @@ export function AutomationDashboard() {
       setTriggerMessage("ネットワークエラーが発生しました");
     } finally {
       setIsStopping(false);
+      clearTimeout(triggerTimer.current);
+      triggerTimer.current = setTimeout(() => setTriggerMessage(""), 5000);
     }
   }, []);
 
@@ -283,7 +294,7 @@ export function AutomationDashboard() {
     >
       {/* Top section: status + master toggle */}
       <div className="px-5 pt-5 pb-4">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           {/* Left: status indicator */}
           <div className="flex items-center gap-3">
             <div className="relative flex-shrink-0">
@@ -298,7 +309,7 @@ export function AutomationDashboard() {
               </p>
               <p className="text-xs text-slate-500">
                 {isAutoEnabled
-                  ? `毎日 ${config.dailyPipelineTime ?? "06:00"} に記事生成、${config.pdcaBatchTime ?? "23:00"} に分析を自動実行`
+                  ? "毎日 06:00 に記事生成、23:00 に分析を自動実行（JST）"
                   : isPartial
                     ? "一部のジョブのみ有効（詳細設定を確認）"
                     : "手動で実行ボタンを押して実行してください"}
@@ -306,8 +317,22 @@ export function AutomationDashboard() {
             </div>
           </div>
 
-          {/* Right: toggle + execute button */}
+          {/* Right: article count + toggle + execute button */}
           <div className="flex items-center gap-3 flex-shrink-0">
+            {!isAutoEnabled && !pipelineRunning && (
+              <div className="flex items-center gap-1.5">
+                <select
+                  value={maxArticles}
+                  onChange={(e) => setMaxArticles(Number(e.target.value))}
+                  disabled={isTriggering}
+                  className="rounded border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:opacity-50"
+                >
+                  {[1, 2, 3, 5, 10].map((n) => (
+                    <option key={n} value={n}>{n}件</option>
+                  ))}
+                </select>
+              </div>
+            )}
             {saving && <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />}
             <button
               type="button"
@@ -349,7 +374,7 @@ export function AutomationDashboard() {
               <button
                 type="button"
                 onClick={handleTriggerPipeline}
-                disabled={isTriggering}
+                disabled={isTriggering || pipelineRunning}
                 className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition-all disabled:opacity-50 ${
                   isAutoEnabled
                     ? "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
@@ -418,137 +443,131 @@ export function AutomationDashboard() {
           </div>
         </button>
 
-        {detailsOpen && (
-          <div className="border-t border-black/5 px-5 py-4 space-y-4">
-            {/* Individual job toggles */}
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">スケジュールジョブ</p>
-
-              {/* Daily Pipeline */}
-              <div className="space-y-1.5 py-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-slate-800">記事生成パイプライン</p>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={config.dailyPipeline}
-                    disabled={saving}
-                    onClick={() => updateToggle("dailyPipeline", !config.dailyPipeline)}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 disabled:opacity-50 ${
-                      config.dailyPipeline ? "bg-emerald-500" : "bg-slate-300"
-                    }`}
-                  >
-                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ${config.dailyPipeline ? "translate-x-5" : "translate-x-0"}`} />
-                  </button>
+        <div className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${detailsOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+          <div className="overflow-hidden">
+            <div className="border-t border-black/5 px-5 py-4 space-y-4">
+              {/* Info banner: schedule disabled when master is OFF */}
+              {!isAutoEnabled && (
+                <div className="flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 ring-1 ring-blue-200">
+                  <span className="text-blue-500 text-sm">ℹ</span>
+                  <p className="text-xs text-blue-700">
+                    スケジュール実行は無効です。自動モードにすると以下の設定で定期実行されます。
+                  </p>
                 </div>
-                <p className="text-xs text-slate-500">トレンド分析 → 記事生成 → コンプラチェック</p>
-                {config.dailyPipeline && (
-                  <div className="flex items-center gap-2 pt-1">
-                    <span className="text-xs text-slate-500">実行時刻</span>
-                    <input
-                      type="time"
-                      value={config.dailyPipelineTime ?? "06:00"}
-                      disabled={saving}
-                      onChange={(e) => saveConfig({ ...config, dailyPipelineTime: e.target.value })}
-                      className="rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400 disabled:opacity-50"
-                    />
-                    <span className="text-xs text-slate-400">JST</span>
-                  </div>
-                )}
-              </div>
+              )}
+              {/* Individual job toggles */}
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">スケジュールジョブ</p>
 
-              {/* PDCA Batch */}
-              <div className="space-y-1.5 py-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-slate-800">分析パイプライン</p>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={config.pdcaBatch}
-                    disabled={saving}
-                    onClick={() => updateToggle("pdcaBatch", !config.pdcaBatch)}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 disabled:opacity-50 ${
-                      config.pdcaBatch ? "bg-emerald-500" : "bg-slate-300"
-                    }`}
-                  >
-                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ${config.pdcaBatch ? "translate-x-5" : "translate-x-0"}`} />
-                  </button>
-                </div>
-                <p className="text-xs text-slate-500">アナリティクス → 収益分析 → アラート</p>
-                {config.pdcaBatch && (
-                  <div className="flex items-center gap-2 pt-1">
-                    <span className="text-xs text-slate-500">実行時刻</span>
-                    <input
-                      type="time"
-                      value={config.pdcaBatchTime ?? "23:00"}
-                      disabled={saving}
-                      onChange={(e) => saveConfig({ ...config, pdcaBatchTime: e.target.value })}
-                      className="rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400 disabled:opacity-50"
-                    />
-                    <span className="text-xs text-slate-400">JST</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Auto Rewrite (nested under PDCA) */}
-              <div className={`flex items-center justify-between py-2 pl-6 border-l-2 ${config.pdcaBatch ? "border-emerald-200" : "border-slate-200 opacity-50"}`}>
-                <div>
-                  <p className="text-sm font-medium text-slate-700">自動リライト</p>
-                  <p className="text-xs text-slate-400">分析パイプライン内でヘルススコア低下記事を自動リライト</p>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={config.autoRewrite}
-                  disabled={saving || !config.pdcaBatch}
-                  onClick={() => updateToggle("autoRewrite", !config.autoRewrite)}
-                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 disabled:opacity-50 ${
-                    config.autoRewrite ? "bg-emerald-500" : "bg-slate-300"
-                  }`}
-                >
-                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ${config.autoRewrite ? "translate-x-5" : "translate-x-0"}`} />
-                </button>
-              </div>
-            </div>
-
-            {/* Category selection */}
-            <div className="pt-2 border-t border-slate-100">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">記事生成カテゴリ</p>
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={toggleAllCategories}
-                  className="text-xs font-medium text-blue-600 hover:text-blue-700 disabled:opacity-50"
-                >
-                  {allCategoriesSelected ? "全解除" : "全選択"}
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {categories.map((cat) => {
-                  const isEnabled = config.enabledCategories.includes(cat.id);
-                  return (
+                {/* Daily Pipeline */}
+                <div className="space-y-1.5 py-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-slate-800">記事生成パイプライン</p>
                     <button
-                      key={cat.id}
                       type="button"
+                      role="switch"
+                      aria-checked={config.dailyPipeline}
                       disabled={saving}
-                      onClick={() => toggleCategory(cat.id)}
-                      className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-all disabled:opacity-50 ${
-                        isEnabled
-                          ? "bg-blue-600 text-white hover:bg-blue-700"
-                          : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                      onClick={() => updateToggle("dailyPipeline", !config.dailyPipeline)}
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 disabled:opacity-50 ${
+                        config.dailyPipeline ? "bg-emerald-500" : "bg-slate-300"
                       }`}
                     >
-                      {isEnabled && <CheckIcon />}
-                      {cat.label}
+                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ${config.dailyPipeline ? "translate-x-5" : "translate-x-0"}`} />
                     </button>
-                  );
-                })}
+                  </div>
+                  <p className="text-xs text-slate-500">トレンド分析 → 記事生成 → コンプラチェック</p>
+                  {isAutoEnabled && config.dailyPipeline && (
+                    <p className="text-xs text-slate-400 pt-1">毎日 06:00 JST に自動実行</p>
+                  )}
+                </div>
+
+                {/* PDCA Batch */}
+                <div className="space-y-1.5 py-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-slate-800">分析パイプライン</p>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={config.pdcaBatch}
+                      disabled={saving}
+                      onClick={() => updateToggle("pdcaBatch", !config.pdcaBatch)}
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 disabled:opacity-50 ${
+                        config.pdcaBatch ? "bg-emerald-500" : "bg-slate-300"
+                      }`}
+                    >
+                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ${config.pdcaBatch ? "translate-x-5" : "translate-x-0"}`} />
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-500">アナリティクス → 収益分析 → アラート</p>
+                  {isAutoEnabled && config.pdcaBatch && (
+                    <p className="text-xs text-slate-400 pt-1">毎日 23:00 JST に自動実行</p>
+                  )}
+                </div>
+
+                {/* Auto Rewrite (nested under PDCA) */}
+                <div className={`flex items-center justify-between py-2 pl-6 border-l-2 ${config.pdcaBatch ? "border-emerald-200" : "border-slate-200 opacity-50"}`}>
+                  <div>
+                    <p className="text-sm font-medium text-slate-700">自動リライト</p>
+                    <p className="text-xs text-slate-400">分析パイプライン内でヘルススコア低下記事を自動リライト</p>
+                    {!config.pdcaBatch && (
+                      <p className="text-xs text-amber-600 mt-0.5">分析パイプラインをONにすると有効にできます</p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={config.autoRewrite}
+                    disabled={saving || !config.pdcaBatch}
+                    onClick={() => updateToggle("autoRewrite", !config.autoRewrite)}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 disabled:opacity-50 ${
+                      config.autoRewrite ? "bg-emerald-500" : "bg-slate-300"
+                    }`}
+                  >
+                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ${config.autoRewrite ? "translate-x-5" : "translate-x-0"}`} />
+                  </button>
+                </div>
               </div>
-              <p className="mt-2 text-xs text-slate-400">{enabledCount}/{categories.length} カテゴリ選択中</p>
+
+              {/* Category selection */}
+              <div className="pt-2 border-t border-slate-100">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">記事生成カテゴリ</p>
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={toggleAllCategories}
+                    className="text-xs font-medium text-blue-600 hover:text-blue-700 disabled:opacity-50"
+                  >
+                    {allCategoriesSelected ? "リセット" : "全選択"}
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {categories.map((cat) => {
+                    const isEnabled = config.enabledCategories.includes(cat.id);
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        disabled={saving}
+                        onClick={() => toggleCategory(cat.id)}
+                        className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-all disabled:opacity-50 ${
+                          isEnabled
+                            ? "bg-blue-600 text-white hover:bg-blue-700"
+                            : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                        }`}
+                      >
+                        {isEnabled && <CheckIcon />}
+                        {cat.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-xs text-slate-400">{enabledCount}/{categories.length} カテゴリ選択中</p>
+              </div>
             </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

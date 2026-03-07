@@ -15,8 +15,8 @@ export interface AutomationConfig {
 }
 
 const DEFAULT_CONFIG: AutomationConfig = {
-  dailyPipeline: true,
-  pdcaBatch: true,
+  dailyPipeline: false,
+  pdcaBatch: false,
   autoRewrite: false,
   enabledCategories: ["aga", "hair-removal", "skincare", "ed", "column"],
 };
