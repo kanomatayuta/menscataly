@@ -2,12 +2,12 @@ import { Suspense, cache } from "react";
 import { connection } from "next/server";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { AutomationDashboard } from "@/components/admin/AutomationDashboard";
+import { LivePipelineMonitor } from "@/components/admin/LivePipelineMonitor";
 import { StatCard } from "@/components/admin/StatCard";
 import { PipelineRunTable } from "@/components/admin/PipelineRunTable";
-import { PipelineStepTimeline } from "@/components/admin/PipelineStepTimeline";
 import { HealthScoreDistributionChart } from "@/components/admin/HealthScoreDistributionChart";
 import { LowestHealthArticles } from "@/components/admin/LowestHealthArticles";
-import type { PipelineStatus, PipelineType, StepLog } from "@/lib/pipeline/types";
+import type { PipelineStatus, PipelineType } from "@/lib/pipeline/types";
 import type { HealthScoreInput } from "@/lib/content/health-score";
 import type { ArticleReviewItem, ArticleAnalytics, MonitoringAlert } from "@/types/admin";
 import type { MicroCMSArticle } from "@/types/microcms";
@@ -348,43 +348,6 @@ async function fetchAnalyticsForHealth(
 // ------------------------------------------------------------------
 
 // ------------------------------------------------------------------
-// Data fetching: Latest step logs from newest run
-// ------------------------------------------------------------------
-
-async function fetchLatestStepLogs(): Promise<StepLog[]> {
-  try {
-    await connection();
-  } catch {
-    return [];
-  }
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceRoleKey) return [];
-
-  try {
-    const { createServerSupabaseClient } = await import("@/lib/supabase/client");
-    const supabase = createServerSupabaseClient();
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any)
-      .from("pipeline_runs")
-      .select("steps_json")
-      .order("started_at", { ascending: false })
-      .limit(1);
-
-    if (error || !data || data.length === 0) return [];
-
-    const stepsJson = data[0].steps_json;
-    if (Array.isArray(stepsJson)) return stepsJson as StepLog[];
-    return [];
-  } catch (err) {
-    if (!isPprRejection(err)) console.error("[automation] Step logs error:", err);
-    return [];
-  }
-}
-
-// ------------------------------------------------------------------
 // Data fetching: Recent error logs from monitoring_alerts
 // ------------------------------------------------------------------
 
@@ -486,7 +449,6 @@ async function fetchCumulativeStats(): Promise<CumulativeStats> {
 const getCachedPipelineRuns = cache(fetchPipelineRuns);
 const getCachedTodayActivity = cache(fetchTodayActivity);
 const getCachedHealthData = cache(fetchHealthData);
-const getCachedLatestSteps = cache(fetchLatestStepLogs);
 const getCachedRecentErrors = cache(fetchRecentErrors);
 const getCachedCumulativeStats = cache(fetchCumulativeStats);
 
@@ -763,69 +725,25 @@ async function UpcomingActionsSection() {
 }
 
 // ------------------------------------------------------------------
-// AI稼働ステータス + ステップタイムライン
+// AI稼働ステータス (リアルタイムモニター)
 // ------------------------------------------------------------------
 
 async function AIStatusSection() {
-  const [runs, steps, stats] = await Promise.all([
+  const [runs, stats] = await Promise.all([
     getCachedPipelineRuns(),
-    getCachedLatestSteps(),
     getCachedCumulativeStats(),
   ]);
 
-  const latestRun = runs[0];
-  const isRunning = latestRun?.status === "running";
-  const statusIcon = isRunning ? "🟢" : "⏸️";
-  const statusLabel = isRunning ? "稼働中" : "待機中";
+  // Map steps_json from unknown to StepLog[] for the client component
+  const monitorRuns = runs.map((r) => ({
+    ...r,
+    steps_json: (Array.isArray(r.steps_json) ? r.steps_json : []) as import("@/lib/pipeline/types").StepLog[],
+  }));
 
   return (
     <div>
       <h2 className="mb-4 text-lg font-semibold text-slate-800">AI稼働ステータス</h2>
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* 稼働状態 + 累計統計 */}
-        <div className="space-y-4">
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">{statusIcon}</span>
-              <div>
-                <p className="text-lg font-bold text-slate-800">{statusLabel}</p>
-                <p className="text-xs text-slate-500">
-                  {latestRun
-                    ? `最終実行: ${new Date(latestRun.started_at).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}`
-                    : "実行履歴なし"}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm text-center">
-              <p className="text-2xl font-bold text-slate-800">{stats.totalArticles}</p>
-              <p className="text-xs text-slate-500">総記事数</p>
-            </div>
-            <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm text-center">
-              <p className="text-2xl font-bold text-slate-800">{stats.totalPipelineRuns}</p>
-              <p className="text-xs text-slate-500">総実行数</p>
-            </div>
-            <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm text-center">
-              <p className={`text-2xl font-bold ${stats.successRate >= 80 ? "text-green-600" : stats.successRate >= 50 ? "text-amber-600" : "text-red-600"}`}>
-                {stats.successRate}%
-              </p>
-              <p className="text-xs text-slate-500">成功率</p>
-            </div>
-            <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm text-center">
-              <p className={`text-2xl font-bold ${stats.avgComplianceScore >= 80 ? "text-green-600" : stats.avgComplianceScore >= 60 ? "text-amber-600" : "text-red-600"}`}>
-                {stats.avgComplianceScore}
-              </p>
-              <p className="text-xs text-slate-500">平均コンプラスコア</p>
-            </div>
-          </div>
-        </div>
-
-        {/* 最新ステップタイムライン */}
-        <div className="lg:col-span-2">
-          <PipelineStepTimeline steps={steps} />
-        </div>
-      </div>
+      <LivePipelineMonitor initialRuns={monitorRuns} initialStats={stats} />
     </div>
   );
 }
