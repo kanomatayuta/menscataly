@@ -101,6 +101,11 @@ export class PipelineExecutor {
 
     console.log(`[Pipeline] Starting run ${runId} (type: ${this.config.type})`)
 
+    // Record "running" status to Supabase immediately so UI can detect it
+    if (this.config.enableSupabaseLogging && !this.config.dryRun) {
+      await this.recordRunningToSupabase(runId, startedAt)
+    }
+
     let currentInput: unknown = initialInput
     let finalStatus: PipelineStatus = 'success'
     let finalError: string | null = null
@@ -261,6 +266,36 @@ export class PipelineExecutor {
       step.execute(input, context).finally(() => clearTimeout(timeoutId)),
       timeoutPromise,
     ])
+  }
+
+  /**
+   * 実行開始時に "running" ステータスを Supabase に記録する
+   * ポーリングUIで実行中を検出できるようにする
+   */
+  private async recordRunningToSupabase(runId: string, startedAt: string): Promise<void> {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!supabaseUrl || !serviceRoleKey) return
+
+    try {
+      const { createServerSupabaseClient } = await import('@/lib/supabase/client')
+      const supabase = createServerSupabaseClient()
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any)
+        .from('pipeline_runs')
+        .insert({
+          id: runId,
+          type: this.config.type,
+          status: 'running',
+          started_at: startedAt,
+          completed_at: null,
+          steps_json: [],
+          error: null,
+        })
+    } catch (err) {
+      console.error('[Pipeline] Failed to record running status:', err)
+    }
   }
 
   /**
