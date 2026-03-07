@@ -29,7 +29,7 @@ export interface ArticlePayload {
   slug: string
   content: string
   excerpt?: string
-  category?: { id: string }[]
+  category?: string  // microCMS コンテンツ参照ID
   thumbnail?: { url: string }
   seo_title?: string
   seo_description?: string
@@ -87,22 +87,19 @@ class MicroCMSWriteClient {
 
   /**
    * 記事を下書きとして作成する (POST)
+   * microCMS Write API は ?status=draft クエリパラメータで下書き作成
    */
   async createDraft(
     endpoint: string,
     payload: ArticlePayload
   ): Promise<MicroCMSWriteResponse> {
-    const response = await fetch(`${this.baseUrl}/${endpoint}`, {
+    const response = await fetch(`${this.baseUrl}/${endpoint}?status=draft`, {
       method: 'POST',
       headers: {
         'X-MICROCMS-API-KEY': this.apiKey,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        ...payload,
-        // draft ステータスで作成
-        status: ['draft'],
-      }),
+      body: JSON.stringify(payload),
     })
 
     if (!response.ok) {
@@ -140,20 +137,41 @@ class MicroCMSWriteClient {
 
   /**
    * 下書き記事を公開する
+   * microCMS Write API: PATCH /endpoint/{contentId} に ?status=publish をつけてステータス変更
    */
   async publish(endpoint: string, contentId: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/${endpoint}/${contentId}/status`, {
+    const response = await fetch(`${this.baseUrl}/${endpoint}/${contentId}?status=publish`, {
       method: 'PATCH',
       headers: {
         'X-MICROCMS-API-KEY': this.apiKey,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ status: ['publish'] }),
+      body: JSON.stringify({}),
     })
 
     if (!response.ok) {
       const errorText = await response.text()
       throw new Error(`microCMS publish failed: ${response.status} ${errorText}`)
+    }
+  }
+
+  /**
+   * カテゴリスラッグから microCMS カテゴリIDを解決する
+   */
+  async findCategoryIdBySlug(slug: string): Promise<string | null> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/categories?filters=slug[equals]${encodeURIComponent(slug)}&fields=id&limit=1`,
+        {
+          method: 'GET',
+          headers: { 'X-MICROCMS-API-KEY': this.apiKey },
+        }
+      )
+      if (!response.ok) return null
+      const data = await response.json() as { contents: Array<{ id: string }> }
+      return data.contents?.[0]?.id ?? null
+    } catch {
+      return null
     }
   }
 
@@ -281,6 +299,17 @@ export const publishToMicroCMSStep: PipelineStep<ComplianceGateOutput | Generate
       try {
         const payload = toArticlePayload(article)
 
+        // カテゴリスラッグからmicroCMSのカテゴリIDを解決
+        if (article.category) {
+          const categoryId = await client.findCategoryIdBySlug(article.category)
+          if (categoryId) {
+            payload.category = categoryId
+            console.log(`[publish-to-microcms] Category resolved: ${article.category} → ${categoryId}`)
+          } else {
+            console.warn(`[publish-to-microcms] Category not found for slug: ${article.category}`)
+          }
+        }
+
         // upsert方式: slug で検索 → 既存なら PATCH、新規なら POST
         const response = await client.upsertAndPublish('articles', payload)
 
@@ -302,7 +331,11 @@ export const publishToMicroCMSStep: PipelineStep<ComplianceGateOutput | Generate
       } catch (err) {
         // 個別記事の公開失敗時はキューステータスを failed に更新し、続行
         const errorMsg = err instanceof Error ? err.message : String(err)
+        const errorStack = err instanceof Error ? err.stack : undefined
         console.error(`[publish-to-microcms] Failed to publish ${article.slug}: ${errorMsg}`)
+        if (errorStack) {
+          console.error(`[publish-to-microcms] Stack: ${errorStack}`)
+        }
 
         await updateQueueEntryStatus(article.slug, 'failed')
 
