@@ -1,5 +1,6 @@
 /**
  * Next.js Proxy (旧 Middleware — Next.js 16 で proxy に移行)
+ * - CSP nonce 生成 (unsafe-inline/unsafe-eval 除去)
  * - ASP ITPトラッキングスクリプト自動注入
  * - ファーストパーティ Cookie アフィリエイトトラッキング (Safari/Firefox ITP対策)
  *
@@ -11,6 +12,46 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient as createSSRServerClient } from '@supabase/ssr'
+
+// ============================================================
+// CSP nonce 生成・ヘッダー設定
+// ============================================================
+
+/**
+ * CSP nonce を生成する
+ * @returns base64 エンコードされた nonce 文字列
+ */
+function generateCspNonce(): string {
+  return Buffer.from(crypto.randomUUID()).toString('base64')
+}
+
+/**
+ * CSP ヘッダーを構築する
+ * @param nonce CSP nonce
+ */
+function buildCspHeader(nonce: string): string {
+  return [
+    "default-src 'self'",
+    // Next.js のインラインスクリプトは nonce で許可
+    // GA4 (googletagmanager.com) の外部スクリプトも許可
+    `script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com`,
+    // Tailwind CSS のインラインスタイルのため unsafe-inline を維持
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' https://images.microcms-assets.io https://res.cloudinary.com https://ui-avatars.com https://via.placeholder.com data:",
+    "font-src 'self'",
+    // GA4 のビーコン送信先も connect-src に追加
+    "connect-src 'self' https://*.supabase.co https://*.microcms.io https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com",
+    "frame-ancestors 'none'",
+  ].join('; ')
+}
+
+/**
+ * レスポンスに CSP ヘッダーと nonce を設定する
+ */
+function applyCspHeaders(response: NextResponse, nonce: string): void {
+  response.headers.set('Content-Security-Policy', buildCspHeader(nonce))
+  response.headers.set('x-nonce', nonce)
+}
 
 // ============================================================
 // 設定定数
@@ -78,6 +119,12 @@ const ITP_SCRIPT_MAP: Record<string, { url: string; attributes: Record<string, s
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   const { pathname, searchParams } = request.nextUrl
 
+  // CSP nonce を生成 (全レスポンスに適用)
+  const nonce = generateCspNonce()
+
+  // リクエストヘッダーに nonce を付与 (Server Components で参照可能)
+  request.headers.set('x-nonce', nonce)
+
   // ============================================================
   // 管理ページ: Supabase Auth セッション検証
   // ============================================================
@@ -86,6 +133,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     if (pathname === ADMIN_LOGIN_PATH) {
       const response = NextResponse.next()
       response.headers.set('x-admin-pathname', pathname)
+      applyCspHeaders(response, nonce)
       return response
     }
 
@@ -115,10 +163,13 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     if (!user) {
       const loginUrl = new URL(ADMIN_LOGIN_PATH, request.url)
       loginUrl.searchParams.set('from', pathname)
-      return NextResponse.redirect(loginUrl)
+      const redirectResponse = NextResponse.redirect(loginUrl)
+      applyCspHeaders(redirectResponse, nonce)
+      return redirectResponse
     }
 
     supabaseResponse.headers.set('x-admin-pathname', pathname)
+    applyCspHeaders(supabaseResponse, nonce)
     return supabaseResponse
   }
 
@@ -127,8 +178,9 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   // ============================================================
   const response = NextResponse.next()
 
-  // 記事ページ以外はスキップ
+  // 記事ページ以外はスキップ (CSP は適用)
   if (!ARTICLE_PATH_REGEX.test(pathname)) {
+    applyCspHeaders(response, nonce)
     return response
   }
 
@@ -198,6 +250,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     }
   }
 
+  applyCspHeaders(response, nonce)
   return response
 }
 
@@ -277,9 +330,7 @@ export function getItpScriptConfigs(aspNames: string[]): Array<{
 
 export const config = {
   matcher: [
-    // 記事ページ (ITPトラッキング)
-    '/articles/:path*',
-    // 管理ページ (Supabase Auth)
-    '/admin/:path*',
+    // 全ページに CSP nonce を適用 (静的アセットを除く)
+    '/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 }

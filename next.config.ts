@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-// CSP ヘッダーは src/middleware.ts で nonce ベースで設定するため、ここには含めない
+// CSP ヘッダーは src/proxy.ts で nonce ベースで設定するため、ここには含めない
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
