@@ -1,14 +1,6 @@
 {
   "crons": [
     {
-      "path": "/api/pipeline/run?type=daily",
-      "schedule": "0 21 * * *"
-    },
-    {
-      "path": "/api/pipeline/run?type=pdca",
-      "schedule": "0 14 * * *"
-    },
-    {
       "path": "/api/cron/sync-revenue",
       "schedule": "0 15 * * *"
     }
