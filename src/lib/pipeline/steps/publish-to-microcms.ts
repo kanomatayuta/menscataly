@@ -1,15 +1,17 @@
 /**
- * microCMS 記事公開ステップ
- * Phase 3b: upsert方式によるべき等性確保
+ * microCMS 記事保存ステップ（下書き保存）
+ *
+ * パイプラインで生成した記事を microCMS に「下書き」として保存する。
+ * microCMS 管理画面でレビュー → 公開 のワークフローを想定。
  *
  * - slug をキーにして既存記事があれば PATCH、なければ POST
- * - リトライ時の重複記事防止
- * - ComplianceGateOutput を受け取り、articles フィールドを処理
+ * - リトライ時の重複記事防止（upsert方式）
+ * - review_status: "in_review" で保存し、microCMS上でステータス管理
+ * - compliance_score をカスタムフィールドに保存
  */
 
 import type { GeneratedArticleData, PipelineContext, PipelineStep, PublishedArticleData } from '../types'
 import type { ComplianceGateOutput } from './compliance-gate'
-import { updateQueueEntryStatus } from './compliance-gate'
 
 // ============================================================
 // microCMS Write API レスポンス型
@@ -29,24 +31,20 @@ export interface ArticlePayload {
   slug: string
   content: string
   excerpt?: string
-  category?: string  // microCMS コンテンツ参照ID
-  thumbnail?: { url: string }
+  category?: string
   seo_title?: string
   seo_description?: string
   author_name?: string
   tags?: string[]
   is_pr?: boolean
+  review_status?: string[]
+  compliance_score?: number
 }
 
 // ============================================================
-// microCMS Write API クライアント (upsert対応)
+// microCMS Write API クライアント
 // ============================================================
 
-/**
- * microCMS の Write API を呼び出すクライアント
- * microcms-js-sdk は書き込みAPIをサポートしないため直接 fetch を使用する
- * Phase 3b: slug ベースの upsert (GET → PATCH or POST) をサポート
- */
 class MicroCMSWriteClient {
   private apiKey: string
   private baseUrl: string
@@ -58,7 +56,6 @@ class MicroCMSWriteClient {
 
   /**
    * slug で既存記事を検索する
-   * @returns 既存記事のコンテンツID（見つからない場合は null）
    */
   async findBySlug(endpoint: string, slug: string): Promise<string | null> {
     try {
@@ -66,17 +63,10 @@ class MicroCMSWriteClient {
         `${this.baseUrl}/${endpoint}?filters=slug[equals]${encodeURIComponent(slug)}&fields=id&limit=1`,
         {
           method: 'GET',
-          headers: {
-            'X-MICROCMS-API-KEY': this.apiKey,
-          },
+          headers: { 'X-MICROCMS-API-KEY': this.apiKey },
         }
       )
-
-      if (!response.ok) {
-        console.warn(`[publish-to-microcms] findBySlug failed: ${response.status}`)
-        return null
-      }
-
+      if (!response.ok) return null
       const data = await response.json() as { contents: Array<{ id: string }> }
       return data.contents?.[0]?.id ?? null
     } catch (err) {
@@ -86,8 +76,7 @@ class MicroCMSWriteClient {
   }
 
   /**
-   * 記事を下書きとして作成する (POST)
-   * microCMS Write API は ?status=draft クエリパラメータで下書き作成
+   * 記事を下書きとして作成する (POST ?status=draft)
    */
   async createDraft(
     endpoint: string,
@@ -111,9 +100,9 @@ class MicroCMSWriteClient {
   }
 
   /**
-   * 既存記事を更新する (PATCH)
+   * 既存記事を更新する (PATCH) — 下書きのまま更新
    */
-  async updateContent(
+  async updateDraft(
     endpoint: string,
     contentId: string,
     payload: ArticlePayload
@@ -133,26 +122,6 @@ class MicroCMSWriteClient {
     }
 
     return response.json() as Promise<MicroCMSWriteResponse>
-  }
-
-  /**
-   * 下書き記事を公開する
-   * microCMS Write API: PATCH /endpoint/{contentId} に ?status=publish をつけてステータス変更
-   */
-  async publish(endpoint: string, contentId: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/${endpoint}/${contentId}?status=publish`, {
-      method: 'PATCH',
-      headers: {
-        'X-MICROCMS-API-KEY': this.apiKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({}),
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`microCMS publish failed: ${response.status} ${errorText}`)
-    }
   }
 
   /**
@@ -176,33 +145,28 @@ class MicroCMSWriteClient {
   }
 
   /**
-   * 記事をべき等に公開する (upsert)
-   * slug で検索して既存記事があれば PATCH → 公開、なければ POST → 公開
+   * 記事をべき等に下書き保存する (upsert)
+   * slug で検索して既存記事があれば PATCH、なければ POST
+   * 自動公開はしない — microCMS管理画面で手動公開する
    */
-  async upsertAndPublish(
+  async upsertDraft(
     endpoint: string,
     payload: ArticlePayload
   ): Promise<MicroCMSWriteResponse & { wasUpdated: boolean }> {
-    // 1. slug で既存記事を検索
     const existingId = await this.findBySlug(endpoint, payload.slug)
 
     if (existingId) {
-      // 2a. 既存記事があれば PATCH で更新
-      console.log(`[publish-to-microcms] Existing article found (id: ${existingId}), updating via PATCH`)
-      const response = await this.updateContent(endpoint, existingId, payload)
-      // 公開ステータスに変更
-      await this.publish(endpoint, existingId)
+      console.log(`[publish-to-microcms] Existing article found (id: ${existingId}), updating draft`)
+      const response = await this.updateDraft(endpoint, existingId, payload)
       return { ...response, id: existingId, wasUpdated: true }
     }
 
-    // 2b. 新規記事の場合は POST → 公開
-    console.log(`[publish-to-microcms] No existing article for slug="${payload.slug}", creating new`)
-    const draftResponse = await this.createDraft(endpoint, payload)
-    if (!draftResponse.id) {
+    console.log(`[publish-to-microcms] Creating new draft for slug="${payload.slug}"`)
+    const response = await this.createDraft(endpoint, payload)
+    if (!response.id) {
       throw new Error('microCMS: content ID not returned after create')
     }
-    await this.publish(endpoint, draftResponse.id)
-    return { ...draftResponse, wasUpdated: false }
+    return { ...response, wasUpdated: false }
   }
 }
 
@@ -212,9 +176,10 @@ class MicroCMSWriteClient {
 
 /**
  * 生成記事データを microCMS 投稿ペイロードに変換する
+ * review_status と compliance_score を含める
  */
 function toArticlePayload(article: GeneratedArticleData): ArticlePayload {
-  const payload: ArticlePayload = {
+  return {
     title: article.title,
     slug: article.slug,
     content: article.content,
@@ -224,20 +189,18 @@ function toArticlePayload(article: GeneratedArticleData): ArticlePayload {
     author_name: article.authorName,
     tags: article.tags,
     is_pr: article.isPr,
+    review_status: ['in_review'],
+    compliance_score: article.complianceScore,
   }
-
-  return payload
 }
 
 /**
- * 入力の正規化: ComplianceGateOutput または GeneratedArticleData[] を受け取り、
- * GeneratedArticleData[] を返す
+ * 入力の正規化
  */
 function normalizeInput(input: ComplianceGateOutput | GeneratedArticleData[]): GeneratedArticleData[] {
   if (Array.isArray(input)) {
     return input
   }
-  // ComplianceGateOutput の場合は articles フィールドを取得
   if ('articles' in input && Array.isArray(input.articles)) {
     return input.articles
   }
@@ -245,12 +208,14 @@ function normalizeInput(input: ComplianceGateOutput | GeneratedArticleData[]): G
 }
 
 /**
- * microCMS 記事公開ステップ (upsert方式)
- * Phase 3b: slug ベースのべき等性確保、リトライ時の重複防止
+ * microCMS 記事保存ステップ（下書き保存）
+ *
+ * 記事を microCMS に下書き (review_status: "in_review") として保存する。
+ * microCMS 管理画面でレビュー・編集 → 手動公開するワークフロー。
  */
 export const publishToMicroCMSStep: PipelineStep<ComplianceGateOutput | GeneratedArticleData[], PublishedArticleData[]> = {
   name: 'publish-to-microcms',
-  description: 'microCMS APIへ記事をupsert（slug重複防止）・公開する',
+  description: 'microCMS に記事を下書き保存する（レビュー待ち）',
   maxRetries: 3,
 
   async execute(
@@ -258,14 +223,13 @@ export const publishToMicroCMSStep: PipelineStep<ComplianceGateOutput | Generate
     context: PipelineContext
   ): Promise<PublishedArticleData[]> {
     const articles = normalizeInput(input)
-    console.log(`[publish-to-microcms] Starting publish (run: ${context.runId}, articles: ${articles.length})`)
+    console.log(`[publish-to-microcms] Starting draft save (run: ${context.runId}, articles: ${articles.length})`)
 
     const serviceDomain = process.env.MICROCMS_SERVICE_DOMAIN
     const apiKey = process.env.MICROCMS_API_KEY
 
     if (!serviceDomain || !apiKey) {
-      console.warn('[publish-to-microcms] microCMS env vars not set — skipping publish')
-      // 環境変数未設定時はモックレスポンスを返す
+      console.warn('[publish-to-microcms] microCMS env vars not set — skipping')
       const mockResult = articles.map(article => ({
         microcmsId: `mock-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         supabaseId: '',
@@ -278,7 +242,7 @@ export const publishToMicroCMSStep: PipelineStep<ComplianceGateOutput | Generate
     }
 
     if (context.config.dryRun) {
-      console.log('[publish-to-microcms] Dry run mode — skipping actual publish')
+      console.log('[publish-to-microcms] Dry run mode — skipping actual save')
       const dryRunResult = articles.map(article => ({
         microcmsId: `dryrun-${article.slug}`,
         supabaseId: '',
@@ -291,68 +255,52 @@ export const publishToMicroCMSStep: PipelineStep<ComplianceGateOutput | Generate
     }
 
     const client = new MicroCMSWriteClient(serviceDomain, apiKey)
-    const publishedArticles: PublishedArticleData[] = []
+    const savedArticles: PublishedArticleData[] = []
 
     for (const article of articles) {
-      console.log(`[publish-to-microcms] Publishing article: ${article.title}`)
+      console.log(`[publish-to-microcms] Saving draft: ${article.title}`)
 
       try {
         const payload = toArticlePayload(article)
 
-        // カテゴリスラッグからmicroCMSのカテゴリIDを解決
+        // カテゴリスラッグ → microCMS カテゴリID
         if (article.category) {
           const categoryId = await client.findCategoryIdBySlug(article.category)
           if (categoryId) {
             payload.category = categoryId
             console.log(`[publish-to-microcms] Category resolved: ${article.category} → ${categoryId}`)
-          } else {
-            console.warn(`[publish-to-microcms] Category not found for slug: ${article.category}`)
           }
         }
 
-        // upsert方式: slug で検索 → 既存なら PATCH、新規なら POST
-        const response = await client.upsertAndPublish('articles', payload)
+        // 下書き保存（自動公開しない）
+        const response = await client.upsertDraft('articles', payload)
 
-        const published: PublishedArticleData = {
+        savedArticles.push({
           microcmsId: response.id,
-          supabaseId: '',  // sync-to-supabase ステップで設定される
+          supabaseId: '',
           slug: article.slug,
           title: article.title,
-          publishedAt: response.publishedAt ?? new Date().toISOString(),
-        }
-
-        publishedArticles.push(published)
-
-        // キューステータスを完了に更新
-        await updateQueueEntryStatus(article.slug, 'completed')
+          publishedAt: new Date().toISOString(),
+        })
 
         const mode = response.wasUpdated ? 'Updated' : 'Created'
-        console.log(`[publish-to-microcms] ${mode}: ${article.title} (id: ${response.id})`)
+        console.log(`[publish-to-microcms] ${mode} draft: ${article.title} (id: ${response.id}, score: ${article.complianceScore})`)
       } catch (err) {
-        // 個別記事の公開失敗時はキューステータスを failed に更新し、続行
         const errorMsg = err instanceof Error ? err.message : String(err)
-        const errorStack = err instanceof Error ? err.stack : undefined
-        console.error(`[publish-to-microcms] Failed to publish ${article.slug}: ${errorMsg}`)
-        if (errorStack) {
-          console.error(`[publish-to-microcms] Stack: ${errorStack}`)
+        console.error(`[publish-to-microcms] Failed to save ${article.slug}: ${errorMsg}`)
+        if (err instanceof Error && err.stack) {
+          console.error(`[publish-to-microcms] Stack: ${err.stack}`)
         }
-
-        await updateQueueEntryStatus(article.slug, 'failed')
-
-        // 他の記事の処理は続行（部分的成功を許容）
-        // ただし全記事が失敗した場合はパイプラインリトライのためにエラーを投げる
       }
     }
 
-    if (publishedArticles.length === 0 && articles.length > 0) {
-      throw new Error(`All ${articles.length} articles failed to publish`)
+    if (savedArticles.length === 0 && articles.length > 0) {
+      throw new Error(`All ${articles.length} articles failed to save to microCMS`)
     }
 
-    console.log(`[publish-to-microcms] Published ${publishedArticles.length}/${articles.length} articles`)
+    console.log(`[publish-to-microcms] Saved ${savedArticles.length}/${articles.length} articles as drafts`)
+    context.sharedData['publishedArticles'] = savedArticles
 
-    // コンテキストの共有データに保存
-    context.sharedData['publishedArticles'] = publishedArticles
-
-    return publishedArticles
+    return savedArticles
   },
 }
