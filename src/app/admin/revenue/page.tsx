@@ -2,9 +2,8 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { RevenueTable } from "@/components/admin/RevenueTable";
-import { RevenueChart } from "@/components/admin/RevenueChart";
-import { CostChart } from "@/components/admin/CostChart";
-import type { DailyCostData, MonthlyCostData } from "@/components/admin/CostChart";
+import { RevenueCostChart, CostBreakdownChart, AspRevenueChart } from "@/components/admin/CostChart";
+import type { DailyProfitData, CostBreakdown, AspRevenueData } from "@/components/admin/CostChart";
 import { CsvUploadForm } from "@/components/admin/CsvUploadForm";
 import type { RevenueSummary } from "@/types/admin";
 
@@ -401,8 +400,8 @@ async function fetchEmptyFromAspPrograms(supabase: any, startDate: string, endDa
 // ------------------------------------------------------------------
 
 interface CostResponse {
-  dailyCosts: DailyCostData[];
-  monthlyCosts: MonthlyCostData[];
+  dailyCosts: Map<string, { articleGeneration: number; analysis: number; imageGeneration: number; complianceCheck: number }>;
+  costBreakdown: CostBreakdown[];
   totalCostUsd: number;
   totalArticles: number;
   avgCostPerArticle: number;
@@ -410,12 +409,20 @@ interface CostResponse {
   lastMonthCostUsd: number;
 }
 
+const COST_TYPE_NAMES: Record<string, string> = {
+  article_generation: "記事生成",
+  analysis: "分析",
+  image_generation: "画像生成",
+  compliance_check: "コンプライアンス",
+};
+
 async function fetchCostData(): Promise<CostResponse> {
   await connection();
 
+  const emptyMap = new Map<string, { articleGeneration: number; analysis: number; imageGeneration: number; complianceCheck: number }>();
   const empty: CostResponse = {
-    dailyCosts: [],
-    monthlyCosts: [],
+    dailyCosts: emptyMap,
+    costBreakdown: [],
     totalCostUsd: 0,
     totalArticles: 0,
     avgCostPerArticle: 0,
@@ -431,7 +438,6 @@ async function fetchCostData(): Promise<CostResponse> {
     const { createServerSupabaseClient } = await import("@/lib/supabase/client");
     const supabase = createServerSupabaseClient();
 
-    // 過去90日のコストデータを取得
     const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -448,26 +454,10 @@ async function fetchCostData(): Promise<CostResponse> {
 
     if (!rows || rows.length === 0) return empty;
 
-    // --- 日別集計（過去30日） ---
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const dailyMap = new Map<string, DailyCostData>();
-
-    // 過去30日分の空エントリを初期化
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
-      const key = `${d.getMonth() + 1}/${d.getDate()}`;
-      dailyMap.set(key, {
-        date: key,
-        articleGeneration: 0,
-        analysis: 0,
-        imageGeneration: 0,
-        complianceCheck: 0,
-        total: 0,
-      });
-    }
-
-    // --- 月別集計 ---
-    const monthlyMap = new Map<string, { totalCostUsd: number; articleIds: Set<string> }>();
+    // 日別コスト (key: "M/D")
+    const dailyCosts = new Map<string, { articleGeneration: number; analysis: number; imageGeneration: number; complianceCheck: number }>();
+    // 種別集計
+    const typeMap = new Map<string, { costUsd: number; count: number }>();
 
     let totalCostUsd = 0;
     const allArticleIds = new Set<string>();
@@ -479,6 +469,8 @@ async function fetchCostData(): Promise<CostResponse> {
     let thisMonthCostUsd = 0;
     let lastMonthCostUsd = 0;
 
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
     for (const row of rows) {
       const costUsd = parseFloat(row.cost_usd ?? "0");
       const costType = row.cost_type as string;
@@ -488,61 +480,48 @@ async function fetchCostData(): Promise<CostResponse> {
       totalCostUsd += costUsd;
       if (articleId) allArticleIds.add(articleId);
 
-      // 日別（過去30日のみ）
+      // 種別集計
+      const typeName = COST_TYPE_NAMES[costType] ?? costType;
+      if (!typeMap.has(typeName)) typeMap.set(typeName, { costUsd: 0, count: 0 });
+      const typeEntry = typeMap.get(typeName)!;
+      typeEntry.costUsd += costUsd;
+      typeEntry.count += 1;
+
+      // 日別（過去30日）
       if (createdAt >= thirtyDaysAgo) {
         const dayKey = `${createdAt.getMonth() + 1}/${createdAt.getDate()}`;
-        const dayEntry = dailyMap.get(dayKey);
-        if (dayEntry) {
-          dayEntry.total += costUsd;
-          switch (costType) {
-            case "article_generation":
-              dayEntry.articleGeneration += costUsd;
-              break;
-            case "analysis":
-              dayEntry.analysis += costUsd;
-              break;
-            case "image_generation":
-              dayEntry.imageGeneration += costUsd;
-              break;
-            case "compliance_check":
-              dayEntry.complianceCheck += costUsd;
-              break;
-          }
+        if (!dailyCosts.has(dayKey)) {
+          dailyCosts.set(dayKey, { articleGeneration: 0, analysis: 0, imageGeneration: 0, complianceCheck: 0 });
+        }
+        const dayEntry = dailyCosts.get(dayKey)!;
+        switch (costType) {
+          case "article_generation": dayEntry.articleGeneration += costUsd; break;
+          case "analysis": dayEntry.analysis += costUsd; break;
+          case "image_generation": dayEntry.imageGeneration += costUsd; break;
+          case "compliance_check": dayEntry.complianceCheck += costUsd; break;
         }
       }
 
       // 月別
       const monthKey = `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, "0")}`;
-      if (!monthlyMap.has(monthKey)) {
-        monthlyMap.set(monthKey, { totalCostUsd: 0, articleIds: new Set() });
-      }
-      const monthEntry = monthlyMap.get(monthKey)!;
-      monthEntry.totalCostUsd += costUsd;
-      if (articleId) monthEntry.articleIds.add(articleId);
-
       if (monthKey === thisMonthKey) thisMonthCostUsd += costUsd;
       if (monthKey === lastMonthKey) lastMonthCostUsd += costUsd;
     }
 
-    const dailyCosts = Array.from(dailyMap.values());
-
-    const monthlyCosts: MonthlyCostData[] = Array.from(monthlyMap.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([month, data]) => {
-        const articleCount = data.articleIds.size || 1;
-        return {
-          month,
-          totalCostUsd: Math.round(data.totalCostUsd * 100) / 100,
-          articleCount,
-          avgCostPerArticle: Math.round((data.totalCostUsd / articleCount) * 100) / 100,
-        };
-      });
+    // CostBreakdown 配列
+    const costBreakdown: CostBreakdown[] = Array.from(typeMap.entries()).map(([name, data]) => ({
+      name,
+      costUsd: Math.round(data.costUsd * 100) / 100,
+      costJpy: Math.round(data.costUsd * USD_TO_JPY),
+      percentage: totalCostUsd > 0 ? (data.costUsd / totalCostUsd) * 100 : 0,
+      count: data.count,
+    })).sort((a, b) => b.costUsd - a.costUsd);
 
     const totalArticles = allArticleIds.size || 1;
 
     return {
       dailyCosts,
-      monthlyCosts,
+      costBreakdown,
       totalCostUsd: Math.round(totalCostUsd * 100) / 100,
       totalArticles,
       avgCostPerArticle: Math.round((totalCostUsd / totalArticles) * 100) / 100,
@@ -595,10 +574,47 @@ async function RevenueContent() {
       ? ((totalConversions / totalClicks) * 100).toFixed(2)
       : "0.00";
 
-  const hasCostData = costResult.dailyCosts.some((d) => d.total > 0) || costResult.monthlyCosts.length > 0;
   const totalCostJpy = usdToJpy(costResult.totalCostUsd);
   const thisMonthCostJpy = usdToJpy(costResult.thisMonthCostUsd);
   const netProfit = totalRevenue - totalCostJpy;
+
+  // --- 日別 収益 vs コスト データ構築 ---
+  const dailyProfitData: DailyProfitData[] = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+    const key = `${d.getMonth() + 1}/${d.getDate()}`;
+    const dayCost = costResult.dailyCosts.get(key);
+    const costJpy = dayCost
+      ? usdToJpy(dayCost.articleGeneration + dayCost.analysis + dayCost.imageGeneration + dayCost.complianceCheck)
+      : 0;
+    // TODO: 日別売上データはrevenue_dailyから取得可能（現状は月合計/30で概算）
+    const dailyRevenue = Math.round(totalRevenue / 30);
+    dailyProfitData.push({
+      date: key,
+      revenueJpy: dailyRevenue,
+      costJpy,
+      profitJpy: dailyRevenue - costJpy,
+    });
+  }
+
+  // --- ASP別データ構築 ---
+  const ASP_COLORS: Record<string, string> = {
+    afb: "#3b82f6", a8: "#10b981", accesstrade: "#f59e0b",
+    valuecommerce: "#8b5cf6", felmat: "#ef4444", moshimo: "#ec4899",
+  };
+  const ASP_NAMES: Record<string, string> = {
+    afb: "afb", a8: "A8.net", accesstrade: "アクセストレード",
+    valuecommerce: "バリューコマース", felmat: "felmat", moshimo: "もしもアフィリエイト",
+  };
+  const aspRevenueData: AspRevenueData[] = summaries.map((s) => ({
+    aspName: s.aspName,
+    displayName: ASP_NAMES[s.aspName.toLowerCase()] ?? s.aspName,
+    revenueJpy: s.totalRevenue,
+    clicks: s.totalClicks,
+    conversions: s.totalConversions,
+    cvr: s.conversionRate,
+    color: ASP_COLORS[s.aspName.toLowerCase()] ?? "#6b7280",
+  }));
 
   return (
     <>
@@ -698,62 +714,79 @@ async function RevenueContent() {
         />
       </div>
 
-      {/* ======== コスト詳細カード ======== */}
+      {/* ======== 1. 収益 vs コスト（日別） ======== */}
       <div className="mb-6 rounded-lg border border-neutral-200 bg-white shadow-sm">
         <div className="border-b border-neutral-100 px-5 py-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-neutral-800">APIコスト</h2>
-          <span className="text-xs text-slate-400">1$ = {USD_TO_JPY}円換算</span>
+          <h2 className="text-sm font-semibold text-neutral-800">収益 vs APIコスト（過去30日）</h2>
+          <div className="flex items-center gap-3 text-[10px] text-slate-400">
+            <span>1$ = {USD_TO_JPY}円換算</span>
+            <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-emerald-500" />収益</span>
+            <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-amber-500" />コスト</span>
+            <span className="flex items-center gap-1"><span className="inline-block h-0.5 w-3 bg-indigo-500" style={{ borderTop: "2px dashed" }} />純利益</span>
+          </div>
         </div>
         <div className="p-4">
-          {/* コストサマリーテーブル */}
-          <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="rounded-lg bg-slate-50 px-3 py-2">
-              <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">累計コスト</p>
-              <p className="text-base font-bold tabular-nums text-slate-800">${costResult.totalCostUsd.toFixed(2)}</p>
-              <p className="text-[10px] text-slate-400">{`\u00A5${totalCostJpy.toLocaleString()}`}</p>
-            </div>
-            <div className="rounded-lg bg-slate-50 px-3 py-2">
-              <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">今月</p>
-              <p className="text-base font-bold tabular-nums text-slate-800">${costResult.thisMonthCostUsd.toFixed(2)}</p>
-              <p className="text-[10px] text-slate-400">{`\u00A5${thisMonthCostJpy.toLocaleString()}`}</p>
-            </div>
-            <div className="rounded-lg bg-slate-50 px-3 py-2">
-              <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">先月</p>
-              <p className="text-base font-bold tabular-nums text-slate-800">${costResult.lastMonthCostUsd.toFixed(2)}</p>
-              <p className="text-[10px] text-slate-400">{`\u00A5${usdToJpy(costResult.lastMonthCostUsd).toLocaleString()}`}</p>
-            </div>
-            <div className="rounded-lg bg-slate-50 px-3 py-2">
-              <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">1記事あたり</p>
-              <p className="text-base font-bold tabular-nums text-slate-800">${costResult.avgCostPerArticle.toFixed(2)}</p>
-              <p className="text-[10px] text-slate-400">{costResult.totalArticles}記事生成</p>
-            </div>
-          </div>
-
-          {hasCostData ? (
-            <CostChart dailyCosts={costResult.dailyCosts} monthlyCosts={costResult.monthlyCosts} />
-          ) : (
-            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 px-8 py-10">
-              <svg className="mb-2 h-8 w-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
-              </svg>
-              <p className="text-sm text-slate-500">パイプライン実行後にコストデータが表示されます</p>
-              <p className="mt-1 text-xs text-slate-400">generation_costs テーブルに自動記録されます</p>
-            </div>
-          )}
+          <RevenueCostChart data={dailyProfitData} />
         </div>
       </div>
 
-      {/* ======== ASP別売上チャート ======== */}
-      {hasData && (
-        <div className="mb-6 rounded-lg border border-neutral-200 bg-white shadow-sm">
+      {/* ======== 2. コスト内訳 + サマリー（横並び） ======== */}
+      <div className="mb-6 grid gap-6 lg:grid-cols-2">
+        {/* コスト内訳ドーナツ */}
+        <div className="rounded-lg border border-neutral-200 bg-white shadow-sm">
           <div className="border-b border-neutral-100 px-5 py-3">
-            <h2 className="text-sm font-semibold text-neutral-800">ASP別売上</h2>
+            <h2 className="text-sm font-semibold text-neutral-800">コスト内訳</h2>
           </div>
-          <div className="overflow-x-auto p-4">
-            <RevenueChart summaries={summaries} />
+          <div className="p-4">
+            <CostBreakdownChart
+              data={costResult.costBreakdown}
+              totalUsd={costResult.totalCostUsd}
+              totalJpy={totalCostJpy}
+            />
           </div>
         </div>
-      )}
+
+        {/* コストサマリー */}
+        <div className="rounded-lg border border-neutral-200 bg-white shadow-sm">
+          <div className="border-b border-neutral-100 px-5 py-3">
+            <h2 className="text-sm font-semibold text-neutral-800">コストサマリー</h2>
+          </div>
+          <div className="p-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg bg-slate-50 px-4 py-3">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">累計コスト</p>
+                <p className="text-xl font-bold tabular-nums text-slate-800">${costResult.totalCostUsd.toFixed(2)}</p>
+                <p className="text-xs text-slate-400">{`\u00A5${totalCostJpy.toLocaleString()}`}</p>
+              </div>
+              <div className="rounded-lg bg-slate-50 px-4 py-3">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">今月</p>
+                <p className="text-xl font-bold tabular-nums text-slate-800">${costResult.thisMonthCostUsd.toFixed(2)}</p>
+                <p className="text-xs text-slate-400">{`\u00A5${thisMonthCostJpy.toLocaleString()}`}</p>
+              </div>
+              <div className="rounded-lg bg-slate-50 px-4 py-3">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">先月</p>
+                <p className="text-xl font-bold tabular-nums text-slate-800">${costResult.lastMonthCostUsd.toFixed(2)}</p>
+                <p className="text-xs text-slate-400">{`\u00A5${usdToJpy(costResult.lastMonthCostUsd).toLocaleString()}`}</p>
+              </div>
+              <div className="rounded-lg bg-slate-50 px-4 py-3">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">1記事あたり</p>
+                <p className="text-xl font-bold tabular-nums text-slate-800">${costResult.avgCostPerArticle.toFixed(2)}</p>
+                <p className="text-xs text-slate-400">{costResult.totalArticles}記事生成</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ======== 3. ASP別売上（横棒グラフ） ======== */}
+      <div className="mb-6 rounded-lg border border-neutral-200 bg-white shadow-sm">
+        <div className="border-b border-neutral-100 px-5 py-3">
+          <h2 className="text-sm font-semibold text-neutral-800">ASP別売上</h2>
+        </div>
+        <div className="p-4">
+          <AspRevenueChart data={aspRevenueData} />
+        </div>
+      </div>
 
       {/* Revenue table card */}
       {hasData && (
