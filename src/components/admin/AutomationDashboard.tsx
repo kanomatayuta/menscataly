@@ -348,7 +348,9 @@ export function AutomationDashboard() {
               <div className="flex items-center justify-between py-2">
                 <div>
                   <p className="text-sm font-medium text-slate-800">記事生成パイプライン</p>
-                  <p className="text-xs text-slate-500">毎日 06:00 JST — トレンド分析 → 記事生成 → コンプラチェック</p>
+                  <p className="text-xs text-slate-500">
+                    {config.dailyPipeline ? "毎日 06:00 JST — " : ""}トレンド分析 → 記事生成 → コンプラチェック
+                  </p>
                 </div>
                 <button
                   type="button"
@@ -368,7 +370,9 @@ export function AutomationDashboard() {
               <div className="flex items-center justify-between py-2">
                 <div>
                   <p className="text-sm font-medium text-slate-800">分析パイプライン</p>
-                  <p className="text-xs text-slate-500">毎日 23:00 JST — アナリティクス → 収益分析 → アラート</p>
+                  <p className="text-xs text-slate-500">
+                    {config.pdcaBatch ? "毎日 23:00 JST — " : ""}アナリティクス → 収益分析 → アラート
+                  </p>
                 </div>
                 <button
                   type="button"
