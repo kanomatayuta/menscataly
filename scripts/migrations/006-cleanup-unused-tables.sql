@@ -32,7 +32,8 @@ DROP TABLE IF EXISTS pipeline_logs;
 -- 4. article_keywords (未実装)
 DROP TABLE IF EXISTS article_keywords;
 
--- 5. compliance_logs (未実装)
+-- 5. compliance_logs (未実装) + 依存ビュー v_compliance_status も削除
+DROP VIEW IF EXISTS v_compliance_status;
 DROP TABLE IF EXISTS compliance_logs;
 
 -- 6. categories (microCMS に移行済み)
