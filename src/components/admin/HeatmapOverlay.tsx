@@ -346,7 +346,7 @@ export function HeatmapOverlay({ slug, title }: HeatmapOverlayProps) {
     return () => window.removeEventListener("resize", handleResize);
   }, [drawHeatmap]);
 
-  const maxScrollCount = data
+  const maxScrollCount = data?.scrollBands?.length
     ? Math.max(...data.scrollBands.map((b) => b.count), 1)
     : 1;
 
@@ -397,7 +397,7 @@ export function HeatmapOverlay({ slug, title }: HeatmapOverlayProps) {
         )}
 
         {/* Scroll depth overlay — 帯状カラーマスク */}
-        {mode === "scroll" && data && data.totalScrollSessions > 0 && (
+        {mode === "scroll" && data?.scrollBands?.length && data.totalScrollSessions > 0 && (
           <ScrollDepthOverlay bands={data.scrollBands} maxCount={maxScrollCount} />
         )}
 
