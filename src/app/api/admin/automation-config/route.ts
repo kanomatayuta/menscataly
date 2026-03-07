@@ -11,12 +11,14 @@ export interface AutomationConfig {
   dailyPipeline: boolean;
   pdcaBatch: boolean;
   autoRewrite: boolean;
+  enabledCategories: string[];
 }
 
 const DEFAULT_CONFIG: AutomationConfig = {
   dailyPipeline: true,
   pdcaBatch: true,
   autoRewrite: false,
+  enabledCategories: ["aga", "hair-removal", "skincare", "ed", "column"],
 };
 
 const CONFIG_KEY = "automation_config";
