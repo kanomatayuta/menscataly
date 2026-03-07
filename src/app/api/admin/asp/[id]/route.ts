@@ -13,6 +13,7 @@ import { mapRowToProgram } from '@/lib/asp/helpers'
 import type { AspProgramRow } from '@/types/database'
 import type { RewardTier, AdCreative } from '@/types/asp-config'
 import { enrichCreativeWithParsedSize } from '@/lib/asp/banner-parser'
+import { validateAdCreatives } from '@/lib/asp/validate-creatives'
 import { getInMemoryPrograms } from '../route'
 
 // ============================================================
@@ -80,7 +81,11 @@ export async function GET(
       )
     }
 
-    return NextResponse.json({ program: mapRowToProgram(data!) })
+    if (!data) {
+      return NextResponse.json({ error: 'Program not found' }, { status: 404 })
+    }
+
+    return NextResponse.json({ program: mapRowToProgram(data) })
   } catch (err) {
     console.error('[admin/asp/[id]] Error:', err)
     return NextResponse.json(
@@ -306,7 +311,11 @@ export async function PUT(
       )
     }
 
-    return NextResponse.json({ success: true, program: mapRowToProgram(data!) })
+    if (!data) {
+      return NextResponse.json({ error: 'Failed to retrieve updated program' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true, program: mapRowToProgram(data) })
   } catch (err) {
     console.error('[admin/asp/[id]] Error:', err)
     return NextResponse.json(
@@ -396,33 +405,4 @@ export async function DELETE(
   }
 }
 
-// ============================================================
-// ヘルパー関数
-// ============================================================
-
-function validateAdCreatives(creatives: unknown[]): string | null {
-  if (!Array.isArray(creatives)) return 'adCreatives must be an array'
-
-  for (let i = 0; i < creatives.length; i++) {
-    const item = creatives[i]
-    if (typeof item !== 'object' || item === null) {
-      return `adCreatives[${i}]: must be an object`
-    }
-    const c = item as Record<string, unknown>
-    if (typeof c.id !== 'string' || !c.id) {
-      return `adCreatives[${i}].id: must be a non-empty string`
-    }
-    if (!['text', 'banner'].includes(c.type as string)) {
-      return `adCreatives[${i}].type: must be 'text' or 'banner'`
-    }
-    // rawHtml が設定されている場合、affiliateUrl は不要（rawHtml内に含まれる）
-    const hasRawHtml = typeof c.rawHtml === 'string' && c.rawHtml.length > 0
-    if (!hasRawHtml && (typeof c.affiliateUrl !== 'string' || !c.affiliateUrl)) {
-      return `adCreatives[${i}].affiliateUrl: must be a non-empty string (or provide rawHtml)`
-    }
-    if (typeof c.isActive !== 'boolean') {
-      return `adCreatives[${i}].isActive: must be a boolean`
-    }
-  }
-  return null
-}
+// validateAdCreatives is imported from '@/lib/asp/validate-creatives'

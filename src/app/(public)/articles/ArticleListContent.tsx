@@ -49,7 +49,8 @@ type Props = {
 export async function ArticleListContent({ searchParams }: Props) {
   const params = await searchParams;
   const categoryParam = params.category;
-  const pageParam = params.page ? Math.max(1, parseInt(params.page, 10)) : 1;
+  const rawPage = parseInt(params.page ?? '', 10);
+  const pageParam = Math.max(1, isNaN(rawPage) ? 1 : rawPage);
   const activeCategory = categoryParam
     ? CATEGORY_MAP[categoryParam]
     : undefined;

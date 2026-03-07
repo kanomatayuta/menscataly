@@ -108,7 +108,8 @@ interface ForbiddenRange { start: number; end: number }
 /** コンテンツ全体の禁止タグ範囲を一度計算する */
 function computeForbiddenRanges(content: string): ForbiddenRange[] {
   const ranges: ForbiddenRange[] = []
-  const pattern = /<(a|h2|h3|script)\b[^>]*>[\s\S]*?<\/\1>/gi
+  // 非バックトラッキングパターン: タグ内テキストは [^<]* で、途中に現れる < は閉じタグでなければ許可
+  const pattern = /<(a|h2|h3|script)\b[^>]*>[^<]*(?:<(?!\/\1>)[^<]*)*<\/\1>/gi
   let match: RegExpExecArray | null
   while ((match = pattern.exec(content)) !== null) {
     ranges.push({ start: match.index, end: match.index + match[0].length })

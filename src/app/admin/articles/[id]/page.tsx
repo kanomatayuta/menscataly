@@ -313,7 +313,12 @@ async function fetchArticleAnalytics(
 
   try {
     await connection();
+  } catch (err) {
+    if (!isPprRejection(err)) console.error(`[admin/articles/${articleId}] connection() failed:`, err);
+    return result;
+  }
 
+  try {
     // GA4 PV + affiliate clicks を並列取得
     const { fetchGA4DailyMetrics, extractSlugFromPath, fetchAffiliateClicks } = await import("@/lib/analytics/ga4-client");
     const [ga4Data, affiliateData] = await Promise.all([

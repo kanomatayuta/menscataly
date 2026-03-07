@@ -102,8 +102,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const { searchParams } = new URL(request.url)
   const articleId = searchParams.get('articleId')
-  const maxLinks = parseInt(searchParams.get('maxLinks') ?? '5', 10)
-  const maxRelated = parseInt(searchParams.get('maxRelated') ?? '3', 10)
+  const rawMaxLinks = parseInt(searchParams.get('maxLinks') ?? '5', 10)
+  const maxLinks = isNaN(rawMaxLinks) ? 5 : Math.min(Math.max(1, rawMaxLinks), 20)
+  const rawMaxRelated = parseInt(searchParams.get('maxRelated') ?? '3', 10)
+  const maxRelated = isNaN(rawMaxRelated) ? 3 : Math.min(Math.max(1, rawMaxRelated), 10)
   const includeAnalysis = searchParams.get('includeAnalysis') === 'true'
 
   if (!articleId) {

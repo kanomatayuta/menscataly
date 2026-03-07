@@ -14,7 +14,7 @@ import type { ContentGenerationRequest } from '@/types/content'
 export async function POST(request: NextRequest): Promise<NextResponse> {
   // 本番環境・プレビュー環境では無効化（ローカル開発環境のみ有効）
   if (
-    process.env.VERCEL_ENV === 'production' ||
+    (process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV === 'production') ||
     process.env.VERCEL_ENV === 'preview' ||
     process.env.NODE_ENV === 'production'
   ) {

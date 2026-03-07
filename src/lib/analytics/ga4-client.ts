@@ -163,8 +163,11 @@ export async function runGA4Report(
   propertyId: string,
   request: Record<string, unknown>
 ): Promise<GA4RunReportResponse> {
-  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL!
-  const privateKey = process.env.GOOGLE_PRIVATE_KEY!
+  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
+  const privateKey = process.env.GOOGLE_PRIVATE_KEY
+  if (!email || !privateKey) {
+    throw new Error('Google credentials not configured: GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_PRIVATE_KEY are required')
+  }
   const token = await getAccessToken(email, privateKey)
 
   const url = `https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`

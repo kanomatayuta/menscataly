@@ -43,8 +43,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   const { searchParams } = new URL(request.url)
-  const limit = Math.min(parseInt(searchParams.get('limit') ?? '20', 10), 100)
-  const offset = parseInt(searchParams.get('offset') ?? '0', 10)
+  const rawLimit = parseInt(searchParams.get('limit') ?? '20', 10)
+  const limit = isNaN(rawLimit) ? 20 : Math.min(Math.max(1, rawLimit), 100)
+  const rawOffset = parseInt(searchParams.get('offset') ?? '0', 10)
+  const offset = isNaN(rawOffset) ? 0 : Math.max(0, rawOffset)
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY

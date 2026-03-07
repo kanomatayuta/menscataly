@@ -22,8 +22,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const { searchParams } = new URL(request.url)
 
-  const limitNum = Math.min(parseInt(searchParams.get('limit') ?? '50', 10), 200)
-  const offsetNum = Math.max(parseInt(searchParams.get('offset') ?? '0', 10), 0)
+  const rawLimit = parseInt(searchParams.get('limit') ?? '50', 10)
+  const limitNum = isNaN(rawLimit) ? 50 : Math.min(Math.max(1, rawLimit), 200)
+  const rawOffset = parseInt(searchParams.get('offset') ?? '0', 10)
+  const offsetNum = isNaN(rawOffset) ? 0 : Math.max(0, rawOffset)
   const eventType = searchParams.get('event_type') ?? undefined
   const fromDate = searchParams.get('from') ?? undefined
   const toDate = searchParams.get('to') ?? undefined

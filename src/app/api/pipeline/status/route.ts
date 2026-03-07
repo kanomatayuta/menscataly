@@ -103,7 +103,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const errorMessage = err instanceof Error ? err.message : String(err)
     console.error('[pipeline/status] Error:', errorMessage)
     return NextResponse.json(
-      { error: 'Failed to fetch pipeline status', details: errorMessage },
+      { error: 'Failed to fetch pipeline status', details: 'Internal server error' },
       { status: 500 }
     )
   }

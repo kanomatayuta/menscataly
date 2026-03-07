@@ -63,7 +63,9 @@ function formatDuration(ms: number | null): string {
 }
 
 function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("ja-JP", { timeZone: "Asia/Tokyo" });
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "-";
+  return d.toLocaleTimeString("ja-JP", { timeZone: "Asia/Tokyo" });
 }
 
 function formatDateTime(iso: string): string {
@@ -74,6 +76,7 @@ function formatDateTime(iso: string): string {
 
 function getElapsedSince(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
+  if (isNaN(ms)) return "-";
   const s = Math.floor(ms / 1000);
   if (s < 60) return `${s}秒`;
   const m = Math.floor(s / 60);

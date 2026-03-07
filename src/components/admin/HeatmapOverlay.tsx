@@ -243,7 +243,10 @@ export function HeatmapOverlay({ slug, title }: HeatmapOverlayProps) {
   // Fetch heatmap data
   useEffect(() => {
     fetch(`/api/admin/heatmap?slug=${encodeURIComponent(slug)}`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error('Failed to fetch');
+        return r.json();
+      })
       .then((d: HeatmapData) => {
         setData(d);
         setLoading(false);

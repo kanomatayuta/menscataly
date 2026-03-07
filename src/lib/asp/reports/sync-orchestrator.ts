@@ -143,22 +143,22 @@ export class ReportSyncOrchestrator {
     return rows.length
   }
 
-  /** affiliate_links の集計値を更新 */
+  /** affiliate_links の集計値を更新（絶対値upsert — 二重カウント防止） */
   async updateAffiliateLinksTotals(
     records: NormalizedReportRecord[]
   ): Promise<void> {
     const supabase = getSupabaseClient()
     if (!supabase) return
 
-    // program_id ごとに集計
+    // aspName + programId ごとに集計
     const totals = new Map<
       string,
-      { clicks: number; conversions: number; revenue: number }
+      { aspName: string; programId: string; clicks: number; conversions: number; revenue: number }
     >()
 
     for (const r of records) {
       const key = `${r.aspName}:${r.programId}`
-      const current = totals.get(key) ?? { clicks: 0, conversions: 0, revenue: 0 }
+      const current = totals.get(key) ?? { aspName: r.aspName, programId: r.programId, clicks: 0, conversions: 0, revenue: 0 }
       current.clicks += r.clicks
       current.conversions += r.conversionsConfirmed
       current.revenue += r.revenueConfirmed
@@ -166,23 +166,25 @@ export class ReportSyncOrchestrator {
     }
 
     for (const [key, total] of totals) {
-      const [aspName] = key.split(':')
       try {
+        // aspName + programId で正確にマッチング
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: links } = await (supabase as any)
           .from('affiliate_links')
-          .select('id, click_count, conversion_count, revenue')
-          .eq('asp_name', aspName)
+          .select('id')
+          .eq('asp_name', total.aspName)
+          .eq('program_id', total.programId)
 
         if (links && links.length > 0) {
           for (const link of links) {
+            // 絶対値で設定（加算ではなく上書き — 二重カウント防止）
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             await (supabase as any)
               .from('affiliate_links')
               .update({
-                click_count: (link.click_count || 0) + total.clicks,
-                conversion_count: (link.conversion_count || 0) + total.conversions,
-                revenue: (link.revenue || 0) + total.revenue,
+                click_count: total.clicks,
+                conversion_count: total.conversions,
+                revenue: total.revenue,
                 updated_at: new Date().toISOString(),
               })
               .eq('id', link.id)

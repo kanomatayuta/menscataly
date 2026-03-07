@@ -33,7 +33,9 @@ export async function createBigQueryClient(): Promise<BigQueryInstance | null> {
   }
 
   try {
-    const mod = await (Function('return import("@google-cloud/bigquery")')() as Promise<{
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval
+    const modulePath = '@google-cloud/bigquery'
+    const mod = await (import(/* webpackIgnore: true */ modulePath) as Promise<{
       BigQuery: new (opts: Record<string, unknown>) => BigQueryInstance
     }>)
     return new mod.BigQuery({

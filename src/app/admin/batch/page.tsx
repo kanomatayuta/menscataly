@@ -417,6 +417,8 @@ export default function AdminBatchPage() {
         }
         // ジョブ完了後に履歴を再取得
         await loadHistory();
+      } else {
+        console.error(`[pollProgress] ステータス取得失敗: ${res.status}`);
       }
     } catch {
       // Polling failed
@@ -472,7 +474,7 @@ export default function AdminBatchPage() {
       });
 
       if (res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({ jobId: 'unknown' }));
         setActiveJob({
           jobId: data.jobId,
           status: "running",

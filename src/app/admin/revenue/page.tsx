@@ -128,7 +128,16 @@ interface RevenueResponse {
 }
 
 async function fetchRevenueData(): Promise<RevenueResponse> {
-  await connection();
+  try { await connection() } catch {
+    const endDate = new Date().toISOString().split("T")[0];
+    const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+    return {
+      revenue: getMockRevenueSummary(),
+      period: { startDate, endDate },
+      source: "mock",
+      reason: "connection() unavailable",
+    };
+  }
 
   const endDate = new Date().toISOString().split("T")[0];
   const startDate = new Date(
@@ -417,7 +426,16 @@ const COST_TYPE_NAMES: Record<string, string> = {
 };
 
 async function fetchCostData(): Promise<CostResponse> {
-  await connection();
+  const emptyDefault: CostResponse = {
+    dailyCosts: new Map(),
+    costBreakdown: [],
+    totalCostUsd: 0,
+    totalArticles: 0,
+    avgCostPerArticle: 0,
+    thisMonthCostUsd: 0,
+    lastMonthCostUsd: 0,
+  };
+  try { await connection() } catch { return emptyDefault; }
 
   const emptyMap = new Map<string, { articleGeneration: number; analysis: number; imageGeneration: number; complianceCheck: number }>();
   const empty: CostResponse = {

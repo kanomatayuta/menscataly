@@ -337,7 +337,7 @@ export class BatchArticleGenerator {
         ((progress.completed + progress.failed) / keywords.length) * 100
       )
       const elapsed = Date.now() - batchStartTime
-      const avgTimePerArticle = elapsed / progress.completed
+      const avgTimePerArticle = progress.completed > 0 ? elapsed / progress.completed : 0
       const remaining = keywords.length - progress.completed - progress.failed
       progress.estimatedRemainingSeconds = Math.round((avgTimePerArticle * remaining) / 1000)
     } catch (err) {

@@ -5,7 +5,9 @@ import type { ArticleCategory } from "@/components/ui/Badge";
  * 日付を日本語フォーマットに変換
  */
 export function formatDate(dateString: string): string {
+  if (!dateString) return '';
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
   return date.toLocaleDateString("ja-JP", {
     year: "numeric",
     month: "long",

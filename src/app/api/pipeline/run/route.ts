@@ -109,8 +109,36 @@ async function executePipeline(
       try {
         await executor.run(steps, initialSharedData)
         console.log(`[pipeline/run] Pipeline "${pipelineType}" completed (runId=${runId})`)
+        // 成功時: DBステータスを completed に更新
+        try {
+          const { createServerSupabaseClient: createClient } = await import('@/lib/supabase/client')
+          const sb = createClient()
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (sb as any)
+            .from('pipeline_runs')
+            .update({ status: 'completed', finished_at: new Date().toISOString() })
+            .eq('id', runId)
+        } catch (dbErr) {
+          console.warn(`[pipeline/run] Failed to update DB status to completed (runId=${runId}):`, dbErr)
+        }
       } catch (err) {
         console.error(`[pipeline/run] Pipeline "${pipelineType}" failed (runId=${runId}):`, err)
+        // 失敗時: DBステータスを failed に更新
+        try {
+          const { createServerSupabaseClient: createClient } = await import('@/lib/supabase/client')
+          const sb = createClient()
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (sb as any)
+            .from('pipeline_runs')
+            .update({
+              status: 'failed',
+              finished_at: new Date().toISOString(),
+              error_message: err instanceof Error ? err.message : String(err),
+            })
+            .eq('id', runId)
+        } catch (dbErr) {
+          console.warn(`[pipeline/run] Failed to update DB status to failed (runId=${runId}):`, dbErr)
+        }
       }
     })
 

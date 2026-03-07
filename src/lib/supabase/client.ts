@@ -59,11 +59,16 @@ export const createServerClient = createServerSupabaseClient
  * Supabase Auth セッション管理に必要
  */
 export async function createSupabaseServerClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!supabaseUrl) throw new Error('NEXT_PUBLIC_SUPABASE_URL is not defined')
+  if (!supabaseAnonKey) throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY is not defined')
+
   const { cookies } = await import('next/headers')
   const cookieStore = await cookies()
   return createSSRServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {
@@ -85,10 +90,12 @@ export async function createSupabaseServerClient() {
  * Supabase Auth セッション管理に必要
  */
 export function createSupabaseBrowserClient() {
-  return createSSRBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!supabaseUrl) throw new Error('NEXT_PUBLIC_SUPABASE_URL is not defined')
+  if (!supabaseAnonKey) throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY is not defined')
+
+  return createSSRBrowserClient(supabaseUrl, supabaseAnonKey)
 }
 
 // ============================================================

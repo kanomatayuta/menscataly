@@ -9,7 +9,7 @@ import type { Violation } from "../types";
  * PR表記・アフィリエイト開示の欠如チェック
  */
 const PR_DISCLOSURE_PATTERNS = [
-  /PR|広告|プロモーション|スポンサード|アフィリエイト|affiliate/i,
+  /\bPR\b|広告|プロモーション|スポンサード|アフィリエイト|affiliate/i,
   /※本記事は.*(広告|PR|アフィリエイト)/,
   /本記事には.*(広告|PR|アフィリエイト)/,
   /プロモーション含む|広告を含む|PR含む/,

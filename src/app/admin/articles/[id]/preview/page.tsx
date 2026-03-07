@@ -233,7 +233,7 @@ const VIEWPORT_LABELS: Record<ViewportMode, string> = {
 
 export default function ArticlePreviewPage() {
   const params = useParams();
-  const id = params.id as string;
+  const id = Array.isArray(params.id) ? params.id[0] : params.id as string;
 
   const [article, setArticle] = useState<PreviewArticle | null>(null);
   const [isLoading, setIsLoading] = useState(true);

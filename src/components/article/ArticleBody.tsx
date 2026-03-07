@@ -545,6 +545,7 @@ function ensureHeadingIds(html: string): string {
  * コンテンツを適切な HTML に変換する
  */
 function normalizeContent(content: string): string {
+  if (!content) return '';
   // 前処理: HTML内に埋め込まれたJSON/Markdownを抽出
   const unwrapped = unwrapEmbeddedContent(content);
   const format = detectFormat(unwrapped);

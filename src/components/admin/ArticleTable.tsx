@@ -184,13 +184,13 @@ export function ArticleTable({ articles, analytics, categories, updatedAtMap, gr
     if (!sortColumn) return filteredArticles;
     return [...filteredArticles].sort((a, b) => {
       if (sortColumn === "healthScore") {
-        const hsA = healthScores?.get(a.id)?.total ?? -1;
-        const hsB = healthScores?.get(b.id)?.total ?? -1;
+        const hsA = healthScores?.get(a.id)?.total ?? 0;
+        const hsB = healthScores?.get(b.id)?.total ?? 0;
         return sortDirection === "asc" ? hsA - hsB : hsB - hsA;
       }
       if (sortColumn === "growthRate") {
-        const grA = growthRates?.get(a.id)?.growthRate ?? -Infinity;
-        const grB = growthRates?.get(b.id)?.growthRate ?? -Infinity;
+        const grA = growthRates?.get(a.id)?.growthRate ?? 0;
+        const grB = growthRates?.get(b.id)?.growthRate ?? 0;
         return sortDirection === "asc" ? grA - grB : grB - grA;
       }
       if (sortColumn === "affiliateCtr") {

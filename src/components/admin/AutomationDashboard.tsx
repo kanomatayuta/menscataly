@@ -105,6 +105,12 @@ export function AutomationDashboard() {
     Promise.all([
       fetch("/api/admin/automation-config", { credentials: "include" })
         .then(async (res) => {
+          if (!res.ok) {
+            if (res.status === 503) {
+              setTableExists(false);
+            }
+            return DEFAULT_CONFIG;
+          }
           const data = await res.json().catch(() => DEFAULT_CONFIG);
           if (data.tableExists === false) {
             setTableExists(false);

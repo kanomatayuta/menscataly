@@ -27,7 +27,7 @@ interface PipelineSuccessChartProps {
  */
 /** Deterministic pseudo-random based on seed index (avoids hydration mismatch) */
 function seededRandom(seed: number): number {
-  return (Math.sin(seed * 12345.6789) * 10000) % 1;
+  return Math.abs((Math.sin(seed * 12345.6789) * 10000) % 1);
 }
 
 export function generateDefaultPipelineData(): PipelineDataPoint[] {
