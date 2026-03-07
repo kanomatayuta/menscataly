@@ -10,8 +10,6 @@ import {
   generateArticleStructuredData,
   generateMedicalWebPageSchema,
   generateFAQSchema,
-  generateBreadcrumbSchema,
-  generateHowToSchema,
   generatePersonSchema,
   extractFAQsFromContent,
   type FAQItem,

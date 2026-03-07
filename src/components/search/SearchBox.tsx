@@ -72,7 +72,7 @@ export function SearchBox({
   const initialQuery = searchParams.get("q") ?? "";
   const [query, setQuery] = useState(initialQuery);
   const [isFocused, setIsFocused] = useState(false);
-  const [history, setHistory] = useState<string[]>([]);
+  const [history, setHistory] = useState<string[]>(getSearchHistory);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -81,11 +81,6 @@ export function SearchBox({
       inputRef.current.focus();
     }
   }, [autoFocus]);
-
-  // Load search history on mount
-  useEffect(() => {
-    setHistory(getSearchHistory());
-  }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
