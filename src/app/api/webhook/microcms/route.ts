@@ -39,16 +39,17 @@ async function verifySignature(
   const signatureBuffer = await crypto.subtle.sign('HMAC', cryptoKey, messageData)
   const expectedSignature = btoa(String.fromCharCode(...new Uint8Array(signatureBuffer)))
 
-  // タイミング攻撃対策: 文字数が一致しない場合でも定数時間で比較
-  if (expectedSignature.length !== signature.length) {
+  // タイミング攻撃対策: crypto.timingSafeEqual (Buffer ベース) を使用
+  // 長さが異なる場合でもダミー比較を行い、一定時間で完了させる
+  const { timingSafeEqual } = await import('crypto')
+  const expectedBuf = Buffer.from(expectedSignature)
+  const signatureBuf = Buffer.from(signature)
+  if (expectedBuf.length !== signatureBuf.length) {
+    // 長さが異なる場合でもタイミング攻撃を防ぐためダミー比較を実行
+    timingSafeEqual(expectedBuf, expectedBuf)
     return false
   }
-
-  let result = 0
-  for (let i = 0; i < expectedSignature.length; i++) {
-    result |= expectedSignature.charCodeAt(i) ^ signature.charCodeAt(i)
-  }
-  return result === 0
+  return timingSafeEqual(expectedBuf, signatureBuf)
 }
 
 // ============================================================

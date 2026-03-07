@@ -9,6 +9,11 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { Footer } from "@/components/layout/Footer";
 
+// next/server のモック
+vi.mock("next/server", () => ({
+  connection: vi.fn().mockResolvedValue(undefined),
+}));
+
 // next/link のモック: Link を <a> タグとしてレンダリング
 vi.mock("next/link", () => ({
   default: ({
@@ -39,8 +44,9 @@ describe("Footer", () => {
 
   it.each(LEGAL_LINKS)(
     "法的リンク「$label」が正しいパス $expectedHref を持つ",
-    ({ label, expectedHref }) => {
-      render(<Footer />);
+    async ({ label, expectedHref }) => {
+      const result = await Footer();
+      render(result);
       const link = screen.getByRole("link", { name: label });
       expect(link).toBeInTheDocument();
       expect(link).toHaveAttribute("href", expectedHref);
@@ -59,8 +65,9 @@ describe("Footer", () => {
 
   it.each(SITE_INFO_LINKS)(
     "サイト情報リンク「$label」が正しいパス $expectedHref を持つ",
-    ({ label, expectedHref }) => {
-      render(<Footer />);
+    async ({ label, expectedHref }) => {
+      const result = await Footer();
+      render(result);
       const link = screen.getByRole("link", { name: label });
       expect(link).toBeInTheDocument();
       expect(link).toHaveAttribute("href", expectedHref);
@@ -86,8 +93,9 @@ describe("Footer", () => {
 
   it.each(CATEGORY_LINKS)(
     "カテゴリリンク「$label」が正しいパス $expectedHref を持つ",
-    ({ label, expectedHref }) => {
-      render(<Footer />);
+    async ({ label, expectedHref }) => {
+      const result = await Footer();
+      render(result);
       const link = screen.getByRole("link", { name: label });
       expect(link).toBeInTheDocument();
       expect(link).toHaveAttribute("href", expectedHref);
@@ -98,8 +106,9 @@ describe("Footer", () => {
   // 構造の検証
   // ==================================================================
 
-  it("ブランドロゴ（トップページリンク）が存在する", () => {
-    render(<Footer />);
+  it("ブランドロゴ（トップページリンク）が存在する", async () => {
+    const result = await Footer();
+    render(result);
     const logoLink = screen.getByRole("link", {
       name: "メンズカタリ トップページ",
     });
@@ -107,20 +116,23 @@ describe("Footer", () => {
     expect(logoLink).toHaveAttribute("href", "/");
   });
 
-  it("コピーライト表記が存在する", () => {
-    render(<Footer />);
+  it("コピーライト表記が存在する", async () => {
+    const result = await Footer();
+    render(result);
     expect(screen.getByText(/メンズカタリ. All rights reserved/)).toBeInTheDocument();
   });
 
-  it("3つのナビゲーションセクションが存在する", () => {
-    render(<Footer />);
+  it("3つのナビゲーションセクションが存在する", async () => {
+    const result = await Footer();
+    render(result);
     const navs = screen.getAllByRole("navigation");
     // カテゴリ, サイト情報, 法的情報 の3つ
     expect(navs.length).toBe(3);
   });
 
-  it("医療免責事項が表示されている", () => {
-    render(<Footer />);
+  it("医療免責事項が表示されている", async () => {
+    const result = await Footer();
+    render(result);
     expect(
       screen.getByText(/本サイトの情報は医療診断を代替するものではありません/)
     ).toBeInTheDocument();

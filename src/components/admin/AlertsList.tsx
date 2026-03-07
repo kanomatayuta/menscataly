@@ -103,7 +103,11 @@ export function AlertsList({ alerts: initialAlerts }: AlertsListProps) {
                     {alert.message}
                   </p>
                   <p className="mt-1 text-xs text-slate-400">
-                    {new Date(alert.createdAt).toLocaleString("ja-JP")}
+                    {(() => {
+                      const d = new Date(alert.createdAt);
+                      if (isNaN(d.getTime())) return alert.createdAt;
+                      return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+                    })()}
                   </p>
                 </div>
               </div>

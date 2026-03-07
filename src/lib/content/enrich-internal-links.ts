@@ -82,7 +82,7 @@ function isInForbiddenRange(
   length: number
 ): boolean {
   return ranges.some(
-    (r) => index >= r.start && index + length <= r.end
+    (r) => index < r.end && index + length > r.start
   )
 }
 

@@ -60,6 +60,19 @@ interface InternalBatchProgress extends BatchGenerationProgress {
 const progressStore = new Map<string, InternalBatchProgress>()
 
 /**
+ * ジョブ完了後に1時間でインメモリ進捗を自動削除する (メモリリーク防止)
+ */
+function scheduleProgressCleanup(jobId: string): void {
+  const timer = setTimeout(() => {
+    progressStore.delete(jobId)
+  }, 3_600_000) // 1時間
+  // Node.js 環境でプロセス終了を妨げない
+  if (timer && 'unref' in timer) {
+    timer.unref()
+  }
+}
+
+/**
  * ジョブIDから進捗を取得する
  */
 export function getBatchProgress(jobId: string): BatchGenerationProgress | null {
@@ -87,9 +100,34 @@ export function getBatchProgress(jobId: string): BatchGenerationProgress | null 
 
 export class BatchArticleGenerator {
   /**
-   * バッチ記事生成を実行する
+   * バッチ記事生成を実行する (後方互換: fire-and-forget方式)
    */
   async generateBatch(
+    request: BatchGenerationRequest
+  ): Promise<BatchGenerationProgress> {
+    const progress = await this.startBatch(request)
+
+    // ドライランモードでなければバックグラウンドで生成を実行
+    if (progress.status === 'running') {
+      this.executeGeneration(progress.jobId, request).catch((err) => {
+        console.error(`[BatchGenerator] Unexpected error for job ${progress.jobId}:`, err)
+        const internal = progressStore.get(progress.jobId)
+        if (internal) {
+          internal.status = 'failed'
+          internal.updatedAt = new Date().toISOString()
+          progressStore.set(progress.jobId, internal)
+        }
+      })
+    }
+
+    return progress
+  }
+
+  /**
+   * バッチジョブを初期化する (進捗オブジェクト作成のみ、生成は開始しない)
+   * route.ts の after() と組み合わせて使用する
+   */
+  async startBatch(
     request: BatchGenerationRequest
   ): Promise<BatchGenerationProgress> {
     const jobId = randomUUID()
@@ -143,28 +181,27 @@ export class BatchArticleGenerator {
       progress.completed = keywords.length
       progress.progressPercent = 100
       progressStore.set(jobId, progress)
+      // ドライランも1時間後に自動削除
+      scheduleProgressCleanup(jobId)
       return getBatchProgress(jobId)!
     }
-
-    // バックグラウンドで生成を実行
-    this.executeGeneration(jobId, request, progress).catch((err) => {
-      console.error(`[BatchGenerator] Unexpected error for job ${jobId}:`, err)
-      progress.status = 'failed'
-      progress.updatedAt = new Date().toISOString()
-      progressStore.set(jobId, progress)
-    })
 
     return getBatchProgress(jobId)!
   }
 
   /**
    * 生成処理の実行 (並行数制限付き)
+   * route.ts の after() から直接呼び出し可能
    */
-  private async executeGeneration(
+  async executeGeneration(
     jobId: string,
-    request: BatchGenerationRequest,
-    progress: InternalBatchProgress
+    request: BatchGenerationRequest
   ): Promise<void> {
+    const progress = progressStore.get(jobId)
+    if (!progress) {
+      throw new Error(`[BatchGenerator] Job ${jobId} not found in progress store`)
+    }
+
     const maxConcurrent = request.maxConcurrent ?? 2
     const semaphore = new Semaphore(maxConcurrent)
     const startTime = Date.now()
@@ -197,6 +234,9 @@ export class BatchArticleGenerator {
     progress.currentKeywords = []
     progress.updatedAt = new Date().toISOString()
     progressStore.set(jobId, progress)
+
+    // 完了後1時間でインメモリ進捗を自動削除 (メモリリーク防止)
+    scheduleProgressCleanup(jobId)
 
     // Supabaseへ完了記録
     await this.updateJobInSupabase(jobId, progress)

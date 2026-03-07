@@ -51,14 +51,6 @@ const RUN_STATUS: Record<PipelineStatus, { label: string; color: string; dot: st
   partial: { label: "一部失敗", color: "text-amber-700", dot: "bg-amber-500", pulse: false },
 };
 
-const STATUS_DOT: Record<PipelineStatus, string> = {
-  idle: "bg-slate-400",
-  running: "bg-blue-500",
-  success: "bg-emerald-500",
-  failed: "bg-red-500",
-  partial: "bg-amber-500",
-};
-
 // ============================================================
 // Helpers
 // ============================================================
@@ -75,7 +67,9 @@ function formatTime(iso: string): string {
 }
 
 function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "-";
+  return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 function getElapsedSince(iso: string): string {
@@ -199,7 +193,7 @@ function MiniPipelineStatus({ run, label }: { run: PipelineRunData | undefined; 
 
   return (
     <div className="flex items-center gap-2 px-3 py-2">
-      <span className={`block h-2 w-2 rounded-full ${STATUS_DOT[run.status]}`} />
+      <span className={`block h-2 w-2 rounded-full ${RUN_STATUS[run.status].dot}`} />
       <span className="text-xs font-medium text-slate-700">{label}</span>
       <span className="text-[10px] text-slate-500 ml-auto">
         {formatDateTime(run.started_at)}

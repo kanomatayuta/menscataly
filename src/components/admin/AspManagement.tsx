@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import type { AspName, AspProgram, AdCreative, AdCreativeType, RewardTier } from "@/types/asp-config";
 import type { ContentCategory } from "@/types/content";
+import { sanitizeHtml } from "@/components/article/ArticleBody";
 
 // ------------------------------------------------------------------
 // Types
@@ -382,7 +383,7 @@ function AdCreativesSection({
                     <p className="mb-1 text-[10px] font-medium text-neutral-400">プレビュー:</p>
                     <div
                       className="text-sm"
-                      dangerouslySetInnerHTML={{ __html: creative.rawHtml }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(creative.rawHtml) }}
                     />
                   </div>
                 )}

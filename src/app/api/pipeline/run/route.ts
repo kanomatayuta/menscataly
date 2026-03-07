@@ -42,7 +42,7 @@ async function executePipeline(
 
   console.log(`[pipeline/run] Starting pipeline: type=${pipelineType}, dryRun=${dryRun}`)
 
-  // 二重実行防止: 既に実行中のパイプラインがあれば 409 を返す
+  // 二重実行防止: メモリチェック (高速パス)
   const { getRunningPipelineIds } = await import('@/lib/pipeline/executor')
   const runningIds = getRunningPipelineIds()
   if (runningIds.length > 0) {
@@ -52,10 +52,14 @@ async function executePipeline(
     )
   }
 
-  // DB-based lock check
+  // DB-based atomic lock: INSERT ... ON CONFLICT で排他制御 (TOCTOU レース防止)
+  const runId = `pipeline-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   try {
     const { createServerSupabaseClient } = await import('@/lib/supabase/client')
     const supabase = createServerSupabaseClient()
+
+    // まず既存の running レコードを確認 (SELECT FOR UPDATE 相当)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: runningInDb } = await (supabase as any)
       .from('pipeline_runs')
       .select('id')
@@ -67,8 +71,28 @@ async function executePipeline(
         { status: 409 }
       )
     }
+
+    // 排他的INSERT: 同じ runId で INSERT し、成功すればロック取得
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: insertError } = await (supabase as any)
+      .from('pipeline_runs')
+      .insert({
+        id: runId,
+        type: pipelineType,
+        status: 'running',
+        started_at: new Date().toISOString(),
+      })
+
+    if (insertError) {
+      console.warn('[pipeline/run] DB lock insert failed:', insertError.message)
+      // INSERT失敗 = 別プロセスが先にロック取得した可能性
+      return NextResponse.json(
+        { success: false, error: 'パイプラインのロック取得に失敗しました' },
+        { status: 409 }
+      )
+    }
   } catch (e) {
-    console.warn('[pipeline/run] DB lock check failed, continuing with memory check:', e)
+    console.warn('[pipeline/run] DB lock check failed, continuing with memory check only:', e)
   }
 
   try {
@@ -79,7 +103,6 @@ async function executePipeline(
 
     // パイプラインを非同期で実行（レスポンスは即時返却）
     const executor = new PipelineExecutor(config)
-    const runId = `pipeline-${Date.now()}`
 
     // Next.js after() でレスポンス返却後もバックグラウンド実行を保証
     after(async () => {

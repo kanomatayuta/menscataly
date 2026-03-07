@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Suspense } from "react";
+import { cache, Suspense } from "react";
 import { draftMode } from "next/headers";
 import { Badge } from "@/components/ui/Badge";
 import { PRDisclosure } from "@/components/compliance/PRDisclosure";
@@ -28,6 +28,8 @@ import { AdSidebar } from "@/components/article/AdSidebar";
 import { ShareButtons } from "@/components/article/ShareButtons";
 import { formatDate, getImageUrl, hasAffiliateLinks, estimateReadingTime } from "@/lib/utils/article";
 
+const getArticleCached = cache(getArticleBySlug);
+
 type Props = {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ draftKey?: string }>;
@@ -42,7 +44,7 @@ export async function generateStaticParams() {
 // ページメタデータ (microCMSデータから動的生成)
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const article = await getArticleBySlug(slug);
+  const article = await getArticleCached(slug);
 
   if (!article) {
     return {
@@ -148,7 +150,7 @@ async function ArticleContent({
   searchParams: Promise<{ draftKey?: string }>;
 }) {
   const { draftKey } = await searchParams;
-  const article = await getArticleBySlug(slug, draftKey);
+  const article = await getArticleCached(slug, draftKey);
 
   if (!article) {
     notFound();
@@ -293,7 +295,7 @@ async function ArticleContent({
 export default async function ArticleDetailPage({ params, searchParams }: Props) {
   const { slug } = await params;
 
-  const article = await getArticleBySlug(slug);
+  const article = await getArticleCached(slug);
   const category = (article?.category?.slug ?? "aga") as string;
   const supervisors = getSupervisorsByCategory(category);
   const supervisor = supervisors[0] ?? null;

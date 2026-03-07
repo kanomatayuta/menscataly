@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withRateLimit } from "@/lib/admin/rate-limit";
 
 /**
  * POST /api/heatmap/track
@@ -35,6 +36,10 @@ function sanitizeViewportWidth(v: unknown): number {
 }
 
 export async function POST(req: NextRequest) {
+  // レート制限 (DoS対策: 認証なしエンドポイント)
+  const rateLimited = withRateLimit(req, 'public:heatmap')
+  if (rateLimited) return rateLimited
+
   try {
     const body = await req.json();
     const events: HeatmapEvent[] = Array.isArray(body.events) ? body.events : [];
@@ -85,7 +90,7 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error("[heatmap/track] Insert error:", error.message);
-      return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+      return NextResponse.json({ ok: false, error: "Failed to save events" }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true, inserted: rows.length });

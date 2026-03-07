@@ -3,7 +3,7 @@
  * バッチ記事生成ジョブの作成
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { validateAdminAuth } from '@/lib/admin/auth'
 import { BatchArticleGenerator } from '@/lib/batch/generator'
 import type { BatchGenerationRequest, KeywordTarget } from '@/types/batch-generation'
@@ -119,7 +119,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   try {
     const generator = new BatchArticleGenerator()
-    const progress = await generator.generateBatch(validation.request)
+    const progress = await generator.startBatch(validation.request)
+
+    // after() でレスポンス返却後にバックグラウンド実行を保証
+    if (progress.status === 'running') {
+      after(async () => {
+        try {
+          await generator.executeGeneration(progress.jobId, validation.request)
+        } catch (err) {
+          console.error(`[batch/generate] Background generation failed for job ${progress.jobId}:`, err)
+        }
+      })
+    }
 
     return NextResponse.json(
       {
@@ -132,11 +143,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       { status: 202 }
     )
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err)
-    console.error('[batch/generate] Failed to start batch:', errorMessage)
+    console.error('[batch/generate] Failed to start batch:', err instanceof Error ? err.message : String(err))
 
     return NextResponse.json(
-      { error: 'Failed to start batch generation', details: errorMessage },
+      { error: 'Failed to start batch generation' },
       { status: 500 }
     )
   }

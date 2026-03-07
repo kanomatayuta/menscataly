@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { connection } from "next/server";
 
 const FOOTER_LINKS = {
   カテゴリ: [
@@ -19,9 +20,9 @@ const FOOTER_LINKS = {
   ],
 } as const;
 
-const CURRENT_YEAR = new Date().getFullYear();
-
-export function Footer() {
+export async function Footer() {
+  await connection();
+  const currentYear = new Date().getFullYear();
   return (
     <footer
       className="border-t border-neutral-200 bg-neutral-900"
@@ -80,7 +81,7 @@ export function Footer() {
         {/* コピーライト */}
         <div className="mt-10 border-t border-neutral-700 pt-8">
           <p className="text-center text-xs text-neutral-500">
-            &copy; {CURRENT_YEAR} メンズカタリ. All rights reserved.
+            &copy; {currentYear} メンズカタリ. All rights reserved.
           </p>
         </div>
       </div>

@@ -233,7 +233,7 @@ export const ARTICLE_TOOL_SCHEMA: ToolSchema = {
         },
       },
     },
-    required: ['title', 'lead', 'sections', 'conclusion', 'tags', 'references'],
+    required: ['title', 'lead', 'sections', 'conclusion', 'cta', 'tags', 'references'],
   },
 };
 

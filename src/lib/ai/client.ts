@@ -280,10 +280,10 @@ export class ClaudeClient {
           },
         });
 
-        // トークン上限による切り詰めを検出
+        // トークン上限による切り詰めを検出 — 不完全なJSONになるためエラーとする
         if (message.stop_reason === "max_tokens") {
-          console.warn(
-            `[ClaudeClient] tool_use response was truncated (max_tokens reached). Output tokens: ${message.usage.output_tokens}/${effectiveConfig.maxTokens}`
+          throw new Error(
+            `[ClaudeClient] tool_use response was truncated (max_tokens reached). Output tokens: ${message.usage.output_tokens}/${effectiveConfig.maxTokens}. Falling back to text generation.`
           );
         }
 

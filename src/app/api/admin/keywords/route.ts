@@ -44,20 +44,27 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const { searchParams } = new URL(request.url)
 
+  /** parseInt with NaN guard — returns undefined if NaN */
+  const safeInt = (v: string | null): number | undefined => {
+    if (v === null) return undefined
+    const n = parseInt(v, 10)
+    return isNaN(n) ? undefined : n
+  }
+
   const filter: KeywordFilter = {
     category: (searchParams.get('category') as ContentCategory) ?? undefined,
     difficultyLevel: searchParams.get('difficulty') as KeywordFilter['difficultyLevel'] ?? undefined,
     searchIntent: searchParams.get('intent') as KeywordFilter['searchIntent'] ?? undefined,
-    minVolume: searchParams.has('minVolume') ? parseInt(searchParams.get('minVolume')!, 10) : undefined,
-    maxVolume: searchParams.has('maxVolume') ? parseInt(searchParams.get('maxVolume')!, 10) : undefined,
-    minDifficulty: searchParams.has('minDifficulty') ? parseInt(searchParams.get('minDifficulty')!, 10) : undefined,
-    maxDifficulty: searchParams.has('maxDifficulty') ? parseInt(searchParams.get('maxDifficulty')!, 10) : undefined,
-    minTrendScore: searchParams.has('minTrendScore') ? parseInt(searchParams.get('minTrendScore')!, 10) : undefined,
+    minVolume: safeInt(searchParams.get('minVolume')),
+    maxVolume: safeInt(searchParams.get('maxVolume')),
+    minDifficulty: safeInt(searchParams.get('minDifficulty')),
+    maxDifficulty: safeInt(searchParams.get('maxDifficulty')),
+    minTrendScore: safeInt(searchParams.get('minTrendScore')),
     query: searchParams.get('q') ?? undefined,
     sortBy: (searchParams.get('sortBy') as KeywordFilter['sortBy']) ?? 'volume',
     sortOrder: (searchParams.get('sortOrder') as KeywordFilter['sortOrder']) ?? 'desc',
-    limit: parseInt(searchParams.get('limit') ?? '50', 10),
-    offset: parseInt(searchParams.get('offset') ?? '0', 10),
+    limit: safeInt(searchParams.get('limit')) ?? 50,
+    offset: safeInt(searchParams.get('offset')) ?? 0,
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL

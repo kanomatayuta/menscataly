@@ -115,6 +115,14 @@ export function AutomationDashboard() {
 
   useEffect(() => { configRef.current = config; }, [config]);
 
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      clearTimeout(savedTimer.current);
+      clearTimeout(triggerTimer.current);
+    };
+  }, []);
+
   const saveConfig = useCallback(async (newConfig: AutomationConfig) => {
     const prevConfig = configRef.current;
     setConfig(newConfig);
@@ -244,7 +252,7 @@ export function AutomationDashboard() {
       clearTimeout(triggerTimer.current);
       triggerTimer.current = setTimeout(() => setTriggerMessage(""), 5000);
     }
-  }, []);
+  }, [maxArticles, config.enabledCategories]);
 
   const handleStopPipeline = useCallback(async () => {
     setIsStopping(true);

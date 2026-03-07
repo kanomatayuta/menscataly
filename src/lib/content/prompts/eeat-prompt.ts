@@ -56,6 +56,12 @@ const SUPERVISOR_PROFILE_TEMPLATES: Record<string, AuthorInfo> = {
     bio: "薬剤師として〇〇年以上の調剤・服薬指導経験を持ち、AGA治療薬・ED治療薬の専門知識を有する。〇〇薬科大学卒業。",
     imageUrl: undefined,
   },
+  none: {
+    name: "MENS CATALY 編集部",
+    credentials: "メンズ医療・美容メディア編集スタッフ",
+    bio: "男性向け医療・美容情報を専門に扱うメディア編集部。医師・薬剤師監修のもと、信頼性の高い情報を提供しています。",
+    imageUrl: undefined,
+  },
 };
 
 /** 推奨参考文献リスト（カテゴリ別） */

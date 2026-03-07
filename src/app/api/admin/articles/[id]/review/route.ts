@@ -5,6 +5,7 @@
  * GET:   レビュー履歴取得
  */
 
+import crypto from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { validateAdminAuth } from '@/lib/admin/auth'
 import { withRateLimit } from '@/lib/admin/rate-limit'
@@ -173,7 +174,7 @@ export async function POST(
 
   const now = new Date().toISOString()
   const reviewComment: ReviewComment = {
-    id: `review-${Date.now()}`,
+    id: crypto.randomUUID(),
     author: body.author ?? 'admin',
     content: body.comment.trim(),
     action: body.action,

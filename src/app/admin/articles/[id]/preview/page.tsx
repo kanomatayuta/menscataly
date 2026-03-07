@@ -6,6 +6,7 @@ import Link from "next/link";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import type { ReviewStatus } from "@/types/admin";
+import { sanitizeHtml } from "@/components/article/ArticleBody";
 
 // ------------------------------------------------------------------
 // Preview article type
@@ -484,7 +485,7 @@ export default function ArticlePreviewPage() {
 
                   <div
                     className="article-body max-w-none"
-                    dangerouslySetInnerHTML={{ __html: article.htmlContent }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(article.htmlContent) }}
                   />
                 </article>
               </div>

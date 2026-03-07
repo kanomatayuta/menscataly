@@ -215,11 +215,14 @@ export function checkStealthMarketingPatterns(text: string): Violation[] {
   }
 
   // PR表記そのものが欠如している場合
+  // アフィリエイトURLが含まれている場合のみ severity: "high"、それ以外は "low"
   if (!checkPRDisclosure(text)) {
+    const hasAffiliateUrl = AFFILIATE_URL_PATTERNS.some((p) => p.test(text)) ||
+      /affiliate|rel=["']sponsored/i.test(text);
     violations.push({
       id: "stealth_missing_pr",
       type: "missing_pr_disclosure",
-      severity: "high",
+      severity: hasAffiliateUrl ? "high" : "low",
       ngText: "(PR表記なし)",
       suggestedText: "※本記事はアフィリエイト広告を含みます",
       reason: "ステマ規制：アフィリエイト広告記事にはPR表記が必須",

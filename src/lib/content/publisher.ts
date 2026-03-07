@@ -200,7 +200,7 @@ async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 2)
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const res = await fetch(url, options);
-      if (res.ok || res.status < 500) return res;
+      if (res.ok || (res.status < 500 && res.status !== 429)) return res;
       if (attempt < maxRetries) {
         console.warn(`[Publisher] microCMS API returned ${res.status}, retrying (${attempt + 1}/${maxRetries})...`);
         await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));

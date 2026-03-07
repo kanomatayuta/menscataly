@@ -94,8 +94,18 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    const body = (await request.json()) as Partial<AutomationConfig>;
-    const newConfig: AutomationConfig = { ...DEFAULT_CONFIG, ...body };
+    const body = (await request.json()) as Record<string, unknown>;
+    // 許可されたフィールドのみを明示的に抽出（マスプロパティインジェクション防止）
+    const sanitizedBody: Partial<AutomationConfig> = {};
+    if (typeof body.dailyPipeline === "boolean") sanitizedBody.dailyPipeline = body.dailyPipeline;
+    if (typeof body.pdcaBatch === "boolean") sanitizedBody.pdcaBatch = body.pdcaBatch;
+    if (typeof body.autoRewrite === "boolean") sanitizedBody.autoRewrite = body.autoRewrite;
+    if (Array.isArray(body.enabledCategories)) {
+      sanitizedBody.enabledCategories = body.enabledCategories.filter(
+        (c): c is string => typeof c === "string"
+      );
+    }
+    const newConfig: AutomationConfig = { ...DEFAULT_CONFIG, ...sanitizedBody };
 
     const supabase = await getSupabaseClient();
     if (!supabase) {
@@ -125,13 +135,14 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
 
     if (error) {
       console.error("[automation-config] Save error:", error.message);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: "Failed to save configuration" }, { status: 500 });
     }
 
     return NextResponse.json(newConfig);
   } catch (err) {
+    console.error("[automation-config] Error:", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Unknown error" },
+      { error: "Invalid request" },
       { status: 400 }
     );
   }

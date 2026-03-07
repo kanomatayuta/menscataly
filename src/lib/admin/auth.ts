@@ -32,7 +32,7 @@ export interface AuthResult {
  * タイミングセーフな文字列比較
  * タイミング攻撃を防止するために crypto.timingSafeEqual を使用
  */
-function timingSafeCompare(a: string, b: string): boolean {
+export function timingSafeCompare(a: string, b: string): boolean {
   if (a.length !== b.length) {
     // 長さが異なる場合でもタイミング攻撃を防ぐため
     // ダミー比較を実行してから false を返す
@@ -152,7 +152,7 @@ export async function validateAdminAuth(request: Request): Promise<AuthResult> {
       authorized: false,
       error: {
         code: 'FORBIDDEN',
-        message: 'Server configuration error: ADMIN_API_KEY not set',
+        message: 'Forbidden',
       },
     }
   }
@@ -203,7 +203,7 @@ export function validatePipelineAuth(request: Request): AuthResult {
       authorized: false,
       error: {
         code: 'FORBIDDEN',
-        message: 'Server configuration error: PIPELINE_API_KEY not set',
+        message: 'Forbidden',
       },
     }
   }

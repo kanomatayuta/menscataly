@@ -26,7 +26,7 @@ import skincareTermsPhase4 from "./dictionaries/skincare-terms-phase4";
 import commonTermsPhase4 from "./dictionaries/common-terms-phase4";
 import { checkPharmaceuticalLawPatterns, checkRequiredElements } from "./rules/pharmaceutical-law";
 import { checkRepresentationLawPatterns } from "./rules/representation-law";
-import { checkStealthMarketingPatterns } from "./rules/stealth-marketing";
+import { checkStealthMarketingPatterns, checkRelSponsored, checkLinkDensity } from "./rules/stealth-marketing";
 import { EEATValidator } from "./rules/eeat-validation";
 import { hasPRDisclosure, insertPRDisclosure } from "./templates/pr-disclosure";
 import type { Article } from "@/types/content";
@@ -237,9 +237,21 @@ function checkDictionaryEntries(
  * テキスト中のNG表現を修正テキストに置換する
  */
 function applyFixes(text: string, violations: Violation[]): string {
-  // 重複を排除し、後ろから順に置換（位置ズレ防止）
-  const uniqueViolations = violations
-    .filter((v) => v.ngText !== "(PR表記なし)")
+  // severity の優先度マップ（高い方を残す）
+  const severityPriority: Record<Severity, number> = { high: 3, medium: 2, low: 1 };
+
+  // 同一 position.start の重複を除去（severity が最も高いものだけ残す）
+  const byStart = new Map<number, Violation>();
+  for (const v of violations) {
+    if (v.ngText === "(PR表記なし)") continue;
+    const existing = byStart.get(v.position.start);
+    if (!existing || severityPriority[v.severity] > severityPriority[existing.severity]) {
+      byStart.set(v.position.start, v);
+    }
+  }
+
+  // 後ろから順に置換（位置ズレ防止）
+  const uniqueViolations = Array.from(byStart.values())
     .sort((a, b) => b.position.start - a.position.start);
 
   let fixed = text;
@@ -303,6 +315,14 @@ export class ComplianceChecker {
     // 4. ステマ規制チェック
     const stealthViolations = checkStealthMarketingPatterns(text);
     allViolations.push(...stealthViolations);
+
+    // 4b. rel="sponsored" 欠如チェック
+    const relSponsoredViolations = checkRelSponsored(text);
+    allViolations.push(...relSponsoredViolations);
+
+    // 4c. アフィリエイトリンク密度チェック
+    const linkDensityViolations = checkLinkDensity(text);
+    allViolations.push(...linkDensityViolations);
 
     // 5a. 否定・批判文脈の違反はhigh→lowにダウングレード
     for (const v of allViolations) {

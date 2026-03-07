@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { validateAdminAuth } from '@/lib/admin/auth'
+import { validateAdminAuth, getAuthErrorStatus } from '@/lib/admin/auth'
 import { safeParseInt } from '@/lib/utils/safe-parse'
 import type { ArticleReviewItem } from '@/types/admin'
 // ============================================================
@@ -56,7 +56,8 @@ function getMockArticles() {
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const auth = await validateAdminAuth(request)
   if (!auth.authorized) {
-    return NextResponse.json({ error: auth.error }, { status: 401 })
+    const errorStatus = auth.error ? getAuthErrorStatus(auth.error) : 401
+    return NextResponse.json({ error: auth.error }, { status: errorStatus })
   }
 
   const { searchParams } = new URL(request.url)
@@ -140,7 +141,8 @@ interface UpdateStatusRequest {
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const auth = await validateAdminAuth(request)
   if (!auth.authorized) {
-    return NextResponse.json({ error: auth.error }, { status: 401 })
+    const errorStatus = auth.error ? getAuthErrorStatus(auth.error) : 401
+    return NextResponse.json({ error: auth.error }, { status: errorStatus })
   }
 
   let body: UpdateStatusRequest

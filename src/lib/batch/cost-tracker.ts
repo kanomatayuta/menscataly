@@ -32,6 +32,20 @@ export class CostTracker {
   /** インメモリのコスト記録 (Supabase未設定時のフォールバック) */
   private inMemoryRecords: GenerationCostRecord[] = []
 
+  /** インメモリレコードの最大保持件数 */
+  private static readonly MAX_IN_MEMORY_RECORDS = 1000
+
+  /**
+   * インメモリレコードに追加し、最大件数を超えた場合は古いものを削除する
+   */
+  private pushInMemory(record: GenerationCostRecord): void {
+    this.inMemoryRecords.push(record)
+    if (this.inMemoryRecords.length > CostTracker.MAX_IN_MEMORY_RECORDS) {
+      // 古いレコードを削除 (先頭から超過分を切り捨て)
+      this.inMemoryRecords = this.inMemoryRecords.slice(-CostTracker.MAX_IN_MEMORY_RECORDS)
+    }
+  }
+
   /**
    * コスト記録を保存する
    */
@@ -54,7 +68,7 @@ export class CostTracker {
     if (!supabaseUrl || !serviceRoleKey) {
       // Dry-run: インメモリに保存
       console.info('[CostTracker] Supabase not configured — storing cost in memory')
-      this.inMemoryRecords.push(record)
+      this.pushInMemory(record)
       return record
     }
 
@@ -78,11 +92,11 @@ export class CostTracker {
 
       if (error) {
         console.error('[CostTracker] Failed to record cost:', error.message)
-        this.inMemoryRecords.push(record)
+        this.pushInMemory(record)
       }
     } catch (err) {
       console.error('[CostTracker] Supabase error:', err)
-      this.inMemoryRecords.push(record)
+      this.pushInMemory(record)
     }
 
     return record

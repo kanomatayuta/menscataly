@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { draftMode } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getArticleBySlug, getArticleById } from '@/lib/microcms/client'
+import { timingSafeCompare } from '@/lib/admin/auth'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
     // シークレット未設定の場合はリクエストを拒否 (セキュリティ対策)
     return NextResponse.json({ error: 'Preview not configured' }, { status: 503 })
   }
-  if (secret !== previewSecret) {
+  if (!secret || !timingSafeCompare(secret, previewSecret)) {
     return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
   }
 

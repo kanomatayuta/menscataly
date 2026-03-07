@@ -632,6 +632,11 @@ export class ArticleGenerator {
 
       article.content = fixedContent;
 
+      // PR表記を挿入した場合は即座にフラグを更新
+      if (/アフィリエイト広告|【PR】|成果報酬型広告|広告を含みます/.test(fixedContent)) {
+        article.hasPRDisclosure = true;
+      }
+
       // 修正後の最終チェック
       complianceResult = this.checker.check(article.content, {
         categories: [categoryKey, "common"],
@@ -654,7 +659,7 @@ export class ArticleGenerator {
     // ----------------------------------------------------------------
     // 7. 記事にコンプライアンス結果を反映
     // ----------------------------------------------------------------
-    article.isCompliant = complianceResult.score >= COMPLIANCE_PASS_SCORE;
+    article.isCompliant = complianceResult.isCompliant && complianceResult.score >= COMPLIANCE_PASS_SCORE;
     article.complianceScore = complianceResult.score;
     article.hasPRDisclosure = complianceResult.hasPRDisclosure;
 

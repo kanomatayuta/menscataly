@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { validatePipelineAuth, getAuthErrorStatus } from '@/lib/admin/auth'
+import { validatePipelineAuth, validateAdminAuth, getAuthErrorStatus } from '@/lib/admin/auth'
 import type { PipelineHistoryResponse, PipelineType } from '@/lib/pipeline/types'
 
 // ============================================================
@@ -13,12 +13,17 @@ import type { PipelineHistoryResponse, PipelineType } from '@/lib/pipeline/types
 // ============================================================
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  const auth = validatePipelineAuth(request)
-  if (!auth.authorized) {
-    return NextResponse.json(
-      { error: auth.error },
-      { status: getAuthErrorStatus(auth.error!) }
-    )
+  // Pipeline API Key → Admin Session のフォールバック認証
+  const pipelineAuth = validatePipelineAuth(request)
+  if (!pipelineAuth.authorized) {
+    const adminAuth = await validateAdminAuth(request)
+    if (!adminAuth.authorized) {
+      const errorStatus = adminAuth.error ? getAuthErrorStatus(adminAuth.error) : 401
+      return NextResponse.json(
+        { error: adminAuth.error ?? { code: 'UNAUTHORIZED', message: 'Unauthorized' } },
+        { status: errorStatus }
+      )
+    }
   }
 
   // クエリパラメータのパース

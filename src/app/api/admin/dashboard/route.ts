@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { validateAdminAuth } from '@/lib/admin/auth'
+import { validateAdminAuth, getAuthErrorStatus } from '@/lib/admin/auth'
 import { fetchDashboardData } from '@/lib/admin/dashboard-data'
 
 // ============================================================
@@ -17,7 +17,8 @@ import { fetchDashboardData } from '@/lib/admin/dashboard-data'
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const auth = await validateAdminAuth(request)
   if (!auth.authorized) {
-    return NextResponse.json({ error: auth.error }, { status: 401 })
+    const errorStatus = auth.error ? getAuthErrorStatus(auth.error) : 401
+    return NextResponse.json({ error: auth.error }, { status: errorStatus })
   }
 
   try {

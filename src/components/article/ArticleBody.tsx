@@ -164,6 +164,13 @@ interface RawArticleJson {
 /**
  * 生JSON (ArticleGenerator のレスポンスフォーマット) を HTML に変換する
  */
+const ALLOWED_HEADING_TAGS = new Set(["h2", "h3", "h4", "h5", "h6"]);
+
+function safeHeadingTag(level: string | undefined, fallback: string): string {
+  const tag = level || fallback;
+  return ALLOWED_HEADING_TAGS.has(tag) ? tag : fallback;
+}
+
 function jsonToHtml(jsonStr: string): string | null {
   try {
     // ```json ... ``` ラップを除去
@@ -182,7 +189,7 @@ function jsonToHtml(jsonStr: string): string | null {
 
     if (data.sections) {
       for (const section of data.sections) {
-        const tag = section.level || "h2";
+        const tag = safeHeadingTag(section.level, "h2");
         parts.push(`<${tag}>${section.heading || ""}</${tag}>`);
         if (section.content) {
           // content might itself contain markdown
@@ -194,7 +201,7 @@ function jsonToHtml(jsonStr: string): string | null {
         }
         if (section.subsections) {
           for (const sub of section.subsections) {
-            const subTag = sub.level || "h3";
+            const subTag = safeHeadingTag(sub.level, "h3");
             parts.push(`<${subTag}>${sub.heading || ""}</${subTag}>`);
             if (sub.content) {
               if (sub.content.includes("\n")) {
@@ -571,7 +578,7 @@ function normalizeContent(content: string): string {
  * HTMLからXSSリスクのある要素を除去する
  * dangerouslySetInnerHTML に渡す前に必ず適用する
  */
-function sanitizeHtml(html: string): string {
+export function sanitizeHtml(html: string): string {
   let s = html;
   // script tags
   s = s.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');

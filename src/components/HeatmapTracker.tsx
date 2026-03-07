@@ -87,7 +87,12 @@ export function HeatmapTracker({ articleSlug }: HeatmapTrackerProps) {
     // 管理画面プレビュー（iframe）からのアクセスも除外
     const params = new URLSearchParams(window.location.search);
     if (params.has("notrack")) return;
-    if (window.self !== window.top) return;
+    try {
+      if (window.self !== window.top) return;
+    } catch {
+      // Cross-origin iframe — skip tracking
+      return;
+    }
 
     const vw = window.innerWidth;
 

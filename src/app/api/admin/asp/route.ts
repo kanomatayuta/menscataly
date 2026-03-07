@@ -263,7 +263,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (error) {
       console.error('[admin/asp] Insert error:', error.message)
       return NextResponse.json(
-        { error: `Failed to create ASP program: ${error.message}` },
+        { error: 'Failed to create ASP program' },
         { status: 500 }
       )
     }

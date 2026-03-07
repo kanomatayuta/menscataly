@@ -25,6 +25,11 @@ interface PipelineSuccessChartProps {
  * Generate default pipeline success data for the last 7 days
  * when no real data is available.
  */
+/** Deterministic pseudo-random based on seed index (avoids hydration mismatch) */
+function seededRandom(seed: number): number {
+  return (Math.sin(seed * 12345.6789) * 10000) % 1;
+}
+
 export function generateDefaultPipelineData(): PipelineDataPoint[] {
   const now = new Date();
   const data: PipelineDataPoint[] = [];
@@ -32,17 +37,15 @@ export function generateDefaultPipelineData(): PipelineDataPoint[] {
   for (let i = 6; i >= 0; i--) {
     const date = new Date(now);
     date.setDate(date.getDate() - i);
-    const dateStr = date.toLocaleDateString("ja-JP", {
-      month: "short",
-      day: "numeric",
-    });
+    const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
 
-    // Generate realistic-looking data
-    const baseRate = 90 + Math.random() * 8;
+    // Generate deterministic realistic-looking data
+    const seed = date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate();
+    const baseRate = 90 + Math.abs(seededRandom(seed)) * 8;
     data.push({
       date: dateStr,
       successRate: Math.round(baseRate * 10) / 10,
-      totalRuns: Math.floor(1 + Math.random() * 3),
+      totalRuns: 1 + Math.floor(Math.abs(seededRandom(seed + 1)) * 3),
     });
   }
 
