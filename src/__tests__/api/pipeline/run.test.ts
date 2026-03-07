@@ -14,6 +14,7 @@ vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', '')
 // Pipeline 認証のモック
 vi.mock('@/lib/admin/auth', () => ({
   validatePipelineAuth: vi.fn(() => ({ authorized: true })),
+  validateAdminAuth: vi.fn(async () => ({ authorized: true })),
   getAuthErrorStatus: vi.fn((error: { code: string }) =>
     error.code === 'FORBIDDEN' ? 403 : 401
   ),
@@ -51,7 +52,7 @@ vi.mock('@/lib/pipeline/scheduler', () => ({
   })),
 }))
 
-import { validatePipelineAuth } from '@/lib/admin/auth'
+import { validatePipelineAuth, validateAdminAuth } from '@/lib/admin/auth'
 
 describe('パイプライン実行 API (POST /api/pipeline/run)', () => {
   let POST: typeof import('@/app/api/pipeline/run/route').POST
@@ -78,6 +79,13 @@ describe('パイプライン実行 API (POST /api/pipeline/run)', () => {
           message: 'Unauthorized: Missing authentication credentials',
         },
       })
+      ;(validateAdminAuth as ReturnType<typeof vi.fn>).mockResolvedValue({
+        authorized: false,
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'Unauthorized: Missing authentication credentials',
+        },
+      })
 
       const req = new Request('http://localhost/api/pipeline/run', {
         method: 'POST',
@@ -93,6 +101,13 @@ describe('パイプライン実行 API (POST /api/pipeline/run)', () => {
         error: {
           code: 'FORBIDDEN',
           message: 'Server configuration error: PIPELINE_API_KEY not set',
+        },
+      })
+      ;(validateAdminAuth as ReturnType<typeof vi.fn>).mockResolvedValue({
+        authorized: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Server configuration error',
         },
       })
 
