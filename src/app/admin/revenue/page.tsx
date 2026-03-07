@@ -3,6 +3,8 @@ import { connection } from "next/server";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { RevenueTable } from "@/components/admin/RevenueTable";
 import { RevenueChart } from "@/components/admin/RevenueChart";
+import { CostChart } from "@/components/admin/CostChart";
+import type { DailyCostData, MonthlyCostData } from "@/components/admin/CostChart";
 import { CsvUploadForm } from "@/components/admin/CsvUploadForm";
 import type { RevenueSummary } from "@/types/admin";
 
@@ -280,7 +282,6 @@ async function fetchFromAffiliateLinks(supabase: any, startDate: string, endDate
 
   if (linkError) {
     console.error("[admin/revenue] affiliate_links query error:", linkError.message);
-    // affiliate_links もエラー → asp_programs からゼロデータ
     return await fetchEmptyFromAspPrograms(supabase, startDate, endDate);
   }
 
@@ -288,7 +289,6 @@ async function fetchFromAffiliateLinks(supabase: any, startDate: string, endDate
     return await fetchEmptyFromAspPrograms(supabase, startDate, endDate);
   }
 
-  // ASP名でグループ化して集計
   const aspMap = new Map<
     string,
     {
@@ -321,7 +321,6 @@ async function fetchFromAffiliateLinks(supabase: any, startDate: string, endDate
     }
   }
 
-  // 記事タイトル取得
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: articles } = await (supabase as any)
     .from("articles")
@@ -366,9 +365,6 @@ async function fetchFromAffiliateLinks(supabase: any, startDate: string, endDate
   return { revenue, period: { startDate, endDate }, source: "live" };
 }
 
-/**
- * asp_programs からASP名だけ取得してゼロデータを返す
- */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function fetchEmptyFromAspPrograms(supabase: any, startDate: string, endDate: string): Promise<RevenueResponse> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -401,11 +397,185 @@ async function fetchEmptyFromAspPrograms(supabase: any, startDate: string, endDa
 }
 
 // ------------------------------------------------------------------
+// Cost data fetching (generation_costs テーブル)
+// ------------------------------------------------------------------
+
+interface CostResponse {
+  dailyCosts: DailyCostData[];
+  monthlyCosts: MonthlyCostData[];
+  totalCostUsd: number;
+  totalArticles: number;
+  avgCostPerArticle: number;
+  thisMonthCostUsd: number;
+  lastMonthCostUsd: number;
+}
+
+async function fetchCostData(): Promise<CostResponse> {
+  await connection();
+
+  const empty: CostResponse = {
+    dailyCosts: [],
+    monthlyCosts: [],
+    totalCostUsd: 0,
+    totalArticles: 0,
+    avgCostPerArticle: 0,
+    thisMonthCostUsd: 0,
+    lastMonthCostUsd: 0,
+  };
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) return empty;
+
+  try {
+    const { createServerSupabaseClient } = await import("@/lib/supabase/client");
+    const supabase = createServerSupabaseClient();
+
+    // 過去90日のコストデータを取得
+    const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: rows, error } = await (supabase as any)
+      .from("generation_costs")
+      .select("cost_type, cost_usd, article_id, created_at")
+      .gte("created_at", since)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("[admin/revenue] generation_costs query error:", error.message);
+      return empty;
+    }
+
+    if (!rows || rows.length === 0) return empty;
+
+    // --- 日別集計（過去30日） ---
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const dailyMap = new Map<string, DailyCostData>();
+
+    // 過去30日分の空エントリを初期化
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+      const key = `${d.getMonth() + 1}/${d.getDate()}`;
+      dailyMap.set(key, {
+        date: key,
+        articleGeneration: 0,
+        analysis: 0,
+        imageGeneration: 0,
+        complianceCheck: 0,
+        total: 0,
+      });
+    }
+
+    // --- 月別集計 ---
+    const monthlyMap = new Map<string, { totalCostUsd: number; articleIds: Set<string> }>();
+
+    let totalCostUsd = 0;
+    const allArticleIds = new Set<string>();
+
+    const now = new Date();
+    const thisMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthKey = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, "0")}`;
+    let thisMonthCostUsd = 0;
+    let lastMonthCostUsd = 0;
+
+    for (const row of rows) {
+      const costUsd = parseFloat(row.cost_usd ?? "0");
+      const costType = row.cost_type as string;
+      const articleId = row.article_id as string | null;
+      const createdAt = new Date(row.created_at as string);
+
+      totalCostUsd += costUsd;
+      if (articleId) allArticleIds.add(articleId);
+
+      // 日別（過去30日のみ）
+      if (createdAt >= thirtyDaysAgo) {
+        const dayKey = `${createdAt.getMonth() + 1}/${createdAt.getDate()}`;
+        const dayEntry = dailyMap.get(dayKey);
+        if (dayEntry) {
+          dayEntry.total += costUsd;
+          switch (costType) {
+            case "article_generation":
+              dayEntry.articleGeneration += costUsd;
+              break;
+            case "analysis":
+              dayEntry.analysis += costUsd;
+              break;
+            case "image_generation":
+              dayEntry.imageGeneration += costUsd;
+              break;
+            case "compliance_check":
+              dayEntry.complianceCheck += costUsd;
+              break;
+          }
+        }
+      }
+
+      // 月別
+      const monthKey = `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, "0")}`;
+      if (!monthlyMap.has(monthKey)) {
+        monthlyMap.set(monthKey, { totalCostUsd: 0, articleIds: new Set() });
+      }
+      const monthEntry = monthlyMap.get(monthKey)!;
+      monthEntry.totalCostUsd += costUsd;
+      if (articleId) monthEntry.articleIds.add(articleId);
+
+      if (monthKey === thisMonthKey) thisMonthCostUsd += costUsd;
+      if (monthKey === lastMonthKey) lastMonthCostUsd += costUsd;
+    }
+
+    const dailyCosts = Array.from(dailyMap.values());
+
+    const monthlyCosts: MonthlyCostData[] = Array.from(monthlyMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, data]) => {
+        const articleCount = data.articleIds.size || 1;
+        return {
+          month,
+          totalCostUsd: Math.round(data.totalCostUsd * 100) / 100,
+          articleCount,
+          avgCostPerArticle: Math.round((data.totalCostUsd / articleCount) * 100) / 100,
+        };
+      });
+
+    const totalArticles = allArticleIds.size || 1;
+
+    return {
+      dailyCosts,
+      monthlyCosts,
+      totalCostUsd: Math.round(totalCostUsd * 100) / 100,
+      totalArticles,
+      avgCostPerArticle: Math.round((totalCostUsd / totalArticles) * 100) / 100,
+      thisMonthCostUsd: Math.round(thisMonthCostUsd * 100) / 100,
+      lastMonthCostUsd: Math.round(lastMonthCostUsd * 100) / 100,
+    };
+  } catch (err) {
+    console.error("[admin/revenue] Cost data error:", err);
+    return empty;
+  }
+}
+
+// ------------------------------------------------------------------
+// USD → JPY conversion helper
+// ------------------------------------------------------------------
+
+const USD_TO_JPY = 150; // 概算レート
+
+function usdToJpy(usd: number): number {
+  return Math.round(usd * USD_TO_JPY);
+}
+
+// ------------------------------------------------------------------
 // Async content component (wrapped in Suspense)
 // ------------------------------------------------------------------
 
 async function RevenueContent() {
-  const { revenue: summaries, source, reason } = await fetchRevenueData();
+  const [revenueResult, costResult] = await Promise.all([
+    fetchRevenueData(),
+    fetchCostData(),
+  ]);
+
+  const { revenue: summaries, source, reason } = revenueResult;
 
   const hasData = summaries.length > 0;
   const hasActualData =
@@ -425,6 +595,11 @@ async function RevenueContent() {
       ? ((totalConversions / totalClicks) * 100).toFixed(2)
       : "0.00";
 
+  const hasCostData = costResult.dailyCosts.some((d) => d.total > 0) || costResult.monthlyCosts.length > 0;
+  const totalCostJpy = usdToJpy(costResult.totalCostUsd);
+  const thisMonthCostJpy = usdToJpy(costResult.thisMonthCostUsd);
+  const netProfit = totalRevenue - totalCostJpy;
+
   return (
     <>
       {/* データソース表示 */}
@@ -440,7 +615,6 @@ async function RevenueContent() {
         </div>
       )}
 
-      {/* データなしの場合はインフォバナーを表示 */}
       {source !== "mock" && !hasActualData && (
         <div className="mb-4 flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2">
           <svg className="h-4 w-4 shrink-0 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -454,7 +628,7 @@ async function RevenueContent() {
         </div>
       )}
 
-      {/* Compact summary bar */}
+      {/* ======== 収益 & コスト サマリー ======== */}
       <div className="mb-6 flex flex-wrap items-stretch gap-3">
         <MetricPill
           icon={
@@ -466,6 +640,28 @@ async function RevenueContent() {
           value={`\u00A5${totalRevenue.toLocaleString()}`}
           bg="bg-green-50"
           text="text-green-700"
+        />
+        <MetricPill
+          icon={
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2 6.75h5.25M8.25 15h2.25m-2.25 3h6.75M6 10.5h.008v.008H6V10.5zm0 3h.008v.008H6V13.5zm0 3h.008v.008H6V16.5z" />
+            </svg>
+          }
+          label="APIコスト（今月）"
+          value={`$${costResult.thisMonthCostUsd.toFixed(2)}`}
+          bg="bg-amber-50"
+          text="text-amber-700"
+        />
+        <MetricPill
+          icon={
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
+            </svg>
+          }
+          label="純利益"
+          value={`\u00A5${netProfit.toLocaleString()}`}
+          bg={netProfit >= 0 ? "bg-emerald-50" : "bg-red-50"}
+          text={netProfit >= 0 ? "text-emerald-700" : "text-red-700"}
         />
         <MetricPill
           icon={
@@ -502,7 +698,52 @@ async function RevenueContent() {
         />
       </div>
 
-      {/* Revenue chart card */}
+      {/* ======== コスト詳細カード ======== */}
+      <div className="mb-6 rounded-lg border border-neutral-200 bg-white shadow-sm">
+        <div className="border-b border-neutral-100 px-5 py-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-neutral-800">APIコスト</h2>
+          <span className="text-xs text-slate-400">1$ = {USD_TO_JPY}円換算</span>
+        </div>
+        <div className="p-4">
+          {/* コストサマリーテーブル */}
+          <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-lg bg-slate-50 px-3 py-2">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">累計コスト</p>
+              <p className="text-base font-bold tabular-nums text-slate-800">${costResult.totalCostUsd.toFixed(2)}</p>
+              <p className="text-[10px] text-slate-400">{`\u00A5${totalCostJpy.toLocaleString()}`}</p>
+            </div>
+            <div className="rounded-lg bg-slate-50 px-3 py-2">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">今月</p>
+              <p className="text-base font-bold tabular-nums text-slate-800">${costResult.thisMonthCostUsd.toFixed(2)}</p>
+              <p className="text-[10px] text-slate-400">{`\u00A5${thisMonthCostJpy.toLocaleString()}`}</p>
+            </div>
+            <div className="rounded-lg bg-slate-50 px-3 py-2">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">先月</p>
+              <p className="text-base font-bold tabular-nums text-slate-800">${costResult.lastMonthCostUsd.toFixed(2)}</p>
+              <p className="text-[10px] text-slate-400">{`\u00A5${usdToJpy(costResult.lastMonthCostUsd).toLocaleString()}`}</p>
+            </div>
+            <div className="rounded-lg bg-slate-50 px-3 py-2">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">1記事あたり</p>
+              <p className="text-base font-bold tabular-nums text-slate-800">${costResult.avgCostPerArticle.toFixed(2)}</p>
+              <p className="text-[10px] text-slate-400">{costResult.totalArticles}記事生成</p>
+            </div>
+          </div>
+
+          {hasCostData ? (
+            <CostChart dailyCosts={costResult.dailyCosts} monthlyCosts={costResult.monthlyCosts} />
+          ) : (
+            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 px-8 py-10">
+              <svg className="mb-2 h-8 w-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+              </svg>
+              <p className="text-sm text-slate-500">パイプライン実行後にコストデータが表示されます</p>
+              <p className="mt-1 text-xs text-slate-400">generation_costs テーブルに自動記録されます</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ======== ASP別売上チャート ======== */}
       {hasData && (
         <div className="mb-6 rounded-lg border border-neutral-200 bg-white shadow-sm">
           <div className="border-b border-neutral-100 px-5 py-3">
@@ -541,13 +782,13 @@ async function RevenueContent() {
 export default function AdminRevenuePage() {
   return (
     <>
-      <AdminHeader title="収益" breadcrumbs={[{ label: "収益" }]} />
+      <AdminHeader title="収益 & コスト" breadcrumbs={[{ label: "収益 & コスト" }]} />
 
       <Suspense
         fallback={
           <div className="flex items-center justify-center py-12">
             <span className="text-sm text-neutral-500">
-              売上データを読み込み中...
+              データを読み込み中...
             </span>
           </div>
         }

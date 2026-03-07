@@ -47,7 +47,7 @@ const NAV_ITEMS = [
     ),
   },
   {
-    label: "収益",
+    label: "収益 & コスト",
     href: "/admin/revenue",
     icon: (
       <svg
