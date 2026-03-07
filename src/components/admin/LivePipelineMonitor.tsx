@@ -223,10 +223,13 @@ export function LivePipelineMonitor({ initialRuns, initialStats, todayActivity }
   const [runs, setRuns] = useState<PipelineRunData[]>(initialRuns);
   const [stats, setStats] = useState<CumulativeStats>(initialStats);
   const [isPolling, setIsPolling] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [elapsedText, setElapsedText] = useState("");
+  const [forceFastPoll, setForceFastPoll] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const tickRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  const fastPollTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const latestRun = runs[0];
   const steps = Array.isArray(latestRun?.steps_json) ? latestRun.steps_json : [];
@@ -237,6 +240,7 @@ export function LivePipelineMonitor({ initialRuns, initialStats, todayActivity }
   const lastPdca = runs.find((r) => r.type === "pdca");
 
   const fetchData = useCallback(async () => {
+    setIsFetching(true);
     try {
       const res = await fetch("/api/pipeline/status", { credentials: "include" });
       if (!res.ok) return;
@@ -246,16 +250,43 @@ export function LivePipelineMonitor({ initialRuns, initialStats, todayActivity }
       setLastUpdated(new Date());
     } catch {
       // Silently fail polling
+    } finally {
+      setIsFetching(false);
     }
   }, []);
 
+  // Listen for pipeline-triggered event from AutomationDashboard
+  useEffect(() => {
+    const handleTriggered = () => {
+      // Immediately fetch, then force fast polling for 2 minutes
+      fetchData();
+      setForceFastPoll(true);
+      clearTimeout(fastPollTimerRef.current);
+      fastPollTimerRef.current = setTimeout(() => setForceFastPoll(false), 120000);
+    };
+    window.addEventListener("pipeline-triggered", handleTriggered);
+    return () => {
+      window.removeEventListener("pipeline-triggered", handleTriggered);
+      clearTimeout(fastPollTimerRef.current);
+    };
+  }, [fetchData]);
+
+  // Auto-poll: 3s when running or force-fast, 30s otherwise
   useEffect(() => {
     clearInterval(pollingRef.current);
-    const interval = isRunning ? 3000 : 30000;
+    const interval = (isRunning || forceFastPoll) ? 3000 : 30000;
     setIsPolling(true);
     pollingRef.current = setInterval(fetchData, interval);
     return () => clearInterval(pollingRef.current);
-  }, [isRunning, fetchData]);
+  }, [isRunning, forceFastPoll, fetchData]);
+
+  // Stop force-fast-poll once we detect running state (natural fast poll takes over)
+  useEffect(() => {
+    if (isRunning && forceFastPoll) {
+      setForceFastPoll(false);
+      clearTimeout(fastPollTimerRef.current);
+    }
+  }, [isRunning, forceFastPoll]);
 
   useEffect(() => {
     clearInterval(tickRef.current);
@@ -277,7 +308,7 @@ export function LivePipelineMonitor({ initialRuns, initialStats, todayActivity }
     <div className="space-y-3">
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         {/* Status Bar */}
-        <div className={`px-4 py-2.5 ${isRunning ? "bg-blue-50" : latestRun?.status === "success" ? "bg-emerald-50" : latestRun?.status === "failed" ? "bg-red-50" : "bg-slate-50"}`}>
+        <div className={`px-4 py-2.5 ${isRunning || forceFastPoll ? "bg-blue-50" : latestRun?.status === "success" ? "bg-emerald-50" : latestRun?.status === "failed" ? "bg-red-50" : "bg-slate-50"}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <div className="relative">
@@ -289,10 +320,16 @@ export function LivePipelineMonitor({ initialRuns, initialStats, todayActivity }
               <div className="flex items-center gap-2">
                 <span className={`text-sm font-bold ${runStatus.color}`}>{runStatus.label}</span>
                 {isRunning && elapsedText && (
-                  <span className="text-xs text-blue-600 font-medium">{elapsedText} \u7D4C\u904E</span>
+                  <span className="text-xs text-blue-600 font-medium">{elapsedText} 経過</span>
                 )}
-                {!isRunning && latestRun?.started_at && (
-                  <span className="text-xs text-slate-500">\u6700\u7D42: {formatDateTime(latestRun.started_at)}</span>
+                {!isRunning && forceFastPoll && (
+                  <span className="text-xs text-blue-600 font-medium animate-pulse flex items-center gap-1">
+                    <span className="inline-block h-2.5 w-2.5 animate-spin rounded-full border-2 border-blue-300 border-t-blue-600" />
+                    パイプライン起動中...
+                  </span>
+                )}
+                {!isRunning && !forceFastPoll && latestRun?.started_at && (
+                  <span className="text-xs text-slate-500">最終: {formatDateTime(latestRun.started_at)}</span>
                 )}
               </div>
             </div>
@@ -308,8 +345,12 @@ export function LivePipelineMonitor({ initialRuns, initialStats, todayActivity }
               <span className="text-[10px] text-slate-400">
                 \u6B21\u56DE {getNextRunTime(6)}
               </span>
-              <span className="text-[10px] text-slate-400" title={`\u6700\u7D42\u66F4\u65B0: ${lastUpdated.toLocaleTimeString("ja-JP")}`}>
-                {isPolling && <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-400 mr-1" />}
+              <span className="text-[10px] text-slate-400 flex items-center gap-1" title={`最終更新: ${lastUpdated.toLocaleTimeString("ja-JP")}`}>
+                {isFetching ? (
+                  <span className="inline-block h-3 w-3 animate-spin rounded-full border border-slate-300 border-t-blue-500" />
+                ) : isPolling ? (
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-400" />
+                ) : null}
                 LIVE
               </span>
             </div>

@@ -343,7 +343,13 @@ export function AutomationDashboard() {
         credentials: "include",
         body: JSON.stringify({ type: "manual" }),
       });
-      setTriggerMessage(res.ok ? "パイプラインを実行しました" : `実行に失敗しました (${res.status})`);
+      if (res.ok) {
+        setTriggerMessage("パイプラインを実行しました");
+        // LivePipelineMonitorに即座にポーリング開始を通知
+        window.dispatchEvent(new CustomEvent("pipeline-triggered"));
+      } else {
+        setTriggerMessage(`実行に失敗しました (${res.status})`);
+      }
     } catch {
       setTriggerMessage("ネットワークエラーが発生しました");
     } finally {
