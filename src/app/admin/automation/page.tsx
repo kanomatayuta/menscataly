@@ -1,11 +1,14 @@
 import { Suspense, cache } from "react";
 import { connection } from "next/server";
 import { AdminHeader } from "@/components/admin/AdminHeader";
+import { PipelineTriggerButton } from "@/components/admin/PipelineTriggerButton";
+import { AutomationToggle } from "@/components/admin/AutomationToggle";
 import { StatCard } from "@/components/admin/StatCard";
 import { PipelineRunTable } from "@/components/admin/PipelineRunTable";
+import { PipelineStepTimeline } from "@/components/admin/PipelineStepTimeline";
 import { HealthScoreDistributionChart } from "@/components/admin/HealthScoreDistributionChart";
 import { LowestHealthArticles } from "@/components/admin/LowestHealthArticles";
-import type { PipelineStatus, PipelineType } from "@/lib/pipeline/types";
+import type { PipelineStatus, PipelineType, StepLog } from "@/lib/pipeline/types";
 import type { HealthScoreInput } from "@/lib/content/health-score";
 import type { ArticleReviewItem, ArticleAnalytics, MonitoringAlert } from "@/types/admin";
 import type { MicroCMSArticle } from "@/types/microcms";
@@ -345,9 +348,148 @@ async function fetchAnalyticsForHealth(
 // Cache wrappers
 // ------------------------------------------------------------------
 
+// ------------------------------------------------------------------
+// Data fetching: Latest step logs from newest run
+// ------------------------------------------------------------------
+
+async function fetchLatestStepLogs(): Promise<StepLog[]> {
+  try {
+    await connection();
+  } catch {
+    return [];
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) return [];
+
+  try {
+    const { createServerSupabaseClient } = await import("@/lib/supabase/client");
+    const supabase = createServerSupabaseClient();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
+      .from("pipeline_runs")
+      .select("steps_json")
+      .order("started_at", { ascending: false })
+      .limit(1);
+
+    if (error || !data || data.length === 0) return [];
+
+    const stepsJson = data[0].steps_json;
+    if (Array.isArray(stepsJson)) return stepsJson as StepLog[];
+    return [];
+  } catch (err) {
+    if (!isPprRejection(err)) console.error("[automation] Step logs error:", err);
+    return [];
+  }
+}
+
+// ------------------------------------------------------------------
+// Data fetching: Recent error logs from monitoring_alerts
+// ------------------------------------------------------------------
+
+interface ErrorLogEntry {
+  id: string;
+  type: string;
+  severity: string;
+  title: string;
+  message: string;
+  createdAt: string;
+  resolved: boolean;
+}
+
+async function fetchRecentErrors(): Promise<ErrorLogEntry[]> {
+  try {
+    await connection();
+  } catch {
+    return [];
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) return [];
+
+  try {
+    const { createServerSupabaseClient } = await import("@/lib/supabase/client");
+    const supabase = createServerSupabaseClient();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
+      .from("monitoring_alerts")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    if (error || !data) return [];
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (data as any[]).map((row) => ({
+      id: row.id,
+      type: row.type ?? "unknown",
+      severity: row.severity ?? "info",
+      title: row.title ?? "",
+      message: row.message ?? "",
+      createdAt: row.created_at ?? "",
+      resolved: row.resolved ?? false,
+    }));
+  } catch (err) {
+    if (!isPprRejection(err)) console.error("[automation] Error logs fetch:", err);
+    return [];
+  }
+}
+
+// ------------------------------------------------------------------
+// Data fetching: Cumulative stats
+// ------------------------------------------------------------------
+
+interface CumulativeStats {
+  totalArticles: number;
+  totalPipelineRuns: number;
+  successRate: number;
+  avgComplianceScore: number;
+}
+
+async function fetchCumulativeStats(): Promise<CumulativeStats> {
+  const defaults: CumulativeStats = { totalArticles: 0, totalPipelineRuns: 0, successRate: 0, avgComplianceScore: 0 };
+
+  try {
+    await connection();
+  } catch {
+    return defaults;
+  }
+
+  try {
+    const [articlesResponse, runsData] = await Promise.allSettled([
+      getCachedArticlesForHealth(),
+      getCachedPipelineRuns(),
+    ]);
+
+    const articles = articlesResponse.status === "fulfilled" ? articlesResponse.value : EMPTY_MICROCMS_RESPONSE;
+    const runs = runsData.status === "fulfilled" ? runsData.value : [];
+
+    const totalArticles = articles.totalCount;
+    const totalRuns = runs.length;
+    const successRuns = runs.filter((r) => r.status === "success").length;
+    const successRate = totalRuns > 0 ? Math.round((successRuns / totalRuns) * 100) : 0;
+
+    const scores = articles.contents
+      .map((a) => a.compliance_score)
+      .filter((s): s is number => s != null && s > 0);
+    const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+
+    return { totalArticles, totalPipelineRuns: totalRuns, successRate, avgComplianceScore: avgScore };
+  } catch {
+    return defaults;
+  }
+}
+
 const getCachedPipelineRuns = cache(fetchPipelineRuns);
 const getCachedTodayActivity = cache(fetchTodayActivity);
 const getCachedHealthData = cache(fetchHealthData);
+const getCachedLatestSteps = cache(fetchLatestStepLogs);
+const getCachedRecentErrors = cache(fetchRecentErrors);
+const getCachedCumulativeStats = cache(fetchCumulativeStats);
 
 // ------------------------------------------------------------------
 // Skeleton components
@@ -622,6 +764,149 @@ async function UpcomingActionsSection() {
 }
 
 // ------------------------------------------------------------------
+// AI稼働ステータス + ステップタイムライン
+// ------------------------------------------------------------------
+
+async function AIStatusSection() {
+  const [runs, steps, stats] = await Promise.all([
+    getCachedPipelineRuns(),
+    getCachedLatestSteps(),
+    getCachedCumulativeStats(),
+  ]);
+
+  const latestRun = runs[0];
+  const isRunning = latestRun?.status === "running";
+  const statusIcon = isRunning ? "🟢" : "⏸️";
+  const statusLabel = isRunning ? "稼働中" : "待機中";
+
+  return (
+    <div>
+      <h2 className="mb-4 text-lg font-semibold text-slate-800">AI稼働ステータス</h2>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* 稼働状態 + 累計統計 */}
+        <div className="space-y-4">
+          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">{statusIcon}</span>
+              <div>
+                <p className="text-lg font-bold text-slate-800">{statusLabel}</p>
+                <p className="text-xs text-slate-500">
+                  {latestRun
+                    ? `最終実行: ${new Date(latestRun.started_at).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}`
+                    : "実行履歴なし"}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm text-center">
+              <p className="text-2xl font-bold text-slate-800">{stats.totalArticles}</p>
+              <p className="text-xs text-slate-500">総記事数</p>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm text-center">
+              <p className="text-2xl font-bold text-slate-800">{stats.totalPipelineRuns}</p>
+              <p className="text-xs text-slate-500">総実行数</p>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm text-center">
+              <p className={`text-2xl font-bold ${stats.successRate >= 80 ? "text-green-600" : stats.successRate >= 50 ? "text-amber-600" : "text-red-600"}`}>
+                {stats.successRate}%
+              </p>
+              <p className="text-xs text-slate-500">成功率</p>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm text-center">
+              <p className={`text-2xl font-bold ${stats.avgComplianceScore >= 80 ? "text-green-600" : stats.avgComplianceScore >= 60 ? "text-amber-600" : "text-red-600"}`}>
+                {stats.avgComplianceScore}
+              </p>
+              <p className="text-xs text-slate-500">平均コンプラスコア</p>
+            </div>
+          </div>
+        </div>
+
+        {/* 最新ステップタイムライン */}
+        <div className="lg:col-span-2">
+          <PipelineStepTimeline steps={steps} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------
+// エラーログセクション
+// ------------------------------------------------------------------
+
+async function ErrorLogSection() {
+  const errors = await getCachedRecentErrors();
+
+  if (errors.length === 0) {
+    return (
+      <div>
+        <h2 className="mb-4 text-lg font-semibold text-slate-800">エラーログ</h2>
+        <div className="rounded-lg border border-slate-200 bg-white p-6 text-center">
+          <p className="text-sm text-green-600 font-medium">エラーなし — 正常に稼働中</p>
+        </div>
+      </div>
+    );
+  }
+
+  const severityConfig: Record<string, { color: string; bg: string; label: string }> = {
+    critical: { color: "text-red-700", bg: "bg-red-100", label: "重大" },
+    warning: { color: "text-amber-700", bg: "bg-amber-100", label: "警告" },
+    info: { color: "text-blue-700", bg: "bg-blue-100", label: "情報" },
+  };
+
+  return (
+    <div>
+      <h2 className="mb-4 text-lg font-semibold text-slate-800">エラーログ (直近20件)</h2>
+      <div className="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="border-b border-slate-200 bg-slate-50">
+              <tr>
+                <th className="px-4 py-2 text-left text-xs font-medium text-slate-500">重要度</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-slate-500">タイプ</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-slate-500">タイトル</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-slate-500">日時</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-slate-500">状態</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {errors.map((err) => {
+                const sev = severityConfig[err.severity] ?? severityConfig.info;
+                return (
+                  <tr key={err.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-2.5">
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${sev.bg} ${sev.color}`}>
+                        {sev.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 text-xs text-slate-600">{err.type}</td>
+                    <td className="px-4 py-2.5">
+                      <p className="text-xs font-medium text-slate-800 truncate max-w-xs">{err.title}</p>
+                      {err.message && (
+                        <p className="text-xs text-slate-500 truncate max-w-xs">{err.message}</p>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-xs text-slate-500 whitespace-nowrap">
+                      {err.createdAt ? new Date(err.createdAt).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" }) : "-"}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${err.resolved ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                        {err.resolved ? "解決済" : "未解決"}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------
 // Helper
 // ------------------------------------------------------------------
 
@@ -641,14 +926,33 @@ export default function AutomationPage() {
   return (
     <>
       <AdminHeader
-        title="自動化モニタリング"
-        breadcrumbs={[{ label: "自動化モニタリング" }]}
+        title="パイプライン・自動化"
+        breadcrumbs={[{ label: "パイプライン・自動化" }]}
       />
 
-      {/* Pipeline Status + Today's Activity */}
-      <Suspense fallback={<StatsSkeleton />}>
-        <PipelineStatusSection />
+      <div className="mb-6 flex items-center justify-between">
+        <p className="text-sm text-slate-500">
+          パイプライン実行履歴・ヘルススコア・手動トリガー
+        </p>
+        <PipelineTriggerButton />
+      </div>
+
+      {/* 自動化ON/OFF設定 */}
+      <div className="mb-6">
+        <AutomationToggle />
+      </div>
+
+      {/* AI稼働ステータス + ステップタイムライン + 累計統計 */}
+      <Suspense fallback={<HealthSkeleton />}>
+        <AIStatusSection />
       </Suspense>
+
+      {/* Pipeline Status + Today's Activity */}
+      <div className="mt-6">
+        <Suspense fallback={<StatsSkeleton />}>
+          <PipelineStatusSection />
+        </Suspense>
+      </div>
 
       <div className="mt-6">
         <Suspense fallback={<StatsSkeleton />}>
@@ -656,17 +960,24 @@ export default function AutomationPage() {
         </Suspense>
       </div>
 
-      {/* Health Score Overview */}
-      <div className="mt-6">
-        <Suspense fallback={<HealthSkeleton />}>
-          <HealthOverviewSection />
-        </Suspense>
-      </div>
-
       {/* Upcoming Actions */}
       <div className="mt-6">
         <Suspense fallback={<StatsSkeleton />}>
           <UpcomingActionsSection />
+        </Suspense>
+      </div>
+
+      {/* エラーログ */}
+      <div className="mt-6">
+        <Suspense fallback={<PipelineSkeleton />}>
+          <ErrorLogSection />
+        </Suspense>
+      </div>
+
+      {/* Health Score Overview */}
+      <div className="mt-6">
+        <Suspense fallback={<HealthSkeleton />}>
+          <HealthOverviewSection />
         </Suspense>
       </div>
 

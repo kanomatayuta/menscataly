@@ -161,5 +161,23 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const typeParam = url.searchParams.get('type')
   const pipelineType: PipelineType = typeParam === 'pdca' ? 'pdca' : 'daily'
 
+  // 自動化設定をチェック（Cron実行時のみ）
+  try {
+    const { getAutomationConfig } = await import('@/app/api/admin/automation-config/route')
+    const automationConfig = await getAutomationConfig()
+
+    if (pipelineType === 'daily' && !automationConfig.dailyPipeline) {
+      console.log('[pipeline/run] Daily pipeline is disabled — skipping')
+      return NextResponse.json({ success: true, message: 'Daily pipeline is disabled', skipped: true })
+    }
+    if (pipelineType === 'pdca' && !automationConfig.pdcaBatch) {
+      console.log('[pipeline/run] PDCA batch is disabled — skipping')
+      return NextResponse.json({ success: true, message: 'PDCA batch is disabled', skipped: true })
+    }
+  } catch (err) {
+    // 設定取得失敗時は実行を継続（安全側に倒す）
+    console.warn('[pipeline/run] Failed to check automation config, proceeding:', err)
+  }
+
   return executePipeline(pipelineType, false)
 }

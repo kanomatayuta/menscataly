@@ -48,7 +48,7 @@ const NAV_ITEMS = [
   },
   {
     label: "パイプライン",
-    href: "/admin/pipeline",
+    href: "/admin/automation",
     icon: (
       <svg
         className="h-5 w-5"
