@@ -30,6 +30,39 @@ const DEFAULT_CONFIG: PipelineConfig = {
 }
 
 // ============================================================
+// Global registry: track running pipelines for stop support
+// ============================================================
+
+const runningPipelines = new Map<string, AbortController>()
+
+/** Get all currently running pipeline run IDs */
+export function getRunningPipelineIds(): string[] {
+  return Array.from(runningPipelines.keys())
+}
+
+/** Abort a running pipeline by runId. Returns true if found and aborted. */
+export function abortPipeline(runId: string): boolean {
+  const controller = runningPipelines.get(runId)
+  if (controller) {
+    controller.abort()
+    runningPipelines.delete(runId)
+    return true
+  }
+  return false
+}
+
+/** Abort all running pipelines. Returns number of pipelines aborted. */
+export function abortAllPipelines(): number {
+  let count = 0
+  for (const [id, controller] of runningPipelines) {
+    controller.abort()
+    runningPipelines.delete(id)
+    count++
+  }
+  return count
+}
+
+// ============================================================
 // PipelineExecutor クラス
 // ============================================================
 
@@ -52,6 +85,10 @@ export class PipelineExecutor {
     const runId = randomUUID()
     const startedAt = new Date().toISOString()
 
+    // Register abort controller for this run
+    const abortController = new AbortController()
+    runningPipelines.set(runId, abortController)
+
     const context: PipelineContext = {
       runId,
       type: this.config.type,
@@ -59,6 +96,7 @@ export class PipelineExecutor {
       config: this.config,
       stepLogs: [],
       sharedData: {},
+      signal: abortController.signal,
     }
 
     console.log(`[Pipeline] Starting run ${runId} (type: ${this.config.type})`)
@@ -68,6 +106,14 @@ export class PipelineExecutor {
     let finalError: string | null = null
 
     for (const step of steps) {
+      // Check abort before each step
+      if (abortController.signal.aborted) {
+        finalStatus = 'failed'
+        finalError = 'パイプラインが手動で停止されました'
+        console.log(`[Pipeline] Run ${runId} was stopped by user`)
+        break
+      }
+
       const stepResult = await this.executeStep(step, currentInput, context)
       context.stepLogs.push(stepResult.log)
 
@@ -123,6 +169,9 @@ export class PipelineExecutor {
         console.error('[Pipeline] Failed to send completion notification:', err)
       }
     }
+
+    // Clean up from registry
+    runningPipelines.delete(runId)
 
     console.log(`[Pipeline] Run ${runId} completed: ${finalStatus} (${durationMs}ms)`)
     return result

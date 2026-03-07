@@ -245,7 +245,14 @@ export function LivePipelineMonitor({ initialRuns, initialStats, todayActivity }
       const res = await fetch("/api/pipeline/status", { credentials: "include" });
       if (!res.ok) return;
       const data = await res.json();
-      if (data.runs) setRuns(data.runs);
+      if (data.runs) {
+        setRuns(data.runs);
+        // Notify AutomationDashboard of pipeline status
+        const hasRunning = data.runs.some((r: { status: string }) => r.status === "running");
+        window.dispatchEvent(new CustomEvent("pipeline-status-changed", {
+          detail: { status: hasRunning ? "running" : "completed" },
+        }));
+      }
       if (data.stats) setStats(data.stats);
       setLastUpdated(new Date());
     } catch {

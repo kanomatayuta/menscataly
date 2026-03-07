@@ -39,6 +39,14 @@ const DEFAULT_CONFIG: AutomationConfig = {
 // Icons (minimal inline SVGs)
 // ============================================================
 
+function StopIcon() {
+  return (
+    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+      <rect x="6" y="6" width="12" height="12" rx="1" />
+    </svg>
+  );
+}
+
 function PlayIcon() {
   return (
     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -82,6 +90,8 @@ export function AutomationDashboard() {
 
   // Pipeline trigger state
   const [isTriggering, setIsTriggering] = useState(false);
+  const [pipelineRunning, setPipelineRunning] = useState(false);
+  const [isStopping, setIsStopping] = useState(false);
   const [triggerMessage, setTriggerMessage] = useState("");
 
   // Derived: master switch = both main jobs ON
@@ -172,6 +182,37 @@ export function AutomationDashboard() {
     });
   }, [config, categories, saveConfig]);
 
+  // Check if pipeline is currently running (on mount + after trigger)
+  const checkPipelineStatus = useCallback(async () => {
+    try {
+      const res = await fetch("/api/pipeline/status", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        const hasRunning = data.runs?.some((r: { status: string }) => r.status === "running");
+        setPipelineRunning(!!hasRunning);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    checkPipelineStatus();
+  }, [checkPipelineStatus]);
+
+  // Listen for pipeline status changes from LivePipelineMonitor
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.status === "running") {
+        setPipelineRunning(true);
+      } else if (detail?.status === "completed") {
+        setPipelineRunning(false);
+        setIsStopping(false);
+      }
+    };
+    window.addEventListener("pipeline-status-changed", handler);
+    return () => window.removeEventListener("pipeline-status-changed", handler);
+  }, []);
+
   const handleTriggerPipeline = useCallback(async () => {
     setIsTriggering(true);
     setTriggerMessage("");
@@ -184,6 +225,7 @@ export function AutomationDashboard() {
       });
       if (res.ok) {
         setTriggerMessage("パイプラインを実行しました");
+        setPipelineRunning(true);
         window.dispatchEvent(new CustomEvent("pipeline-triggered"));
       } else {
         setTriggerMessage(`実行に失敗しました (${res.status})`);
@@ -192,6 +234,28 @@ export function AutomationDashboard() {
       setTriggerMessage("ネットワークエラーが発生しました");
     } finally {
       setIsTriggering(false);
+    }
+  }, []);
+
+  const handleStopPipeline = useCallback(async () => {
+    setIsStopping(true);
+    setTriggerMessage("");
+    try {
+      const res = await fetch("/api/pipeline/stop", {
+        method: "POST",
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTriggerMessage(data.message);
+        setPipelineRunning(false);
+      } else {
+        setTriggerMessage("停止に失敗しました");
+      }
+    } catch {
+      setTriggerMessage("ネットワークエラーが発生しました");
+    } finally {
+      setIsStopping(false);
     }
   }, []);
 
@@ -262,28 +326,49 @@ export function AutomationDashboard() {
                 }`}
               />
             </button>
-            <button
-              type="button"
-              onClick={handleTriggerPipeline}
-              disabled={isTriggering}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition-all disabled:opacity-50 ${
-                isAutoEnabled
-                  ? "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
-                  : "bg-blue-600 text-white shadow-sm hover:bg-blue-700"
-              }`}
-            >
-              {isTriggering ? (
-                <>
-                  <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  実行中...
-                </>
-              ) : (
-                <>
-                  <PlayIcon />
-                  今すぐ実行
-                </>
-              )}
-            </button>
+            {pipelineRunning ? (
+              <button
+                type="button"
+                onClick={handleStopPipeline}
+                disabled={isStopping}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-red-700 disabled:opacity-50"
+              >
+                {isStopping ? (
+                  <>
+                    <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    停止中...
+                  </>
+                ) : (
+                  <>
+                    <StopIcon />
+                    停止
+                  </>
+                )}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleTriggerPipeline}
+                disabled={isTriggering}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition-all disabled:opacity-50 ${
+                  isAutoEnabled
+                    ? "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                    : "bg-blue-600 text-white shadow-sm hover:bg-blue-700"
+                }`}
+              >
+                {isTriggering ? (
+                  <>
+                    <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    実行中...
+                  </>
+                ) : (
+                  <>
+                    <PlayIcon />
+                    今すぐ実行
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
 

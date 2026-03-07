@@ -60,6 +60,7 @@ export interface PipelineContext {
   config: PipelineConfig
   stepLogs: StepLog[]
   sharedData: Record<string, unknown>
+  signal?: AbortSignal
 }
 
 // ============================================================
