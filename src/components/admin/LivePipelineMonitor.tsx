@@ -224,7 +224,7 @@ export function LivePipelineMonitor({ initialRuns, initialStats, todayActivity }
   const [stats, setStats] = useState<CumulativeStats>(initialStats);
   const [isPolling, setIsPolling] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [elapsedText, setElapsedText] = useState("");
   const [forceFastPoll, setForceFastPoll] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
@@ -260,6 +260,11 @@ export function LivePipelineMonitor({ initialRuns, initialStats, todayActivity }
     } finally {
       setIsFetching(false);
     }
+  }, []);
+
+  // Initialize lastUpdated on client mount (avoid SSR hydration mismatch)
+  useEffect(() => {
+    setLastUpdated(new Date());
   }, []);
 
   // Listen for pipeline-triggered event from AutomationDashboard
@@ -348,10 +353,12 @@ export function LivePipelineMonitor({ initialRuns, initialStats, todayActivity }
                   {latestRun.type === "daily" ? "日次" : latestRun.type === "pdca" ? "PDCA" : "手動"}
                 </span>
               )}
-              <span className="text-[10px] text-slate-400">
-                次回 {getNextRunTime(6)}
-              </span>
-              <span className="text-[10px] text-slate-400 flex items-center gap-1" title={`最終更新: ${lastUpdated.toLocaleTimeString("ja-JP")}`}>
+              {lastUpdated && (
+                <span className="text-[10px] text-slate-400">
+                  次回 {getNextRunTime(6)}
+                </span>
+              )}
+              <span className="text-[10px] text-slate-400 flex items-center gap-1" title={lastUpdated ? `最終更新: ${lastUpdated.toLocaleTimeString("ja-JP")}` : undefined}>
                 {isFetching ? (
                   <span className="inline-block h-3 w-3 animate-spin rounded-full border border-slate-300 border-t-blue-500" />
                 ) : isPolling ? (
