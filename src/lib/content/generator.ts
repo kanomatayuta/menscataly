@@ -576,9 +576,15 @@ export class ArticleGenerator {
         toolError instanceof Error ? toolError.message : toolError
       );
 
+      // フォールバック用のuserMessage（JSON指示をMarkdown指示に置換）
+      const fallbackUserMessage = userMessage.replace(
+        '前述のJSONフォーマットで出力してください。',
+        '上記の構成に従って、Markdown形式で記事を出力してください。各セクションは ## で区切ってください。'
+      );
+
       const aiResponse = await this.aiClient.generate({
         systemPrompt,
-        userMessage,
+        userMessage: fallbackUserMessage,
         modelConfig: {
           maxTokens: 16384,
           temperature: 0.5,
@@ -616,9 +622,12 @@ export class ArticleGenerator {
       // NG表現を修正
       let fixedContent = complianceResult.fixedText;
 
-      // PR表記が未挿入なら先頭に追加
+      // PR表記が未挿入なら先頭に追加（既にPR表記が含まれていないか確認）
       if (!complianceResult.hasPRDisclosure) {
-        fixedContent = insertPRDisclosure(fixedContent, "affiliate_standard");
+        const hasPRText = /アフィリエイト広告|【PR】|成果報酬型広告|広告を含みます/.test(fixedContent);
+        if (!hasPRText) {
+          fixedContent = insertPRDisclosure(fixedContent, "affiliate_standard");
+        }
       }
 
       article.content = fixedContent;
@@ -847,7 +856,7 @@ ${ctaPositionList}
 
       // 既にリンク化済み（<a> タグ内）の場合はスキップ
       const alreadyLinked = new RegExp(
-        `<a\\s[^>]*>[^<]*${escapedAnchor}[^<]*</a>`,
+        `<a\\s[^>]*>[\\s\\S]*?${escapedAnchor}[\\s\\S]*?</a>`,
         "i"
       );
       if (alreadyLinked.test(content)) {

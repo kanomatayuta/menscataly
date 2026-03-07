@@ -199,12 +199,12 @@ export class CostTracker {
     const articleCount = articleIds.size || Math.max(1, records.length)
 
     return {
-      totalCostUsd,
-      articleGenerationCost,
-      imageGenerationCost,
-      analysisCost,
+      totalCostUsd: Math.round(totalCostUsd * 1000000) / 1000000,
+      articleGenerationCost: Math.round(articleGenerationCost * 1000000) / 1000000,
+      imageGenerationCost: Math.round(imageGenerationCost * 1000000) / 1000000,
+      analysisCost: Math.round(analysisCost * 1000000) / 1000000,
       articleCount,
-      avgCostPerArticle: articleCount > 0 ? totalCostUsd / articleCount : 0,
+      avgCostPerArticle: articleCount > 0 ? Math.round((totalCostUsd / articleCount) * 1000000) / 1000000 : 0,
       period: { startDate, endDate },
     }
   }

@@ -8,7 +8,7 @@
  * Authorization: Bearer <CRON_SECRET> ヘッダーによる認証
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { PipelineExecutor, getDailyPipelineSteps, getPDCAPipelineSteps } from '@/lib/pipeline/executor'
 import { getPipelineConfig } from '@/lib/pipeline/scheduler'
 import { validatePipelineAuth, validateAdminAuth, getAuthErrorStatus } from '@/lib/admin/auth'
@@ -52,6 +52,25 @@ async function executePipeline(
     )
   }
 
+  // DB-based lock check
+  try {
+    const { createServerSupabaseClient } = await import('@/lib/supabase/client')
+    const supabase = createServerSupabaseClient()
+    const { data: runningInDb } = await (supabase as any)
+      .from('pipeline_runs')
+      .select('id')
+      .eq('status', 'running')
+      .limit(1)
+    if (runningInDb && runningInDb.length > 0) {
+      return NextResponse.json(
+        { success: false, error: 'パイプラインが既に実行中です（DB）', runningIds: runningInDb.map((r: {id: string}) => r.id) },
+        { status: 409 }
+      )
+    }
+  } catch (e) {
+    console.warn('[pipeline/run] DB lock check failed, continuing with memory check:', e)
+  }
+
   try {
     // ステップを取得
     const steps = pipelineType === 'pdca'
@@ -60,41 +79,16 @@ async function executePipeline(
 
     // パイプラインを非同期で実行（レスポンスは即時返却）
     const executor = new PipelineExecutor(config)
+    const runId = `pipeline-${Date.now()}`
 
-    // バックグラウンドで実行（Vercel/Cloud Run はバックグラウンドタスクを制限するため
-    // 実際の環境では Cloud Run Job を使用することを推奨）
-    const runPromise = executor.run(steps, initialSharedData)
-
-    // Cloud Run / Vercel では waitUntil を使用して非同期実行を保証する
-    // ここでは即時レスポンスを返し、バックグラウンド実行を開始する
-    const runId = await new Promise<string>((resolve) => {
-      // runId を取得するため一時的にレースコンディションを回避
-      let resolved = false
-
-      // タイムアウト付きで runId を待つ（500ms）
-      const timeout = setTimeout(() => {
-        if (!resolved) {
-          resolved = true
-          resolve(`pipeline-${Date.now()}`)
-        }
-      }, 500)
-
-      runPromise
-        .then(result => {
-          if (!resolved) {
-            resolved = true
-            clearTimeout(timeout)
-            resolve(result.runId)
-          }
-        })
-        .catch(err => {
-          if (!resolved) {
-            resolved = true
-            clearTimeout(timeout)
-            console.error('[pipeline/run] Pipeline execution error:', err)
-            resolve(`pipeline-error-${Date.now()}`)
-          }
-        })
+    // Next.js after() でレスポンス返却後もバックグラウンド実行を保証
+    after(async () => {
+      try {
+        await executor.run(steps, initialSharedData)
+        console.log(`[pipeline/run] Pipeline "${pipelineType}" completed (runId=${runId})`)
+      } catch (err) {
+        console.error(`[pipeline/run] Pipeline "${pipelineType}" failed (runId=${runId}):`, err)
+      }
     })
 
     const response: PipelineRunResponse = {
@@ -130,9 +124,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   if (!pipelineAuth.authorized) {
     const adminAuth = await validateAdminAuth(request)
     if (!adminAuth.authorized) {
+      const errorStatus = adminAuth.error ? getAuthErrorStatus(adminAuth.error) : 401
       return NextResponse.json(
-        { error: adminAuth.error },
-        { status: getAuthErrorStatus(adminAuth.error!) }
+        { error: adminAuth.error ?? { code: 'UNAUTHORIZED', message: 'Unauthorized' } },
+        { status: errorStatus }
       )
     }
   }
@@ -171,9 +166,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   // Cron認証チェック: PIPELINE_API_KEY or CRON_SECRET (validatePipelineAuth が両方チェック)
   const auth = validatePipelineAuth(request)
   if (!auth.authorized) {
+    const errorStatus = auth.error ? getAuthErrorStatus(auth.error) : 401
     return NextResponse.json(
-      { error: auth.error },
-      { status: getAuthErrorStatus(auth.error!) }
+      { error: auth.error ?? { code: 'UNAUTHORIZED', message: 'Unauthorized' } },
+      { status: errorStatus }
     )
   }
 

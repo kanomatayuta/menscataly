@@ -27,9 +27,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   if (!pipelineAuth.authorized) {
     const adminAuth = await validateAdminAuth(request)
     if (!adminAuth.authorized) {
+      const errorStatus = adminAuth.error ? getAuthErrorStatus(adminAuth.error) : 401
       return NextResponse.json(
-        { error: adminAuth.error },
-        { status: getAuthErrorStatus(adminAuth.error!) }
+        { error: adminAuth.error ?? { code: 'UNAUTHORIZED', message: 'Unauthorized' } },
+        { status: errorStatus }
       )
     }
   }

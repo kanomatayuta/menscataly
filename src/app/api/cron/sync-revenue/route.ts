@@ -26,7 +26,7 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error('[Cron SyncRevenue] Error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

@@ -193,6 +193,30 @@ function articleToMicroCMSBody(article: Article): Record<string, unknown> {
 }
 
 // ============================================================
+// リトライ付き fetch
+// ============================================================
+
+async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 2): Promise<Response> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch(url, options);
+      if (res.ok || res.status < 500) return res;
+      if (attempt < maxRetries) {
+        console.warn(`[Publisher] microCMS API returned ${res.status}, retrying (${attempt + 1}/${maxRetries})...`);
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+      } else {
+        return res;
+      }
+    } catch (err) {
+      if (attempt >= maxRetries) throw err;
+      console.warn(`[Publisher] microCMS API error, retrying (${attempt + 1}/${maxRetries}):`, err);
+      await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+    }
+  }
+  throw new Error('[Publisher] fetchWithRetry: unreachable');
+}
+
+// ============================================================
 // ドライランロガー
 // ============================================================
 
@@ -368,6 +392,13 @@ export class ArticlePublisher {
     // ----------------------------------------------------------------
     // microCMS API へ投稿
     // ----------------------------------------------------------------
+    // content が空の場合は投稿しない
+    if (!article.content || article.content.trim().length < 100) {
+      throw new Error(
+        `[Publisher] 記事コンテンツが空または短すぎます (${article.content?.length ?? 0} chars). 投稿をスキップします。`
+      );
+    }
+
     const body = articleToMicroCMSBody(article);
 
     // thumbnail_url フィールドに画像URL を設定
@@ -396,7 +427,7 @@ export class ArticlePublisher {
     const method = isUpdate ? "PATCH" : "POST";
     const url = isUpdate ? `${endpoint}/${article.id}` : endpoint;
 
-    const response = await fetch(url, {
+    const response = await fetchWithRetry(url, {
       method,
       headers: {
         "Content-Type": "application/json",

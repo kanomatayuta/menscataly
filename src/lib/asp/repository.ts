@@ -7,6 +7,7 @@
  * - Promise-based cache でキャッシュスタンピードを防止
  */
 
+import { connection } from 'next/server'
 import type { AspProgram } from '@/types/asp-config'
 import type { ContentCategory } from '@/types/content'
 import type { AspProgramRow } from '@/types/database'
@@ -144,6 +145,8 @@ async function fetchProgramsFromSupabase(category: ContentCategory): Promise<Asp
 export async function getProgramsByCategoryFromDB(
   category: ContentCategory
 ): Promise<AspProgram[]> {
+  // connection() を呼んでから Date.now() を使用 (PPR対応)
+  await connection()
   // 1. キャッシュチェック (Promise-based)
   const now = Date.now()
   const cached = cache.get(category)

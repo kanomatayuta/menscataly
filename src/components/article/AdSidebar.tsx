@@ -12,6 +12,15 @@ function sanitizeBannerHtml(html: string): string {
     /\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi,
     ""
   );
+  // javascript: URLs
+  sanitized = sanitized.replace(/href\s*=\s*["']?\s*javascript:/gi, 'href="');
+  sanitized = sanitized.replace(/src\s*=\s*["']?\s*javascript:/gi, 'src="');
+  // data: URLs (except safe images)
+  sanitized = sanitized.replace(/src\s*=\s*["']?\s*data:(?!image\/(?:png|jpeg|gif|webp))/gi, 'src="');
+  // SVG内のscript
+  sanitized = sanitized.replace(/<svg[\s\S]*?<\/svg>/gi, (match) => {
+    return match.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+  });
   return sanitized;
 }
 

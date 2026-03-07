@@ -50,6 +50,31 @@ export interface PipelineConfig {
 }
 
 // ============================================================
+// パイプライン間で共有されるデータの型定義
+// ============================================================
+
+/** パイプライン間で共有されるデータの型定義 */
+export interface PipelineSharedData {
+  trends?: TrendData[];
+  analytics?: AnalyticsData[];
+  generatedArticles?: GeneratedArticleData[];
+  maxArticles?: number;
+  enabledCategories?: string[];
+  healthScores?: unknown;
+  depublishResult?: unknown;
+  performanceAlerts?: unknown;
+  rewriteResults?: unknown;
+  publishedArticles?: unknown;
+  aspRevenue?: unknown;
+  syncResults?: unknown;
+  complianceGateResults?: unknown;
+  improvementCandidates?: unknown;
+  maxRewrites?: number;
+  autoDepublish?: unknown;
+  [key: string]: unknown; // 後方互換性
+}
+
+// ============================================================
 // パイプライン実行コンテキスト
 // ============================================================
 
@@ -59,7 +84,7 @@ export interface PipelineContext {
   startedAt: string
   config: PipelineConfig
   stepLogs: StepLog[]
-  sharedData: Record<string, unknown>
+  sharedData: PipelineSharedData
   signal?: AbortSignal
 }
 

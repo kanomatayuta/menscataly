@@ -121,7 +121,7 @@ function injectSingleInternalLink(
     // 既にリンク化済みかチェック
     const escapedAnchor = anchor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     const alreadyLinked = new RegExp(
-      `<a\\s[^>]*>[^<]*${escapedAnchor}[^<]*</a>`,
+      `<a\\s[^>]*>[\\s\\S]*?${escapedAnchor}[\\s\\S]*?</a>`,
       'i'
     )
     if (alreadyLinked.test(content)) continue

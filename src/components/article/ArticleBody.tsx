@@ -564,6 +564,29 @@ function normalizeContent(content: string): string {
 }
 
 // ============================================================
+// HTMLサニタイズ (XSS対策)
+// ============================================================
+
+/**
+ * HTMLからXSSリスクのある要素を除去する
+ * dangerouslySetInnerHTML に渡す前に必ず適用する
+ */
+function sanitizeHtml(html: string): string {
+  let s = html;
+  // script tags
+  s = s.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+  s = s.replace(/<script\b[^>]*\/>/gi, '');
+  // event handlers (on*)
+  s = s.replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+  // javascript: URLs
+  s = s.replace(/href\s*=\s*["']?\s*javascript:/gi, 'href="');
+  s = s.replace(/src\s*=\s*["']?\s*javascript:/gi, 'src="');
+  // data: URLs in src (potential XSS via SVG) — allow safe image types
+  s = s.replace(/src\s*=\s*["']?\s*data:(?!image\/(?:png|jpeg|gif|webp|svg\+xml))/gi, 'src="');
+  return s;
+}
+
+// ============================================================
 // コンポーネント
 // ============================================================
 
@@ -581,7 +604,7 @@ interface ArticleBodyProps {
  * `article-body` CSS クラスでタイポグラフィをスタイリング (globals.css で定義)。
  */
 export function ArticleBody({ content, className = "" }: ArticleBodyProps) {
-  const html = useMemo(() => normalizeContent(content), [content]);
+  const html = useMemo(() => sanitizeHtml(normalizeContent(content)), [content]);
 
   return (
     <div

@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/cron/sync-revenue",
-      "schedule": "0 14 * * *"
+      "schedule": "0 15 * * *"
     }
   ]
 }

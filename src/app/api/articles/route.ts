@@ -8,8 +8,12 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/client'
+import { withRateLimit } from '@/lib/admin/rate-limit'
 
 export async function GET(req: NextRequest) {
+  const rl = await withRateLimit(req, 'public:articles')
+  if (rl) return rl
+
   const { searchParams } = req.nextUrl
 
   // ── クエリパラメータ解析 ─────────────────────────────────────

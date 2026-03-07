@@ -31,9 +31,13 @@ const ASP_DISPLAY_NAMES: Record<AspName, string> = {
   moshimo: "もしもアフィリエイト",
 };
 
+/** クライアント側でのみ一意IDを生成するカウンター */
+let creativeIdCounter = 0;
+
 function createEmptyCreative(): AdCreative {
+  creativeIdCounter += 1;
   return {
-    id: `cr-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    id: `cr-${creativeIdCounter}`,
     type: "text",
     label: "",
     affiliateUrl: "",

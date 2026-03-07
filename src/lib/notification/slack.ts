@@ -122,26 +122,35 @@ export class SlackNotifier {
       blocks,
     }
 
-    try {
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
+    const maxRetries = 2
 
-      if (!response.ok) {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+
+        if (response.ok) {
+          console.log(`[SlackNotifier] メッセージ送信成功: ${channel}`)
+          return true
+        }
+
         const errorText = await response.text()
         console.error(`[SlackNotifier] 送信失敗: ${response.status} ${errorText}`)
-        return false
-      }
 
-      console.log(`[SlackNotifier] メッセージ送信成功: ${channel}`)
-      return true
-    } catch (err) {
-      // エラーをログに記録するがスローしない（通知失敗でシステムを止めない）
-      console.error('[SlackNotifier] 送信エラー:', err instanceof Error ? err.message : err)
-      return false
+        if (response.status < 500 || attempt >= maxRetries) return false
+
+        console.warn(`[SlackNotifier] リトライ (${attempt + 1}/${maxRetries})...`)
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)))
+      } catch (err) {
+        console.error('[SlackNotifier] 送信エラー:', err instanceof Error ? err.message : err)
+        if (attempt >= maxRetries) return false
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)))
+      }
     }
+    return false
   }
 
   /**
