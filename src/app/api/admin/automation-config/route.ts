@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { validatePipelineAuth, getAuthErrorStatus } from "@/lib/admin/auth";
+import { validateAdminAuth, getAuthErrorStatus } from "@/lib/admin/auth";
 
 export interface AutomationConfig {
   dailyPipeline: boolean;
@@ -46,7 +46,26 @@ export async function getAutomationConfig(): Promise<AutomationConfig> {
     if (error || !data) return DEFAULT_CONFIG;
     return { ...DEFAULT_CONFIG, ...(data.value as Partial<AutomationConfig>) };
   } catch {
+    // app_config テーブルが存在しない場合もデフォルトを返す
     return DEFAULT_CONFIG;
+  }
+}
+
+export async function ensureAppConfigTable(): Promise<boolean> {
+  try {
+    const supabase = await getSupabaseClient();
+    if (!supabase) return false;
+
+    // テーブルが存在するかテスト
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
+      .from("app_config")
+      .select("key")
+      .limit(1);
+
+    return !error;
+  } catch {
+    return false;
   }
 }
 
@@ -56,7 +75,7 @@ export async function GET(): Promise<NextResponse> {
 }
 
 export async function PUT(request: NextRequest): Promise<NextResponse> {
-  const auth = validatePipelineAuth(request);
+  const auth = await validateAdminAuth(request);
   if (!auth.authorized) {
     return NextResponse.json(
       { error: auth.error },
@@ -74,6 +93,13 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
         { error: "Supabase not configured" },
         { status: 500 }
       );
+    }
+
+    // テーブル存在チェック
+    const tableExists = await ensureAppConfigTable();
+    if (!tableExists) {
+      console.warn("[automation-config] app_config table does not exist — saving to response only");
+      return NextResponse.json(newConfig);
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
