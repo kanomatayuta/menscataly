@@ -44,29 +44,32 @@ function getMode(config: AutomationConfig): AutomationMode {
 
 const MODE_CONFIG = {
   automatic: {
-    label: "自動運転中",
+    label: "完全自動",
+    sublabel: "すべてのジョブが自動実行されます",
     bg: "bg-emerald-50",
-    border: "border-emerald-200",
+    border: "border-emerald-300",
     text: "text-emerald-800",
     dot: "bg-emerald-500",
     pulse: true,
     btnVariant: "subtle" as const,
   },
   partial: {
-    label: "部分自動",
+    label: "一部自動",
+    sublabel: "一部のジョブのみ自動実行",
     bg: "bg-amber-50",
-    border: "border-amber-200",
+    border: "border-amber-300",
     text: "text-amber-800",
     dot: "bg-amber-500",
     pulse: false,
     btnVariant: "secondary" as const,
   },
   manual: {
-    label: "手動モード",
-    bg: "bg-blue-50",
-    border: "border-blue-200",
-    text: "text-blue-800",
-    dot: "bg-blue-500",
+    label: "すべて手動",
+    sublabel: "自動実行は停止中 — 手動で実行してください",
+    bg: "bg-slate-50",
+    border: "border-slate-300",
+    text: "text-slate-700",
+    dot: "bg-slate-400",
     pulse: false,
     btnVariant: "primary" as const,
   },
@@ -128,51 +131,46 @@ interface ModeStatusBannerProps {
   triggerMessage: string;
 }
 
+function AutoManualTag({ auto }: { auto: boolean }) {
+  return auto ? (
+    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-200">
+      <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" /><span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" /></span>
+      自動
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500 ring-1 ring-slate-200">
+      停止
+    </span>
+  );
+}
+
 function ModeStatusBanner({ config, loading, onTriggerPipeline, isTriggering, triggerMessage }: ModeStatusBannerProps) {
   if (loading) {
-    return <div className="h-[88px] animate-pulse rounded-xl bg-slate-200" />;
+    return <div className="h-[140px] animate-pulse rounded-xl bg-slate-200" />;
   }
 
   const mode = getMode(config);
   const mc = MODE_CONFIG[mode];
 
-  const description = (() => {
-    if (mode === "automatic") {
-      return `日次パイプライン 06:00 JST / PDCAバッチ 23:00 JST${config.autoRewrite ? " / 自動リライト有効" : ""}`;
-    }
-    if (mode === "partial") {
-      const parts: string[] = [];
-      if (config.dailyPipeline) parts.push("日次パイプライン 06:00 JST");
-      if (config.pdcaBatch) parts.push("PDCAバッチ 23:00 JST");
-      return `${parts.join(" / ")} のみ自動実行`;
-    }
-    return "自動実行は停止中 — 手動で実行できます";
-  })();
-
-  const btnStyles = {
-    primary: "bg-blue-600 text-white hover:bg-blue-700 shadow-sm px-5 py-2.5 text-sm",
-    secondary: "bg-white/80 text-blue-700 border border-blue-300 hover:bg-white px-4 py-2 text-sm",
-    subtle: "bg-white/60 text-slate-600 border border-slate-200 hover:bg-white/80 px-4 py-2 text-xs",
-  };
-
   return (
-    <div className={`rounded-xl border ${mc.border} ${mc.bg} px-5 py-4`}>
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 min-w-0">
+    <div className={`rounded-xl border-2 ${mc.border} ${mc.bg} px-5 py-4`}>
+      {/* Top row: mode label + trigger button */}
+      <div className="flex items-center justify-between gap-4 mb-3">
+        <div className="flex items-center gap-3">
           <div className="relative flex-shrink-0">
-            <span className={`block h-3 w-3 rounded-full ${mc.dot}`} />
+            <span className={`block h-3.5 w-3.5 rounded-full ${mc.dot}`} />
             {mc.pulse && (
-              <span className={`absolute inset-0 h-3 w-3 animate-ping rounded-full ${mc.dot} opacity-40`} />
+              <span className={`absolute inset-0 h-3.5 w-3.5 animate-ping rounded-full ${mc.dot} opacity-40`} />
             )}
           </div>
-          <div className="min-w-0">
-            <p className={`text-sm font-bold ${mc.text}`}>{mc.label}</p>
-            <p className="text-xs text-slate-600 truncate">{description}</p>
+          <div>
+            <p className={`text-base font-bold ${mc.text}`}>{mc.label}</p>
+            <p className="text-[11px] text-slate-500">{mc.sublabel}</p>
           </div>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
           {triggerMessage && (
-            <span className={`text-xs ${triggerMessage.includes("失敗") || triggerMessage.includes("エラー") ? "text-red-600" : "text-green-600"}`}>
+            <span className={`text-xs font-medium ${triggerMessage.includes("失敗") || triggerMessage.includes("エラー") ? "text-red-600" : "text-green-600"}`}>
               {triggerMessage}
             </span>
           )}
@@ -180,20 +178,45 @@ function ModeStatusBanner({ config, loading, onTriggerPipeline, isTriggering, tr
             type="button"
             onClick={onTriggerPipeline}
             disabled={isTriggering}
-            className={`inline-flex items-center gap-1.5 rounded-lg font-medium transition-all disabled:opacity-50 ${btnStyles[mc.btnVariant]}`}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
           >
             {isTriggering ? (
               <>
-                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
                 実行中...
               </>
             ) : (
               <>
                 <PlayIcon />
-                {mode === "manual" ? "パイプライン実行" : "手動実行"}
+                手動実行
               </>
             )}
           </button>
+        </div>
+      </div>
+
+      {/* Job status row */}
+      <div className="grid grid-cols-3 gap-2">
+        <div className="flex items-center justify-between rounded-lg bg-white/70 px-3 py-2 ring-1 ring-black/5">
+          <div className="flex items-center gap-2">
+            <ClockIcon className="h-4 w-4 text-slate-400" />
+            <span className="text-xs font-medium text-slate-700">日次パイプライン</span>
+          </div>
+          <AutoManualTag auto={config.dailyPipeline} />
+        </div>
+        <div className="flex items-center justify-between rounded-lg bg-white/70 px-3 py-2 ring-1 ring-black/5">
+          <div className="flex items-center gap-2">
+            <ChartIcon className="h-4 w-4 text-slate-400" />
+            <span className="text-xs font-medium text-slate-700">PDCAバッチ</span>
+          </div>
+          <AutoManualTag auto={config.pdcaBatch} />
+        </div>
+        <div className="flex items-center justify-between rounded-lg bg-white/70 px-3 py-2 ring-1 ring-black/5">
+          <div className="flex items-center gap-2">
+            <PenIcon className="h-4 w-4 text-slate-400" />
+            <span className="text-xs font-medium text-slate-700">自動リライト</span>
+          </div>
+          <AutoManualTag auto={config.autoRewrite} />
         </div>
       </div>
     </div>
@@ -216,16 +239,23 @@ interface ToggleItemProps {
 function ToggleItem({ label, description, enabled, saving, icon, onChange }: ToggleItemProps) {
   return (
     <div
-      className={`flex items-center justify-between rounded-xl border px-5 py-4 transition-all ${
-        enabled ? "border-blue-200 bg-blue-50/50" : "border-slate-200 bg-white"
+      className={`flex items-center justify-between rounded-xl border-2 px-5 py-4 transition-all ${
+        enabled ? "border-emerald-200 bg-emerald-50/40" : "border-slate-200 bg-white"
       }`}
     >
       <div className="flex items-center gap-3">
-        <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${enabled ? "bg-blue-100 text-blue-600" : "bg-slate-100 text-slate-400"}`}>
+        <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${enabled ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-400"}`}>
           {icon}
         </div>
         <div>
-          <p className="text-sm font-semibold text-slate-800">{label}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold text-slate-800">{label}</p>
+            <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold ${
+              enabled ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
+            }`}>
+              {enabled ? "自動ON" : "手動のみ"}
+            </span>
+          </div>
           <p className="text-xs text-slate-500 leading-relaxed">{description}</p>
         </div>
       </div>
@@ -237,7 +267,7 @@ function ToggleItem({ label, description, enabled, saving, icon, onChange }: Tog
           aria-checked={enabled}
           disabled={saving}
           onClick={() => onChange(!enabled)}
-          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 ${enabled ? "bg-blue-600" : "bg-slate-300"}`}
+          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 ${enabled ? "bg-emerald-500" : "bg-slate-300"}`}
         >
           <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${enabled ? "translate-x-5" : "translate-x-0"}`} />
         </button>
