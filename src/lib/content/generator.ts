@@ -542,7 +542,7 @@ export class ArticleGenerator {
           systemPrompt,
           userMessage,
           modelConfig: {
-            maxTokens: 16384,
+            maxTokens: 12288,
             temperature: 0.5,
           },
         },

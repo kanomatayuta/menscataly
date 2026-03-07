@@ -31,8 +31,8 @@ const MAX_RETRY_DELAY_MS = 32000;
 /** デフォルトのリトライ回数 */
 const DEFAULT_MAX_RETRIES = 3;
 
-/** 単一API呼び出しのタイムアウト（ms）— 120秒 */
-const REQUEST_TIMEOUT_MS = 120_000;
+/** 単一API呼び出しのタイムアウト（ms）— 300秒 */
+const REQUEST_TIMEOUT_MS = 300_000;
 
 /** Sonnet 4.6 の推定コスト (USD/1Mトークン) */
 const SONNET_COST_PER_1M_INPUT = 3.0;

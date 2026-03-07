@@ -140,7 +140,7 @@ export const generateArticlesStep: PipelineStep<AnalyticsData[], GeneratedArticl
   name: 'generate-articles',
   description: 'AIによる記事生成（キーワード選定 → 記事生成 → ASP/内部リンク注入）',
   maxRetries: 1, // 記事生成は冪等だがコストがかかるため、リトライは1回に制限
-  timeoutMs: 300_000, // 5分 — Claude API呼び出しを含むため長めに設定
+  timeoutMs: 600_000, // 10分 — Claude API (maxTokens 12288) + ASP/内部リンク注入
 
   async execute(
     input: AnalyticsData[],
