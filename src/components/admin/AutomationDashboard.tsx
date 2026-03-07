@@ -95,13 +95,26 @@ export function AutomationDashboard() {
   const [triggerMessage, setTriggerMessage] = useState("");
   const [maxArticles, setMaxArticles] = useState(1);
 
+  // Table existence state
+  const [tableExists, setTableExists] = useState(true);
+
   // Derived: master switch = both main jobs ON
   const isAutoEnabled = config.dailyPipeline && config.pdcaBatch;
 
   useEffect(() => {
     Promise.all([
       fetch("/api/admin/automation-config", { credentials: "include" })
-        .then((res) => (res.ok ? res.json() : DEFAULT_CONFIG))
+        .then(async (res) => {
+          const data = await res.json().catch(() => DEFAULT_CONFIG);
+          if (data.tableExists === false) {
+            setTableExists(false);
+          } else {
+            setTableExists(true);
+          }
+          // Strip internal flags before using as config
+          const { tableExists: _te, error: _err, ...configFields } = data;
+          return configFields;
+        })
         .catch(() => DEFAULT_CONFIG),
       fetch("/api/admin/categories", { credentials: "include" })
         .then((res) => (res.ok ? res.json() : null))
@@ -140,14 +153,19 @@ export function AutomationDashboard() {
       });
       if (!res.ok) {
         setConfig(prevConfig);
-        setError("保存に失敗しました");
+        if (res.status === 503) {
+          setTableExists(false);
+          setError("設定の保存に失敗しました。Supabase の app_config テーブルが未作成の可能性があります。");
+        } else {
+          setError(`設定の保存に失敗しました (${res.status})`);
+        }
       } else {
         setSaved(true);
         savedTimer.current = setTimeout(() => setSaved(false), 2000);
       }
     } catch {
       setConfig(prevConfig);
-      setError("保存に失敗しました");
+      setError("ネットワークエラー: 設定の保存に失敗しました");
     } finally {
       setSaving(false);
     }
@@ -297,30 +315,54 @@ export function AutomationDashboard() {
       className={`rounded-2xl border-2 transition-colors duration-200 ${
         isAutoEnabled
           ? "border-emerald-300 bg-gradient-to-br from-emerald-50 to-emerald-100/50"
-          : "border-slate-200 bg-slate-50"
+          : isPartial
+            ? "border-amber-300 bg-gradient-to-br from-amber-50 to-amber-100/50"
+            : "border-slate-200 bg-slate-50"
       }`}
     >
+      {/* Table missing warning banner */}
+      {!tableExists && (
+        <div className="flex items-start gap-3 rounded-t-2xl bg-red-50 px-5 py-3 border-b border-red-200">
+          <span className="mt-0.5 flex-shrink-0 text-red-500">
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-red-800">データベーステーブルが見つかりません</p>
+            <p className="text-xs text-red-700 mt-0.5">
+              Supabase の <code className="rounded bg-red-100 px-1 py-0.5 font-mono text-[11px]">app_config</code> テーブルが未作成です。
+              Supabase SQL Editor で <code className="rounded bg-red-100 px-1 py-0.5 font-mono text-[11px]">migrations/004-app-config.sql</code> を実行してください。
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Top section: status + master toggle */}
       <div className="px-5 pt-5 pb-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           {/* Left: status indicator */}
           <div className="flex items-center gap-3">
             <div className="relative flex-shrink-0">
-              <span className={`block h-4 w-4 rounded-full ${isAutoEnabled ? "bg-emerald-500" : "bg-slate-400"}`} />
+              <span className={`block h-4 w-4 rounded-full ${
+                isAutoEnabled ? "bg-emerald-500" : isPartial ? "bg-amber-400" : "bg-slate-400"
+              }`} />
               {isAutoEnabled && (
                 <span className="absolute inset-0 h-4 w-4 animate-ping rounded-full bg-emerald-500 opacity-30" />
               )}
             </div>
             <div>
-              <p className={`text-lg font-bold ${isAutoEnabled ? "text-emerald-800" : "text-slate-700"}`}>
-                {isAutoEnabled ? "自動モード" : "手動モード"}
+              <p className={`text-lg font-bold ${
+                isAutoEnabled ? "text-emerald-800" : isPartial ? "text-amber-800" : "text-slate-700"
+              }`}>
+                {isAutoEnabled ? "自動モード" : isPartial ? "部分自動モード" : "手動モード"}
               </p>
               <p className="text-xs text-slate-500">
                 {isAutoEnabled
                   ? "毎日 06:00 に記事生成、23:00 に分析を自動実行（JST）"
                   : isPartial
                     ? "一部のジョブのみ有効（詳細設定を確認）"
-                    : "手動で実行ボタンを押して実行してください"}
+                    : "Cronジョブは停止中です。手動で実行ボタンを押して実行してください"}
               </p>
             </div>
           </div>
@@ -431,6 +473,41 @@ export function AutomationDashboard() {
             </p>
           </div>
         )}
+
+        {/* Cron schedule display */}
+        {(isAutoEnabled || isPartial) && (
+          <div className="mt-3 rounded-lg bg-slate-100 px-3 py-2.5">
+            <p className="text-xs font-semibold text-slate-600 mb-1.5">次回実行予定</p>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${config.dailyPipeline ? "bg-emerald-500" : "bg-slate-300"}`} />
+                <p className={`text-xs ${config.dailyPipeline ? "text-slate-700" : "text-slate-400 line-through"}`}>
+                  06:00 JST — 記事生成パイプライン
+                </p>
+                {!config.dailyPipeline && <span className="text-[10px] text-slate-400">(停止中)</span>}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${config.pdcaBatch ? "bg-emerald-500" : "bg-slate-300"}`} />
+                <p className={`text-xs ${config.pdcaBatch ? "text-slate-700" : "text-slate-400 line-through"}`}>
+                  23:00 JST — 分析パイプライン
+                </p>
+                {!config.pdcaBatch && <span className="text-[10px] text-slate-400">(停止中)</span>}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Manual mode: cron stopped notice */}
+        {!isAutoEnabled && !isPartial && (
+          <div className="mt-3 flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 ring-1 ring-slate-200">
+            <span className="text-slate-400">
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </span>
+            <p className="text-xs text-slate-500">Cronジョブは停止中です。自動モードをONにするとスケジュール実行が有効になります。</p>
+          </div>
+        )}
       </div>
 
       {/* Details: Accordion (inside same card) */}
@@ -485,8 +562,8 @@ export function AutomationDashboard() {
                     </button>
                   </div>
                   <p className="text-xs text-slate-500">トレンド分析 → 記事生成 → コンプラチェック</p>
-                  {isAutoEnabled && config.dailyPipeline && (
-                    <p className="text-xs text-slate-400 pt-1">毎日 06:00 JST に自動実行</p>
+                  {config.dailyPipeline && (
+                    <p className="text-xs text-emerald-600 pt-1">毎日 06:00 JST に自動実行</p>
                   )}
                 </div>
 
@@ -508,8 +585,8 @@ export function AutomationDashboard() {
                     </button>
                   </div>
                   <p className="text-xs text-slate-500">アナリティクス → 収益分析 → アラート</p>
-                  {isAutoEnabled && config.pdcaBatch && (
-                    <p className="text-xs text-slate-400 pt-1">毎日 23:00 JST に自動実行</p>
+                  {config.pdcaBatch && (
+                    <p className="text-xs text-emerald-600 pt-1">毎日 23:00 JST に自動実行</p>
                   )}
                 </div>
 

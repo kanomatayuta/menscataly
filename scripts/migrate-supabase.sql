@@ -1232,14 +1232,18 @@ ON CONFLICT (version) DO NOTHING;
 CREATE TABLE IF NOT EXISTS app_config (
   key TEXT PRIMARY KEY,
   value JSONB NOT NULL DEFAULT '{}',
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- created_at カラムが既存テーブルにない場合に追加（冪等）
+ALTER TABLE app_config ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 COMMENT ON TABLE app_config IS 'アプリケーション設定 (key-value)';
 
 -- 初期値: 自動化設定 (安全なデフォルト: すべて無効)
 INSERT INTO app_config (key, value)
-VALUES ('automation_config', '{"dailyPipeline": false, "pdcaBatch": false, "autoRewrite": false}')
+VALUES ('automation_config', '{"dailyPipeline": false, "pdcaBatch": false, "autoRewrite": false, "enabledCategories": ["aga", "hair-removal", "skincare", "ed", "column"]}')
 ON CONFLICT (key) DO NOTHING;
 
 -- RLS

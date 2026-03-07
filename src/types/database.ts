@@ -116,12 +116,14 @@ export interface AppConfigRow {
   key: string
   value: Json
   updated_at: string
+  created_at: string
 }
 
 export type AppConfigInsert = {
   key: string
   value: Json
   updated_at?: string
+  created_at?: string
 }
 
 export type AppConfigUpdate = Partial<Omit<AppConfigRow, 'key'>>

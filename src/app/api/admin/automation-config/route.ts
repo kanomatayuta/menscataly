@@ -32,10 +32,18 @@ async function getSupabaseClient() {
   return createServerSupabaseClient();
 }
 
+/**
+ * 自動化設定を取得する。
+ *
+ * Fail-safe 設計:
+ * - DB接続失敗 / テーブル不在 / 値が不正 → DEFAULT_CONFIG (全OFF) を返す
+ * - boolean フィールドは === true のみ許可（"true", 1 等の truthy 値は false 扱い）
+ * - 型が不正な場合はフィールドごとにデフォルト(false)へフォールバック
+ */
 export async function getAutomationConfig(): Promise<AutomationConfig> {
   try {
     const supabase = await getSupabaseClient();
-    if (!supabase) return DEFAULT_CONFIG;
+    if (!supabase) return { ...DEFAULT_CONFIG };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any)
@@ -45,11 +53,33 @@ export async function getAutomationConfig(): Promise<AutomationConfig> {
       .limit(1)
       .single();
 
-    if (error || !data) return DEFAULT_CONFIG;
-    return { ...DEFAULT_CONFIG, ...(data.value as Partial<AutomationConfig>) };
+    if (error || !data) return { ...DEFAULT_CONFIG };
+
+    const raw = data.value;
+
+    // raw が object でなければデフォルトを返す
+    if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+      console.warn("[automation-config] Invalid config value type, returning defaults");
+      return { ...DEFAULT_CONFIG };
+    }
+
+    // 厳密な型チェック: boolean === true のみ許可
+    // string "true", number 1 等の truthy 値は false として扱う（Fail-safe）
+    const strictBoolean = (value: unknown): boolean => value === true;
+
+    const config: AutomationConfig = {
+      dailyPipeline: strictBoolean(raw.dailyPipeline),
+      pdcaBatch: strictBoolean(raw.pdcaBatch),
+      autoRewrite: strictBoolean(raw.autoRewrite),
+      enabledCategories: Array.isArray(raw.enabledCategories)
+        ? raw.enabledCategories.filter((c: unknown): c is string => typeof c === "string")
+        : [...DEFAULT_CONFIG.enabledCategories],
+    };
+
+    return config;
   } catch {
-    // app_config テーブルが存在しない場合もデフォルトを返す
-    return DEFAULT_CONFIG;
+    // app_config テーブルが存在しない場合もデフォルト(全OFF)を返す
+    return { ...DEFAULT_CONFIG };
   }
 }
 
@@ -80,8 +110,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     );
   }
 
+  // テーブル存在チェック（フロントエンドに通知するため）
+  const tableExists = await ensureAppConfigTable();
+  if (!tableExists) {
+    return NextResponse.json(
+      { ...DEFAULT_CONFIG, tableExists: false },
+      { status: 503 }
+    );
+  }
+
   const config = await getAutomationConfig();
-  return NextResponse.json(config);
+  return NextResponse.json({ ...config, tableExists: true });
 }
 
 export async function PUT(request: NextRequest): Promise<NextResponse> {
@@ -120,8 +159,8 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
     if (!tableExists) {
       console.error("[automation-config] app_config table does not exist");
       return NextResponse.json(
-        { error: "app_config table does not exist. Run migrations/004-app-config.sql" },
-        { status: 500 }
+        { error: "app_config table does not exist. Run migrations/004-app-config.sql", tableExists: false },
+        { status: 503 }
       );
     }
 

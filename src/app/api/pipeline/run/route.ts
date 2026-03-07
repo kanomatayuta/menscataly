@@ -184,7 +184,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   return executePipeline(pipelineType, dryRun, initialSharedData)
 }
 
-// Vercel Cron Jobs サポート (GET リクエスト)
+/**
+ * Vercel Cron Jobs サポート (GET リクエスト)
+ *
+ * 多層防御 (Fail-safe Design):
+ *   Layer 1: 環境変数 ENABLE_CRON_JOBS === 'true' が明示的に設定されていなければスキップ
+ *   Layer 2: getAutomationConfig() で DB 上の設定を取得（失敗時はスキップ）
+ *   Layer 3: 設定値の厳密な型チェック (=== true のみ許可、truthy 値を拒否)
+ *
+ * 原則: 疑わしきは停止。設定が読めない、DB が落ちている、テーブルがない、値が不正 → 全て自動実行をスキップ。
+ *
+ * 環境変数:
+ *   ENABLE_CRON_JOBS - "true" を明示的に設定した場合のみ Cron 自動実行を許可。
+ *                      未設定・空文字・"1"・"yes" 等では動作しない (Fail-safe)。
+ *                      Vercel 本番環境でのみ設定すること。
+ */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   // Cron認証チェック: PIPELINE_API_KEY or CRON_SECRET (validatePipelineAuth が両方チェック)
   const auth = validatePipelineAuth(request)
@@ -196,36 +210,76 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     )
   }
 
+  // ================================================================
+  // Layer 1: 環境変数チェック
+  // ENABLE_CRON_JOBS=true が明示的に設定されていなければスキップ。
+  // "1", "yes", "TRUE" 等の truthy 値は許可しない（厳密一致のみ）。
+  // ================================================================
+  const cronEnabled = process.env.ENABLE_CRON_JOBS === 'true'
+  if (!cronEnabled) {
+    console.log(`[pipeline/run] ENABLE_CRON_JOBS is not "true" (value=${JSON.stringify(process.env.ENABLE_CRON_JOBS)}) — skipping Cron`)
+    return NextResponse.json({
+      success: true,
+      message: 'ENABLE_CRON_JOBS is not enabled — Cron execution skipped',
+      skipped: true,
+    })
+  }
+
   // クエリパラメータから type を取得
   const url = new URL(request.url)
   const typeParam = url.searchParams.get('type')
   const pipelineType: PipelineType = typeParam === 'pdca' ? 'pdca' : 'daily'
 
-  // 自動化設定をチェック（Cron実行時のみ）
-  // マスタースイッチ（両方ON）がOFFなら全Cronをスキップ
+  // ================================================================
+  // Layer 2: DB 設定チェック (getAutomationConfig)
+  // try-catch で囲み、失敗時は安全側に倒してスキップ。
+  // ================================================================
+  let automationConfig: Awaited<ReturnType<typeof import('@/app/api/admin/automation-config/route').getAutomationConfig>> | null = null
   try {
     const { getAutomationConfig } = await import('@/app/api/admin/automation-config/route')
-    const automationConfig = await getAutomationConfig()
-
-    // マスタースイッチ: 両方ONでなければ自動実行しない
-    const isAutoEnabled = automationConfig.dailyPipeline && automationConfig.pdcaBatch
-    if (!isAutoEnabled) {
-      console.log(`[pipeline/run] Auto mode is OFF (daily=${automationConfig.dailyPipeline}, pdca=${automationConfig.pdcaBatch}) — skipping Cron`)
-      return NextResponse.json({ success: true, message: 'Auto mode is disabled', skipped: true })
-    }
-
-    if (pipelineType === 'daily' && !automationConfig.dailyPipeline) {
-      console.log('[pipeline/run] Daily pipeline is disabled — skipping')
-      return NextResponse.json({ success: true, message: 'Daily pipeline is disabled', skipped: true })
-    }
-    if (pipelineType === 'pdca' && !automationConfig.pdcaBatch) {
-      console.log('[pipeline/run] PDCA batch is disabled — skipping')
-      return NextResponse.json({ success: true, message: 'PDCA batch is disabled', skipped: true })
-    }
+    automationConfig = await getAutomationConfig()
   } catch (err) {
     // 設定取得失敗時はスキップ（安全側に倒す — 意図しない実行を防止）
-    console.warn('[pipeline/run] Failed to check automation config, skipping:', err)
-    return NextResponse.json({ success: true, message: 'Config unavailable — skipped for safety', skipped: true })
+    console.warn('[pipeline/run] Failed to fetch automation config, skipping for safety:', err)
+    return NextResponse.json({
+      success: true,
+      message: 'Config unavailable — skipped for safety',
+      skipped: true,
+    })
+  }
+
+  // automationConfig が null や undefined の場合もスキップ
+  if (!automationConfig) {
+    console.warn('[pipeline/run] automationConfig is null/undefined — skipping for safety')
+    return NextResponse.json({
+      success: true,
+      message: 'Config unavailable — skipped for safety',
+      skipped: true,
+    })
+  }
+
+  // ================================================================
+  // Layer 3: 設定値の厳密な型チェック
+  // === true のみ許可。truthy 値 ("true", 1, "1" 等) は拒否。
+  // ================================================================
+  if (pipelineType === 'daily') {
+    if (automationConfig.dailyPipeline !== true) {
+      console.log(`[pipeline/run] dailyPipeline is not true (value=${JSON.stringify(automationConfig.dailyPipeline)}, type=${typeof automationConfig.dailyPipeline}) — skipping`)
+      return NextResponse.json({
+        success: true,
+        message: 'Daily pipeline is disabled',
+        skipped: true,
+      })
+    }
+  } else if (pipelineType === 'pdca') {
+    if (automationConfig.pdcaBatch !== true) {
+      console.log(`[pipeline/run] pdcaBatch is not true (value=${JSON.stringify(automationConfig.pdcaBatch)}, type=${typeof automationConfig.pdcaBatch}) — skipping`)
+      return NextResponse.json({
+        success: true,
+        message: 'PDCA batch is disabled',
+        skipped: true,
+      })
+    }
   }
 
   return executePipeline(pipelineType, false)
