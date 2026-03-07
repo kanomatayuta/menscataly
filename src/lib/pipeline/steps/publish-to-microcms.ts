@@ -12,6 +12,7 @@
 
 import type { GeneratedArticleData, PipelineContext, PipelineStep, PublishedArticleData } from '../types'
 import type { ComplianceGateOutput } from './compliance-gate'
+import { getSupervisorsByCategory } from '@/lib/seo/supervisors-data'
 
 // ============================================================
 // microCMS Write API レスポンス型
@@ -32,13 +33,20 @@ export interface ArticlePayload {
   content: string
   excerpt?: string
   category?: string
-  seo_title?: string
-  seo_description?: string
-  author_name?: string
   tags?: string[]
+  thumbnail_url?: string
+  seo_title?: string
+  target_keyword?: string
+  reading_time?: number
+  author_name?: string
+  supervisor_name?: string
+  supervisor_creds?: string
+  supervisor_bio?: string
+  references?: Array<{ fieldId: string; ref_title: string; ref_url?: string }>
   is_pr?: boolean
   compliance_score?: number
   article_type?: string[]
+  disclaimer_type?: string[]
 }
 
 // ============================================================
@@ -183,22 +191,47 @@ const CATEGORY_ARTICLE_TYPE: Record<string, string> = {
   column: 'コラム',
 }
 
+/** カテゴリ → disclaimer_type マッピング */
+const CATEGORY_DISCLAIMER_TYPE: Record<string, string> = {
+  aga: '医療行為に関する免責',
+  'hair-removal': '医療行為に関する免責',
+  skincare: '化粧品・効果の免責',
+  ed: '医療行為に関する免責',
+  column: '免責なし',
+}
+
+/** HTML からプレーンテキストの文字数を推定し、読了時間(分)を返す */
+function estimateReadingTime(html: string): number {
+  const text = html.replace(/<[^>]*>/g, '')
+  const charCount = text.length
+  // 日本語: 約500文字/分
+  return Math.max(1, Math.ceil(charCount / 500))
+}
+
 /**
  * 生成記事データを microCMS 投稿ペイロードに変換する
  */
 function toArticlePayload(article: GeneratedArticleData): ArticlePayload {
+  // カテゴリに対応する監修者を取得
+  const supervisors = getSupervisorsByCategory(article.category)
+  const supervisor = supervisors[0]
+
   return {
     title: article.title,
     slug: article.slug,
     content: article.content,
     excerpt: article.excerpt,
     seo_title: article.seoTitle,
-    seo_description: article.seoDescription,
+    target_keyword: article.tags?.[0] ?? '',
+    reading_time: estimateReadingTime(article.content),
     author_name: article.authorName,
-    tags: article.tags,
+    supervisor_name: supervisor?.name,
+    supervisor_creds: supervisor?.credentials,
+    supervisor_bio: supervisor?.bio,
     is_pr: article.isPr,
     compliance_score: article.complianceScore,
     article_type: [CATEGORY_ARTICLE_TYPE[article.category] ?? 'コラム'],
+    disclaimer_type: [CATEGORY_DISCLAIMER_TYPE[article.category] ?? '免責なし'],
   }
 }
 

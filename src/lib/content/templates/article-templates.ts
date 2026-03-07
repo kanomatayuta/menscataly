@@ -129,7 +129,7 @@ export const ARTICLE_TEMPLATES: Record<ContentCategory, ArticleTemplate> = {
       { sectionIndex: 4, type: 'recommendation-box', description: 'クリニック選びセクションにおすすめボックスを挿入' },
       { sectionIndex: 6, type: 'inline-link', description: 'まとめセクションのCTA内にリンクを挿入' },
     ],
-    wordCountTarget: 4000,
+    wordCountTarget: 8000,
   },
 
   // =========================================================
@@ -206,7 +206,7 @@ export const ARTICLE_TEMPLATES: Record<ContentCategory, ArticleTemplate> = {
       { sectionIndex: 5, type: 'recommendation-box', description: 'オンライン診療セクションにおすすめクリニックを挿入' },
       { sectionIndex: 6, type: 'inline-link', description: 'まとめのCTAにリンクを挿入' },
     ],
-    wordCountTarget: 4000,
+    wordCountTarget: 8000,
   },
 
   // =========================================================
@@ -283,7 +283,7 @@ export const ARTICLE_TEMPLATES: Record<ContentCategory, ArticleTemplate> = {
       { sectionIndex: 4, type: 'recommendation-box', description: '費用セクションにおすすめプランを挿入' },
       { sectionIndex: 6, type: 'inline-link', description: 'まとめのCTAにカウンセリング予約リンクを挿入' },
     ],
-    wordCountTarget: 4500,
+    wordCountTarget: 8000,
   },
 
   // =========================================================
@@ -364,7 +364,7 @@ export const ARTICLE_TEMPLATES: Record<ContentCategory, ArticleTemplate> = {
       { sectionIndex: 4, type: 'inline-link', description: 'クリニック治療セクションに予約リンクを挿入' },
       { sectionIndex: 6, type: 'inline-link', description: 'まとめのCTAにリンクを挿入' },
     ],
-    wordCountTarget: 4000,
+    wordCountTarget: 8000,
   },
 
   // =========================================================
@@ -397,6 +397,6 @@ export const ARTICLE_TEMPLATES: Record<ContentCategory, ArticleTemplate> = {
       { afterSectionIndex: 2, variant: 'secondary' },
     ],
     affiliateInsertionPoints: [],
-    wordCountTarget: 2500,
+    wordCountTarget: 6000,
   },
 }
