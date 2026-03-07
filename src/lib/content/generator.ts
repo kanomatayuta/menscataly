@@ -333,6 +333,10 @@ function buildArticleFromRaw(
   request: ContentGenerationRequest,
   now: string
 ): Article {
+  console.info(
+    `[buildArticleFromRaw] title="${raw.title}", sections=${raw.sections?.length ?? 0}, conclusion=${raw.conclusion ? 'yes' : 'no'}`
+  );
+
   // セクション変換
   const sections: ArticleSection[] = (raw.sections ?? []).map((s) => ({
     heading: s.heading ?? "",
@@ -368,6 +372,12 @@ function buildArticleFromRaw(
         }`
     )
     .join("\n\n");
+
+  if (fullContent.trim().length < 200) {
+    console.warn(
+      `[buildArticleFromRaw] WARNING: Content is very short (${fullContent.length} chars, ${sections.length} sections). Possible API truncation.`
+    );
+  }
 
   // 参考文献
   const references: Reference[] = [
@@ -532,19 +542,33 @@ export class ArticleGenerator {
           systemPrompt,
           userMessage,
           modelConfig: {
-            maxTokens: 8192,
+            maxTokens: 16384,
             temperature: 0.5,
           },
         },
         ARTICLE_TOOL_SCHEMA as ToolSchema
       );
 
-      console.info("[ArticleGenerator] tool_use response received — structured JSON output.");
+      console.info(
+        `[ArticleGenerator] tool_use response received — sections: ${
+          (toolResponse.content as RawArticleJSON).sections?.length ?? 0
+        }, tokens: ${toolResponse.tokenUsage.outputTokens}`
+      );
       aiModel = toolResponse.model;
       aiTokenUsage = toolResponse.tokenUsage;
 
       // tool_use の出力を直接 RawArticleJSON として使用（パース不要）
-      article = buildArticleFromRaw(toolResponse.content, request, now);
+      const rawArticle = toolResponse.content as RawArticleJSON;
+
+      // セクションが空の場合はテキスト生成にフォールバック
+      if (!rawArticle.sections || rawArticle.sections.length === 0) {
+        console.warn(
+          `[ArticleGenerator] tool_use returned empty sections (outputTokens: ${toolResponse.tokenUsage.outputTokens}). Falling back to text generation.`
+        );
+        throw new Error("tool_use returned empty sections");
+      }
+
+      article = buildArticleFromRaw(rawArticle, request, now);
     } catch (toolError) {
       // tool_use 失敗時は従来のテキスト生成にフォールバック
       console.warn(
@@ -556,7 +580,7 @@ export class ArticleGenerator {
         systemPrompt,
         userMessage,
         modelConfig: {
-          maxTokens: 8192,
+          maxTokens: 16384,
           temperature: 0.5,
         },
       });

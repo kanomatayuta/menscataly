@@ -280,6 +280,13 @@ export class ClaudeClient {
           },
         });
 
+        // トークン上限による切り詰めを検出
+        if (message.stop_reason === "max_tokens") {
+          console.warn(
+            `[ClaudeClient] tool_use response was truncated (max_tokens reached). Output tokens: ${message.usage.output_tokens}/${effectiveConfig.maxTokens}`
+          );
+        }
+
         // tool_use ブロックから input を抽出
         const toolUseBlock = message.content.find(
           (block): block is Anthropic.ToolUseBlock => block.type === "tool_use"
@@ -339,9 +346,10 @@ export class ClaudeClient {
       "[ClaudeClient] ANTHROPIC_API_KEY is not set. Returning mock tool response."
     );
 
-    // モックでは空オブジェクトを返す — 呼び出し側でダミーデータにフォールバックする
+    // モックでは空セクション付きオブジェクトを返す（呼び出し側の empty sections 検出でフォールバックさせる）
+    const mockContent = { sections: [] } as unknown as T;
     return {
-      content: {} as T,
+      content: mockContent,
       tokenUsage: {
         inputTokens: 0,
         outputTokens: 0,
