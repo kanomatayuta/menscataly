@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PipelineExecutor, getDailyPipelineSteps, getPDCAPipelineSteps } from '@/lib/pipeline/executor'
 import { getPipelineConfig } from '@/lib/pipeline/scheduler'
-import { validatePipelineAuth, validateCronAuth, getAuthErrorStatus } from '@/lib/admin/auth'
+import { validatePipelineAuth, validateAdminAuth, validateCronAuth, getAuthErrorStatus } from '@/lib/admin/auth'
 import type { PipelineType, PipelineRunResponse } from '@/lib/pipeline/types'
 
 // ============================================================
@@ -112,13 +112,16 @@ async function executePipeline(
 // ============================================================
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  // 認証チェック
-  const auth = validatePipelineAuth(request)
-  if (!auth.authorized) {
-    return NextResponse.json(
-      { error: auth.error },
-      { status: getAuthErrorStatus(auth.error!) }
-    )
+  // 認証チェック: Pipeline API Key → Supabase セッション (管理画面からの手動実行)
+  const pipelineAuth = validatePipelineAuth(request)
+  if (!pipelineAuth.authorized) {
+    const adminAuth = await validateAdminAuth(request)
+    if (!adminAuth.authorized) {
+      return NextResponse.json(
+        { error: adminAuth.error },
+        { status: getAuthErrorStatus(adminAuth.error!) }
+      )
+    }
   }
 
   // リクエストボディのパース
