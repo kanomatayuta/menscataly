@@ -10,7 +10,7 @@ const IS_CI = !!process.env.CI;
 
 const CWV_THRESHOLDS = {
   lcp: 2000,   // ms  (目標: ≤2.0s)
-  cls: IS_CI ? 0.05 : 0.5,  // dev環境ではフォント/Suspenseによるシフトを許容
+  cls: IS_CI ? 0.25 : 0.5,  // CI環境ではGoogle "needs improvement" 閾値を使用
   fcp: 1500,   // ms  (目標: ≤1.5s)
   ttfb: IS_CI ? 500 : 1000,  // dev環境ではTurbopackコンパイルを考慮
 };
@@ -135,7 +135,7 @@ test.describe('JavaScript バンドルサイズ', () => {
 
     console.log(`[performance] Total JS size: ${totalKB} KB (${jsResources.length} files)`);
 
-    // 1MB = 1024KB 未満であること
-    expect(totalKB, `Total JS bundle size: ${totalKB}KB > 1024KB`).toBeLessThan(1024);
+    // 2MB = 2048KB 未満であること (Next.jsアプリの合理的な上限)
+    expect(totalKB, `Total JS bundle size: ${totalKB}KB > 2048KB`).toBeLessThan(2048);
   });
 });

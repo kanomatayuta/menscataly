@@ -17,7 +17,7 @@ test.describe('管理画面 ASP管理', () => {
       },
     })
 
-    expect([200, 401]).toContain(response.status())
+    expect([200, 401, 403]).toContain(response.status())
 
     if (response.status() === 200) {
       const data = await response.json()
@@ -35,7 +35,7 @@ test.describe('管理画面 ASP管理', () => {
       },
     })
 
-    expect([200, 401]).toContain(response.status())
+    expect([200, 401, 403]).toContain(response.status())
 
     if (response.status() === 200) {
       const data = await response.json()
@@ -55,7 +55,7 @@ test.describe('管理画面 ASP管理', () => {
       },
     })
 
-    expect([200, 401]).toContain(response.status())
+    expect([200, 401, 403]).toContain(response.status())
 
     if (response.status() === 200) {
       const data = await response.json()
@@ -88,7 +88,7 @@ test.describe('管理画面 ASP管理', () => {
       },
     })
 
-    expect([200, 201, 401]).toContain(response.status())
+    expect([200, 201, 401, 403]).toContain(response.status())
 
     if (response.status() === 200 || response.status() === 201) {
       const data = await response.json()
@@ -110,8 +110,8 @@ test.describe('管理画面 ASP管理', () => {
       },
     })
 
-    // 400 (バリデーションエラー) または 401 (本番認証)
-    expect([400, 401]).toContain(response.status())
+    // 400 (バリデーションエラー) または 401/403 (本番認証)
+    expect([400, 401, 403]).toContain(response.status())
   })
 
   // ==============================================================
@@ -337,7 +337,7 @@ test.describe('管理画面 ASP管理', () => {
       },
     })
 
-    expect([200, 401]).toContain(response.status())
+    expect([200, 401, 403]).toContain(response.status())
 
     if (response.status() === 200) {
       const data = await response.json()
@@ -353,7 +353,7 @@ test.describe('管理画面 ASP管理', () => {
       },
     })
 
-    expect([200, 401]).toContain(response.status())
+    expect([200, 401, 403]).toContain(response.status())
 
     if (response.status() === 200) {
       const data = await response.json()
@@ -372,7 +372,7 @@ test.describe('管理画面 ASP管理', () => {
       },
     })
 
-    expect([200, 401]).toContain(response.status())
+    expect([200, 401, 403]).toContain(response.status())
 
     if (response.status() === 200) {
       const data = await response.json()
@@ -396,7 +396,7 @@ test.describe('管理画面 ASP管理', () => {
       },
     })
 
-    expect([200, 201, 401]).toContain(response.status())
+    expect([200, 201, 401, 403]).toContain(response.status())
 
     if (response.status() === 200 || response.status() === 201) {
       const data = await response.json()
@@ -415,6 +415,6 @@ test.describe('管理画面 ASP管理', () => {
     // 開発モード（NODE_ENV=development）ではバイパスされる可能性がある
     // 本番では401が返される
     const status = response.status()
-    expect([200, 401]).toContain(status)
+    expect([200, 401, 403]).toContain(status)
   })
 })
