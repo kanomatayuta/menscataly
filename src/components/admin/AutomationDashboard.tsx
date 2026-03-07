@@ -18,8 +18,6 @@ interface CategoryItem {
   label: string;
 }
 
-type AutomationMode = "automatic" | "partial" | "manual";
-
 const FALLBACK_CATEGORIES: CategoryItem[] = [
   { id: "aga", label: "AGA・薄毛" },
   { id: "hair-removal", label: "メンズ脱毛" },
@@ -35,81 +33,9 @@ const DEFAULT_CONFIG: AutomationConfig = {
   enabledCategories: FALLBACK_CATEGORIES.map((c) => c.id),
 };
 
-function getMode(config: AutomationConfig): AutomationMode {
-  const { dailyPipeline, pdcaBatch } = config;
-  if (dailyPipeline && pdcaBatch) return "automatic";
-  if (dailyPipeline || pdcaBatch) return "partial";
-  return "manual";
-}
-
-const MODE_CONFIG = {
-  automatic: {
-    label: "完全自動",
-    sublabel: "すべてのジョブが自動実行されます",
-    bg: "bg-emerald-50",
-    border: "border-emerald-300",
-    text: "text-emerald-800",
-    dot: "bg-emerald-500",
-    pulse: true,
-    btnVariant: "subtle" as const,
-  },
-  partial: {
-    label: "一部自動",
-    sublabel: "一部のジョブのみ自動実行",
-    bg: "bg-amber-50",
-    border: "border-amber-300",
-    text: "text-amber-800",
-    dot: "bg-amber-500",
-    pulse: false,
-    btnVariant: "secondary" as const,
-  },
-  manual: {
-    label: "すべて手動",
-    sublabel: "自動実行は停止中 — 手動で実行してください",
-    bg: "bg-slate-50",
-    border: "border-slate-300",
-    text: "text-slate-700",
-    dot: "bg-slate-400",
-    pulse: false,
-    btnVariant: "primary" as const,
-  },
-} as const;
-
 // ============================================================
-// Icons
+// Icons (minimal inline SVGs)
 // ============================================================
-
-function ClockIcon({ className = "h-5 w-5" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  );
-}
-
-function ChartIcon({ className = "h-5 w-5" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
-    </svg>
-  );
-}
-
-function PenIcon({ className = "h-5 w-5" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-    </svg>
-  );
-}
 
 function PlayIcon() {
   return (
@@ -119,160 +45,22 @@ function PlayIcon() {
   );
 }
 
-// ============================================================
-// Mode Status Banner
-// ============================================================
-
-interface ModeStatusBannerProps {
-  config: AutomationConfig;
-  loading: boolean;
-  onTriggerPipeline: () => void;
-  isTriggering: boolean;
-  triggerMessage: string;
-}
-
-function AutoManualTag({ auto }: { auto: boolean }) {
-  return auto ? (
-    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-200">
-      <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" /><span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" /></span>
-      自動
-    </span>
-  ) : (
-    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500 ring-1 ring-slate-200">
-      停止
-    </span>
-  );
-}
-
-function ModeStatusBanner({ config, loading, onTriggerPipeline, isTriggering, triggerMessage }: ModeStatusBannerProps) {
-  if (loading) {
-    return <div className="h-[140px] animate-pulse rounded-xl bg-slate-200" />;
-  }
-
-  const mode = getMode(config);
-  const mc = MODE_CONFIG[mode];
-
+function ChevronIcon({ open }: { open: boolean }) {
   return (
-    <div className={`rounded-xl border-2 ${mc.border} ${mc.bg} px-5 py-4`}>
-      {/* Top row: mode label + trigger button */}
-      <div className="flex items-center justify-between gap-4 mb-3">
-        <div className="flex items-center gap-3">
-          <div className="relative flex-shrink-0">
-            <span className={`block h-3.5 w-3.5 rounded-full ${mc.dot}`} />
-            {mc.pulse && (
-              <span className={`absolute inset-0 h-3.5 w-3.5 animate-ping rounded-full ${mc.dot} opacity-40`} />
-            )}
-          </div>
-          <div>
-            <p className={`text-base font-bold ${mc.text}`}>{mc.label}</p>
-            <p className="text-[11px] text-slate-500">{mc.sublabel}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 flex-shrink-0">
-          {triggerMessage && (
-            <span className={`text-xs font-medium ${triggerMessage.includes("失敗") || triggerMessage.includes("エラー") ? "text-red-600" : "text-green-600"}`}>
-              {triggerMessage}
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={onTriggerPipeline}
-            disabled={isTriggering}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
-          >
-            {isTriggering ? (
-              <>
-                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                実行中...
-              </>
-            ) : (
-              <>
-                <PlayIcon />
-                手動実行
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Job status row */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="flex items-center justify-between rounded-lg bg-white/70 px-3 py-2 ring-1 ring-black/5">
-          <div className="flex items-center gap-2">
-            <ClockIcon className="h-4 w-4 text-slate-400" />
-            <span className="text-xs font-medium text-slate-700">日次パイプライン</span>
-          </div>
-          <AutoManualTag auto={config.dailyPipeline} />
-        </div>
-        <div className="flex items-center justify-between rounded-lg bg-white/70 px-3 py-2 ring-1 ring-black/5">
-          <div className="flex items-center gap-2">
-            <ChartIcon className="h-4 w-4 text-slate-400" />
-            <span className="text-xs font-medium text-slate-700">PDCAバッチ</span>
-          </div>
-          <AutoManualTag auto={config.pdcaBatch} />
-        </div>
-        <div className="flex items-center justify-between rounded-lg bg-white/70 px-3 py-2 ring-1 ring-black/5">
-          <div className="flex items-center gap-2">
-            <PenIcon className="h-4 w-4 text-slate-400" />
-            <span className="text-xs font-medium text-slate-700">自動リライト</span>
-          </div>
-          <AutoManualTag auto={config.autoRewrite} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================
-// Toggle Item
-// ============================================================
-
-interface ToggleItemProps {
-  label: string;
-  description: string;
-  enabled: boolean;
-  saving: boolean;
-  icon: React.ReactNode;
-  onChange: (enabled: boolean) => void;
-}
-
-function ToggleItem({ label, description, enabled, saving, icon, onChange }: ToggleItemProps) {
-  return (
-    <div
-      className={`flex items-center justify-between rounded-xl border-2 px-5 py-4 transition-all ${
-        enabled ? "border-emerald-200 bg-emerald-50/40" : "border-slate-200 bg-white"
-      }`}
+    <svg
+      className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+      fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
     >
-      <div className="flex items-center gap-3">
-        <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${enabled ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-400"}`}>
-          {icon}
-        </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-semibold text-slate-800">{label}</p>
-            <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold ${
-              enabled ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
-            }`}>
-              {enabled ? "自動ON" : "手動のみ"}
-            </span>
-          </div>
-          <p className="text-xs text-slate-500 leading-relaxed">{description}</p>
-        </div>
-      </div>
-      <div className="flex items-center gap-2 ml-4 flex-shrink-0">
-        {saving && <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />}
-        <button
-          type="button"
-          role="switch"
-          aria-checked={enabled}
-          disabled={saving}
-          onClick={() => onChange(!enabled)}
-          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 ${enabled ? "bg-emerald-500" : "bg-slate-300"}`}
-        >
-          <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${enabled ? "translate-x-5" : "translate-x-0"}`} />
-        </button>
-      </div>
-    </div>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+    </svg>
   );
 }
 
@@ -288,10 +76,14 @@ export function AutomationDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const savedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   // Pipeline trigger state
   const [isTriggering, setIsTriggering] = useState(false);
   const [triggerMessage, setTriggerMessage] = useState("");
+
+  // Derived: master switch = both main jobs ON
+  const isAutoEnabled = config.dailyPipeline && config.pdcaBatch;
 
   useEffect(() => {
     Promise.all([
@@ -323,23 +115,38 @@ export function AutomationDashboard() {
         body: JSON.stringify(newConfig),
       });
       if (!res.ok) {
-        localStorage.setItem("menscataly_automation_config", JSON.stringify(newConfig));
-        setError("サーバー保存に失敗（ローカル保存済み）");
+        setError("保存に失敗しました");
       } else {
         setSaved(true);
         savedTimer.current = setTimeout(() => setSaved(false), 2000);
       }
     } catch {
-      localStorage.setItem("menscataly_automation_config", JSON.stringify(newConfig));
-      setError("サーバー保存に失敗（ローカル保存済み）");
+      setError("保存に失敗しました");
     } finally {
       setSaving(false);
     }
   }, []);
 
+  // Master switch: toggle both dailyPipeline + pdcaBatch
+  const toggleMaster = useCallback(() => {
+    const next = !isAutoEnabled;
+    saveConfig({
+      ...config,
+      dailyPipeline: next,
+      pdcaBatch: next,
+      autoRewrite: next ? config.autoRewrite : false,
+    });
+  }, [config, isAutoEnabled, saveConfig]);
+
+  // Individual toggle (details section)
   const updateToggle = useCallback(
     (key: "dailyPipeline" | "pdcaBatch" | "autoRewrite", value: boolean) => {
-      saveConfig({ ...config, [key]: value });
+      const newConfig = { ...config, [key]: value };
+      // If pdcaBatch is turned off, also disable autoRewrite
+      if (key === "pdcaBatch" && !value) {
+        newConfig.autoRewrite = false;
+      }
+      saveConfig(newConfig);
     },
     [config, saveConfig]
   );
@@ -375,7 +182,6 @@ export function AutomationDashboard() {
       });
       if (res.ok) {
         setTriggerMessage("パイプラインを実行しました");
-        // LivePipelineMonitorに即座にポーリング開始を通知
         window.dispatchEvent(new CustomEvent("pipeline-triggered"));
       } else {
         setTriggerMessage(`実行に失敗しました (${res.status})`);
@@ -387,126 +193,257 @@ export function AutomationDashboard() {
     }
   }, []);
 
-  const allCategoriesSelected = categories.every((c) => config.enabledCategories.includes(c.id));
   const enabledCount = config.enabledCategories.filter((id) => categories.some((c) => c.id === id)).length;
+  const allCategoriesSelected = categories.every((c) => config.enabledCategories.includes(c.id));
+
+  // Partial mode: master is OFF but one of the two jobs is individually ON
+  const isPartial = !isAutoEnabled && (config.dailyPipeline || config.pdcaBatch);
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="h-[160px] animate-pulse rounded-2xl bg-slate-200" />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-4">
-      {/* Mode Status Banner + Pipeline Trigger */}
-      <ModeStatusBanner
-        config={config}
-        loading={loading}
-        onTriggerPipeline={handleTriggerPipeline}
-        isTriggering={isTriggering}
-        triggerMessage={triggerMessage}
-      />
+    <div className="space-y-3">
+      {/* ============================================================ */}
+      {/* Hero Card: Master Switch + Manual Trigger                    */}
+      {/* ============================================================ */}
+      <div
+        className={`rounded-2xl border-2 transition-colors duration-200 ${
+          isAutoEnabled
+            ? "border-emerald-300 bg-gradient-to-br from-emerald-50 to-emerald-100/50"
+            : "border-slate-200 bg-slate-50"
+        }`}
+      >
+        {/* Top section: status + master toggle */}
+        <div className="px-5 pt-5 pb-4">
+          <div className="flex items-center justify-between gap-4">
+            {/* Left: status indicator */}
+            <div className="flex items-center gap-3">
+              <div className="relative flex-shrink-0">
+                <span className={`block h-4 w-4 rounded-full ${isAutoEnabled ? "bg-emerald-500" : "bg-slate-400"}`} />
+                {isAutoEnabled && (
+                  <span className="absolute inset-0 h-4 w-4 animate-ping rounded-full bg-emerald-500 opacity-30" />
+                )}
+              </div>
+              <div>
+                <p className={`text-lg font-bold ${isAutoEnabled ? "text-emerald-800" : "text-slate-700"}`}>
+                  {isAutoEnabled ? "自動運転 ON" : "自動運転 OFF"}
+                </p>
+                <p className="text-xs text-slate-500">
+                  {isAutoEnabled
+                    ? "毎日 06:00 に記事生成、23:00 に分析を自動実行"
+                    : isPartial
+                      ? "一部のジョブのみ有効（詳細設定を確認）"
+                      : "すべて停止中 — 手動で実行してください"}
+                </p>
+              </div>
+            </div>
 
-      {/* Settings Header */}
-      {!loading && (
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-800">スケジュール設定</h2>
+            {/* Right: master toggle */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {saving && <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isAutoEnabled}
+                aria-label="自動運転の切り替え"
+                disabled={saving}
+                onClick={toggleMaster}
+                className={`relative inline-flex h-8 w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 ${
+                  isAutoEnabled ? "bg-emerald-500" : "bg-slate-300"
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    isAutoEnabled ? "translate-x-6" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* Partial warning */}
+          {isPartial && (
+            <div className="mt-3 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 ring-1 ring-amber-200">
+              <span className="h-2 w-2 rounded-full bg-amber-400 flex-shrink-0" />
+              <p className="text-xs text-amber-700">
+                個別設定でジョブが一部有効です。完全自動にするにはスイッチをONにしてください。
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Bottom section: manual trigger + save status */}
+        <div className="flex items-center justify-between border-t border-black/5 px-5 py-3">
           <div className="flex items-center gap-2">
-            {saving && (
-              <span className="text-xs text-slate-400 flex items-center gap-1">
-                <div className="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />
-                保存中...
+            {triggerMessage && (
+              <span className={`text-xs font-medium ${triggerMessage.includes("失敗") || triggerMessage.includes("エラー") ? "text-red-600" : "text-emerald-600"}`}>
+                {triggerMessage}
               </span>
             )}
             {saved && (
-              <span className="text-xs text-green-600 flex items-center gap-1">
+              <span className="text-xs text-emerald-600 flex items-center gap-1">
                 <CheckIcon /> 保存しました
               </span>
             )}
-            {error && <span className="text-xs text-amber-600">{error}</span>}
+            {error && <span className="text-xs text-red-600">{error}</span>}
           </div>
+          <button
+            type="button"
+            onClick={handleTriggerPipeline}
+            disabled={isTriggering}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition-all disabled:opacity-50 ${
+              isAutoEnabled
+                ? "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                : "bg-blue-600 text-white shadow-sm hover:bg-blue-700"
+            }`}
+          >
+            {isTriggering ? (
+              <>
+                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                実行中...
+              </>
+            ) : (
+              <>
+                <PlayIcon />
+                今すぐ実行
+              </>
+            )}
+          </button>
         </div>
-      )}
+      </div>
 
-      {/* Toggle Items */}
-      {loading ? (
-        <div className="space-y-3">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-[72px] animate-pulse rounded-xl bg-slate-200" />
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <ToggleItem
-            icon={<ClockIcon />}
-            label="日次パイプライン (06:00 JST)"
-            description="トレンド分析 → 記事生成 → コンプラチェック → microCMS下書き保存"
-            enabled={config.dailyPipeline}
-            saving={saving}
-            onChange={(v) => updateToggle("dailyPipeline", v)}
-          />
-          <ToggleItem
-            icon={<ChartIcon />}
-            label="PDCAバッチ (23:00 JST)"
-            description="アナリティクス → ASP収益 → ヘルススコア → パフォーマンスアラート"
-            enabled={config.pdcaBatch}
-            saving={saving}
-            onChange={(v) => updateToggle("pdcaBatch", v)}
-          />
-          <ToggleItem
-            icon={<PenIcon />}
-            label="自動リライト"
-            description="ヘルススコアが低い記事を自動的にリライト（PDCAバッチ内で実行）"
-            enabled={config.autoRewrite}
-            saving={saving}
-            onChange={(v) => updateToggle("autoRewrite", v)}
-          />
-        </div>
-      )}
-
-      {/* Category Selection */}
-      {!loading && (
-        <div className="rounded-xl border border-slate-200 bg-white px-5 py-4">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className="text-sm font-semibold text-slate-800">記事生成カテゴリ</p>
-              <p className="text-xs text-slate-500">パイプラインで生成する記事のカテゴリを選択</p>
-            </div>
-            <button
-              type="button"
-              disabled={saving}
-              onClick={toggleAllCategories}
-              className="text-xs font-medium text-blue-600 hover:text-blue-700 disabled:opacity-50 transition-colors"
-            >
-              {allCategoriesSelected ? "全解除" : "全選択"}
-            </button>
+      {/* ============================================================ */}
+      {/* Details: Accordion                                           */}
+      {/* ============================================================ */}
+      <div className="rounded-xl border border-slate-200 bg-white">
+        <button
+          type="button"
+          onClick={() => setDetailsOpen(!detailsOpen)}
+          className="flex w-full items-center justify-between px-5 py-3 text-left hover:bg-slate-50 transition-colors"
+        >
+          <span className="text-sm font-medium text-slate-700">詳細設定</span>
+          <div className="flex items-center gap-2">
+            {isPartial && (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                カスタム
+              </span>
+            )}
+            <ChevronIcon open={detailsOpen} />
           </div>
-          <div className="flex flex-wrap gap-2">
-            {categories.map((cat) => {
-              const isEnabled = config.enabledCategories.includes(cat.id);
-              return (
+        </button>
+
+        {detailsOpen && (
+          <div className="border-t border-slate-100 px-5 py-4 space-y-4">
+            {/* Individual job toggles */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">スケジュールジョブ</p>
+
+              {/* Daily Pipeline */}
+              <div className="flex items-center justify-between py-2">
+                <div>
+                  <p className="text-sm font-medium text-slate-800">日次パイプライン</p>
+                  <p className="text-xs text-slate-500">毎日 06:00 JST — トレンド分析 → 記事生成 → コンプラチェック</p>
+                </div>
                 <button
-                  key={cat.id}
                   type="button"
+                  role="switch"
+                  aria-checked={config.dailyPipeline}
                   disabled={saving}
-                  onClick={() => toggleCategory(cat.id)}
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-all disabled:opacity-50 ${
-                    isEnabled
-                      ? "bg-blue-600 text-white shadow-sm hover:bg-blue-700"
-                      : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                  onClick={() => updateToggle("dailyPipeline", !config.dailyPipeline)}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 disabled:opacity-50 ${
+                    config.dailyPipeline ? "bg-emerald-500" : "bg-slate-300"
                   }`}
                 >
-                  {isEnabled && <CheckIcon />}
-                  {cat.label}
+                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ${config.dailyPipeline ? "translate-x-5" : "translate-x-0"}`} />
                 </button>
-              );
-            })}
-          </div>
-          <div className="mt-3 flex items-center gap-2">
-            <div className="h-1.5 flex-1 rounded-full bg-slate-100 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-blue-600 transition-all duration-300"
-                style={{ width: `${(enabledCount / categories.length) * 100}%` }}
-              />
+              </div>
+
+              {/* PDCA Batch */}
+              <div className="flex items-center justify-between py-2">
+                <div>
+                  <p className="text-sm font-medium text-slate-800">PDCAバッチ</p>
+                  <p className="text-xs text-slate-500">毎日 23:00 JST — アナリティクス → 収益分析 → アラート</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={config.pdcaBatch}
+                  disabled={saving}
+                  onClick={() => updateToggle("pdcaBatch", !config.pdcaBatch)}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 disabled:opacity-50 ${
+                    config.pdcaBatch ? "bg-emerald-500" : "bg-slate-300"
+                  }`}
+                >
+                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ${config.pdcaBatch ? "translate-x-5" : "translate-x-0"}`} />
+                </button>
+              </div>
+
+              {/* Auto Rewrite (nested under PDCA) */}
+              <div className={`flex items-center justify-between py-2 pl-6 border-l-2 ${config.pdcaBatch ? "border-emerald-200" : "border-slate-200 opacity-50"}`}>
+                <div>
+                  <p className="text-sm font-medium text-slate-700">自動リライト</p>
+                  <p className="text-xs text-slate-400">PDCAバッチ内でヘルススコア低下記事を自動リライト</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={config.autoRewrite}
+                  disabled={saving || !config.pdcaBatch}
+                  onClick={() => updateToggle("autoRewrite", !config.autoRewrite)}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 disabled:opacity-50 ${
+                    config.autoRewrite ? "bg-emerald-500" : "bg-slate-300"
+                  }`}
+                >
+                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ${config.autoRewrite ? "translate-x-5" : "translate-x-0"}`} />
+                </button>
+              </div>
             </div>
-            <span className="text-xs font-medium text-slate-500">{enabledCount}/{categories.length}</span>
+
+            {/* Category selection */}
+            <div className="pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">記事生成カテゴリ</p>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={toggleAllCategories}
+                  className="text-xs font-medium text-blue-600 hover:text-blue-700 disabled:opacity-50"
+                >
+                  {allCategoriesSelected ? "全解除" : "全選択"}
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {categories.map((cat) => {
+                  const isEnabled = config.enabledCategories.includes(cat.id);
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      disabled={saving}
+                      onClick={() => toggleCategory(cat.id)}
+                      className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-all disabled:opacity-50 ${
+                        isEnabled
+                          ? "bg-blue-600 text-white hover:bg-blue-700"
+                          : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                      }`}
+                    >
+                      {isEnabled && <CheckIcon />}
+                      {cat.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-xs text-slate-400">{enabledCount}/{categories.length} カテゴリ選択中</p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
