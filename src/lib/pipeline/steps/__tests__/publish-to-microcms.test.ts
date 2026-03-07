@@ -10,14 +10,6 @@ import type { ComplianceGateOutput } from '../compliance-gate'
 import { createMockPipelineContext } from '@/test/helpers'
 
 // ============================================================
-// モック: compliance-gate の updateQueueEntryStatus
-// ============================================================
-
-vi.mock('../compliance-gate', () => ({
-  updateQueueEntryStatus: vi.fn().mockResolvedValue(undefined),
-}))
-
-// ============================================================
 // テストデータ
 // ============================================================
 
@@ -51,7 +43,6 @@ function createTestComplianceGateOutput(articles: GeneratedArticleData[]): Compl
     })),
     reviewQueueCount: 0,
     rejectedCount: 0,
-    queueEntries: [],
   }
 }
 
@@ -160,8 +151,7 @@ describe('publishToMicroCMSStep', () => {
         results: [],
         reviewQueueCount: 0,
         rejectedCount: 0,
-        queueEntries: [],
-      }
+          }
 
       const result = await publishToMicroCMSStep.execute(output, context)
 

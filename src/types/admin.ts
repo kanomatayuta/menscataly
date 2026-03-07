@@ -12,38 +12,6 @@ import type { ContentCategory } from "@/types/content";
 /** レビューステータス */
 export type ReviewStatus = "draft" | "pending" | "approved" | "rejected" | "revision" | "published";
 
-/** レビューキューステータス (DB上は pending/approved/rejected のみ、UIで revision を追加) */
-export type ReviewQueueStatus = "pending" | "approved" | "rejected" | "revision";
-
-/** レビューキューアイテム (一覧API用) */
-export interface ReviewQueueItem {
-  id: string;
-  articleId: string | null;
-  slug: string;
-  title: string;
-  status: ReviewQueueStatus;
-  complianceScore: number;
-  eeatScore: number;
-  violationCount: number;
-  category: string;
-  authorName: string;
-  createdAt: string;
-  generatedAt: string;
-  reviewedAt: string | null;
-  reviewedBy: string | null;
-  reviewNotes: string | null;
-}
-
-/** レビューキュー統計 */
-export interface ReviewQueueStats {
-  pending: number;
-  approved: number;
-  rejected: number;
-  revision: number;
-  total: number;
-  processedLast7Days: number;
-}
-
 /** コンプライアンススコア内訳 */
 export interface ComplianceScoreBreakdown {
   /** 薬機法スコア (0-100) */

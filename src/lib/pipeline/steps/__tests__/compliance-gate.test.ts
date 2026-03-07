@@ -1,11 +1,10 @@
 /**
  * コンプライアンスゲート ユニットテスト
- * Phase 3b: キュー永続化、ComplianceQueueEntry、updateQueueEntryStatus
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { complianceGateStep, updateQueueEntryStatus } from '../compliance-gate'
-import type { ComplianceGateOutput, ComplianceQueueEntry } from '../compliance-gate'
+import { complianceGateStep } from '../compliance-gate'
+import type { ComplianceGateOutput } from '../compliance-gate'
 import type { GeneratedArticleData } from '../../types'
 import { createMockPipelineContext } from '@/test/helpers'
 
@@ -41,30 +40,6 @@ vi.mock('@/lib/monitoring/alert-manager', () => ({
 }))
 
 // ============================================================
-// モック: Supabase client (キュー永続化用)
-// ============================================================
-
-const mockUpsertResult = vi.fn().mockResolvedValue({ error: null })
-const mockUpdateResult = vi.fn().mockResolvedValue({ error: null })
-const mockSelectSingle = vi.fn().mockResolvedValue({ data: null, error: null })
-
-vi.mock('@/lib/supabase/client', () => ({
-  createServerSupabaseClient: vi.fn().mockReturnValue({
-    from: vi.fn().mockImplementation(() => ({
-      upsert: mockUpsertResult,
-      update: vi.fn().mockReturnValue({
-        eq: mockUpdateResult,
-      }),
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          single: mockSelectSingle,
-        }),
-      }),
-    })),
-  }),
-}))
-
-// ============================================================
 // テスト用データ
 // ============================================================
 
@@ -94,9 +69,6 @@ function createTestArticle(overrides?: Partial<GeneratedArticleData>): Generated
 describe('complianceGateStep', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    // デフォルト: Supabase環境変数未設定
-    delete process.env.NEXT_PUBLIC_SUPABASE_URL
-    delete process.env.SUPABASE_SERVICE_ROLE_KEY
   })
 
   it('高スコア記事は auto-publish 判定となること', async () => {
@@ -189,31 +161,7 @@ describe('complianceGateStep', () => {
     )
   })
 
-  it('全記事のキューエントリが生成されること', async () => {
-    mockCheckWithArticle.mockReturnValue({
-      score: 97,
-      violations: [],
-      fixedText: '<p>修正済み</p>',
-      eeatScore: { total: 80 },
-    })
-
-    const context = createMockPipelineContext()
-    const articles = [
-      createTestArticle({ slug: 'article-1', title: 'Article 1' }),
-      createTestArticle({ slug: 'article-2', title: 'Article 2' }),
-    ]
-
-    const result = await complianceGateStep.execute(articles, context) as ComplianceGateOutput
-
-    expect(result.queueEntries).toHaveLength(2)
-    expect(result.queueEntries[0].slug).toBe('article-1')
-    expect(result.queueEntries[0].decision).toBe('auto-publish')
-    expect(result.queueEntries[0].queueStatus).toBe('pending')
-    expect(result.queueEntries[0].retryCount).toBe(0)
-    expect(result.queueEntries[0].runId).toBe(context.runId)
-  })
-
-  it('キューエントリが sharedData に保存されること', async () => {
+  it('complianceGateResults が sharedData に保存されること', async () => {
     mockCheckWithArticle.mockReturnValue({
       score: 97,
       violations: [],
@@ -226,20 +174,7 @@ describe('complianceGateStep', () => {
 
     await complianceGateStep.execute(articles, context)
 
-    expect(context.sharedData['complianceQueueEntries']).toBeDefined()
-    const entries = context.sharedData['complianceQueueEntries'] as ComplianceQueueEntry[]
-    expect(entries).toHaveLength(1)
-  })
-})
-
-describe('updateQueueEntryStatus', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    delete process.env.NEXT_PUBLIC_SUPABASE_URL
-    delete process.env.SUPABASE_SERVICE_ROLE_KEY
-  })
-
-  it('Supabase未設定時はエラーなく完了すること', async () => {
-    await expect(updateQueueEntryStatus('test-slug', 'completed')).resolves.not.toThrow()
+    expect(context.sharedData['complianceGateResults']).toBeDefined()
+    expect(context.sharedData['complianceGateResults']).toHaveLength(1)
   })
 })
