@@ -38,6 +38,7 @@ export interface ArticlePayload {
   tags?: string[]
   is_pr?: boolean
   compliance_score?: number
+  article_type?: string[]
 }
 
 // ============================================================
@@ -173,9 +174,17 @@ class MicroCMSWriteClient {
 // ステップ実装
 // ============================================================
 
+/** カテゴリ → article_type マッピング */
+const CATEGORY_ARTICLE_TYPE: Record<string, string> = {
+  aga: 'クリニック比較',
+  'hair-removal': 'クリニック比較',
+  skincare: 'ロングテール',
+  ed: 'クリニック比較',
+  column: 'コラム',
+}
+
 /**
  * 生成記事データを microCMS 投稿ペイロードに変換する
- * review_status と compliance_score を含める
  */
 function toArticlePayload(article: GeneratedArticleData): ArticlePayload {
   return {
@@ -189,6 +198,7 @@ function toArticlePayload(article: GeneratedArticleData): ArticlePayload {
     tags: article.tags,
     is_pr: article.isPr,
     compliance_score: article.complianceScore,
+    article_type: [CATEGORY_ARTICLE_TYPE[article.category] ?? 'コラム'],
   }
 }
 
