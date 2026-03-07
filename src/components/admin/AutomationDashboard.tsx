@@ -210,126 +210,119 @@ export function AutomationDashboard() {
   }
 
   return (
-    <div className="space-y-3">
-      {/* ============================================================ */}
-      {/* Hero Card: Master Switch + Manual Trigger                    */}
-      {/* ============================================================ */}
-      <div
-        className={`rounded-2xl border-2 transition-colors duration-200 ${
-          isAutoEnabled
-            ? "border-emerald-300 bg-gradient-to-br from-emerald-50 to-emerald-100/50"
-            : "border-slate-200 bg-slate-50"
-        }`}
-      >
-        {/* Top section: status + master toggle */}
-        <div className="px-5 pt-5 pb-4">
-          <div className="flex items-center justify-between gap-4">
-            {/* Left: status indicator */}
-            <div className="flex items-center gap-3">
-              <div className="relative flex-shrink-0">
-                <span className={`block h-4 w-4 rounded-full ${isAutoEnabled ? "bg-emerald-500" : "bg-slate-400"}`} />
-                {isAutoEnabled && (
-                  <span className="absolute inset-0 h-4 w-4 animate-ping rounded-full bg-emerald-500 opacity-30" />
-                )}
-              </div>
-              <div>
-                <p className={`text-lg font-bold ${isAutoEnabled ? "text-emerald-800" : "text-slate-700"}`}>
-                  {isAutoEnabled ? "自動モード" : "手動モード"}
-                </p>
-                <p className="text-xs text-slate-500">
-                  {isAutoEnabled
-                    ? `毎日 ${config.dailyPipelineTime ?? "06:00"} に記事生成、${config.pdcaBatchTime ?? "23:00"} に分析を自動実行`
-                    : isPartial
-                      ? "一部のジョブのみ有効（詳細設定を確認）"
-                      : "手動で実行ボタンを押して実行してください"}
-                </p>
-              </div>
+    <div
+      className={`rounded-2xl border-2 transition-colors duration-200 ${
+        isAutoEnabled
+          ? "border-emerald-300 bg-gradient-to-br from-emerald-50 to-emerald-100/50"
+          : "border-slate-200 bg-slate-50"
+      }`}
+    >
+      {/* Top section: status + master toggle */}
+      <div className="px-5 pt-5 pb-4">
+        <div className="flex items-center justify-between gap-4">
+          {/* Left: status indicator */}
+          <div className="flex items-center gap-3">
+            <div className="relative flex-shrink-0">
+              <span className={`block h-4 w-4 rounded-full ${isAutoEnabled ? "bg-emerald-500" : "bg-slate-400"}`} />
+              {isAutoEnabled && (
+                <span className="absolute inset-0 h-4 w-4 animate-ping rounded-full bg-emerald-500 opacity-30" />
+              )}
             </div>
-
-            {/* Right: master toggle */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {saving && <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />}
-              <button
-                type="button"
-                role="switch"
-                aria-checked={isAutoEnabled}
-                aria-label="自動運転の切り替え"
-                disabled={saving}
-                onClick={toggleMaster}
-                className={`relative inline-flex h-8 w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 ${
-                  isAutoEnabled ? "bg-emerald-500" : "bg-slate-300"
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                    isAutoEnabled ? "translate-x-6" : "translate-x-0"
-                  }`}
-                />
-              </button>
-            </div>
-          </div>
-
-          {/* Partial warning */}
-          {isPartial && (
-            <div className="mt-3 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 ring-1 ring-amber-200">
-              <span className="h-2 w-2 rounded-full bg-amber-400 flex-shrink-0" />
-              <p className="text-xs text-amber-700">
-                個別設定でジョブが一部有効です。完全自動にするにはスイッチをONにしてください。
+            <div>
+              <p className={`text-lg font-bold ${isAutoEnabled ? "text-emerald-800" : "text-slate-700"}`}>
+                {isAutoEnabled ? "自動モード" : "手動モード"}
+              </p>
+              <p className="text-xs text-slate-500">
+                {isAutoEnabled
+                  ? `毎日 ${config.dailyPipelineTime ?? "06:00"} に記事生成、${config.pdcaBatchTime ?? "23:00"} に分析を自動実行`
+                  : isPartial
+                    ? "一部のジョブのみ有効（詳細設定を確認）"
+                    : "手動で実行ボタンを押して実行してください"}
               </p>
             </div>
-          )}
+          </div>
+
+          {/* Right: master toggle */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {saving && <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isAutoEnabled}
+              aria-label="自動運転の切り替え"
+              disabled={saving}
+              onClick={toggleMaster}
+              className={`relative inline-flex h-8 w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 ${
+                isAutoEnabled ? "bg-emerald-500" : "bg-slate-300"
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                  isAutoEnabled ? "translate-x-6" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
         </div>
 
-        {/* Bottom section: manual trigger + save status */}
-        <div className="flex items-center justify-between border-t border-black/5 px-5 py-3">
-          <div className="flex items-center gap-2">
-            {triggerMessage && (
-              <span className={`text-xs font-medium ${triggerMessage.includes("失敗") || triggerMessage.includes("エラー") ? "text-red-600" : "text-emerald-600"}`}>
-                {triggerMessage}
-              </span>
-            )}
-            {saved && (
-              <span className="text-xs text-emerald-600 flex items-center gap-1">
-                <CheckIcon /> 保存しました
-              </span>
-            )}
-            {error && <span className="text-xs text-red-600">{error}</span>}
+        {/* Partial warning */}
+        {isPartial && (
+          <div className="mt-3 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 ring-1 ring-amber-200">
+            <span className="h-2 w-2 rounded-full bg-amber-400 flex-shrink-0" />
+            <p className="text-xs text-amber-700">
+              個別設定でジョブが一部有効です。完全自動にするにはスイッチをONにしてください。
+            </p>
           </div>
-          <button
-            type="button"
-            onClick={handleTriggerPipeline}
-            disabled={isTriggering}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition-all disabled:opacity-50 ${
-              isAutoEnabled
-                ? "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
-                : "bg-blue-600 text-white shadow-sm hover:bg-blue-700"
-            }`}
-          >
-            {isTriggering ? (
-              <>
-                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                実行中...
-              </>
-            ) : (
-              <>
-                <PlayIcon />
-                今すぐ実行
-              </>
-            )}
-          </button>
-        </div>
+        )}
       </div>
 
-      {/* ============================================================ */}
-      {/* Details: Accordion                                           */}
-      {/* ============================================================ */}
-      <div className="rounded-xl border border-slate-200 bg-white">
+      {/* Manual trigger + save status */}
+      <div className="flex items-center justify-between border-t border-black/5 px-5 py-3">
+        <div className="flex items-center gap-2">
+          {triggerMessage && (
+            <span className={`text-xs font-medium ${triggerMessage.includes("失敗") || triggerMessage.includes("エラー") ? "text-red-600" : "text-emerald-600"}`}>
+              {triggerMessage}
+            </span>
+          )}
+          {saved && (
+            <span className="text-xs text-emerald-600 flex items-center gap-1">
+              <CheckIcon /> 保存しました
+            </span>
+          )}
+          {error && <span className="text-xs text-red-600">{error}</span>}
+        </div>
+        <button
+          type="button"
+          onClick={handleTriggerPipeline}
+          disabled={isTriggering}
+          className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition-all disabled:opacity-50 ${
+            isAutoEnabled
+              ? "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+              : "bg-blue-600 text-white shadow-sm hover:bg-blue-700"
+          }`}
+        >
+          {isTriggering ? (
+            <>
+              <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              実行中...
+            </>
+          ) : (
+            <>
+              <PlayIcon />
+              今すぐ実行
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Details: Accordion (inside same card) */}
+      <div className="border-t border-black/5">
         <button
           type="button"
           onClick={() => setDetailsOpen(!detailsOpen)}
-          className="flex w-full items-center justify-between px-5 py-3 text-left hover:bg-slate-50 transition-colors"
+          className="flex w-full items-center justify-between px-5 py-3 text-left hover:bg-black/[0.02] transition-colors"
         >
-          <span className="text-sm font-medium text-slate-700">詳細設定</span>
+          <span className="text-sm font-medium text-slate-600">詳細設定</span>
           <div className="flex items-center gap-2">
             {isPartial && (
               <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
@@ -341,7 +334,7 @@ export function AutomationDashboard() {
         </button>
 
         {detailsOpen && (
-          <div className="border-t border-slate-100 px-5 py-4 space-y-4">
+          <div className="border-t border-black/5 px-5 py-4 space-y-4">
             {/* Individual job toggles */}
             <div className="space-y-2">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">スケジュールジョブ</p>
