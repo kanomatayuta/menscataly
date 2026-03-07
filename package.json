@@ -21,6 +21,7 @@
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.98.0",
     "cloudinary": "^2.9.0",
+    "isomorphic-dompurify": "^3.0.0",
     "microcms-js-sdk": "^3.3.0",
     "next": "16.1.6",
     "react": "19.2.3",

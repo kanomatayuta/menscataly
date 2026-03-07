@@ -74,15 +74,21 @@ function extractApiKey(request: Request, fallbackHeader: string): string | null 
 /**
  * Supabase Auth セッション (Cookie) を検証する
  * ブラウザの管理画面からのリクエストで使用
+ *
+ * ユーザー存在確認に加え、以下のロールチェックを実施:
+ * 1. app_metadata.role === 'admin' であるか
+ * 2. ADMIN_ALLOWED_EMAILS 環境変数にメールが含まれるか（フォールバック認可）
  */
-async function validateSupabaseSession(request: Request): Promise<boolean> {
+async function validateSupabaseSession(request: Request): Promise<AuthResult> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!supabaseUrl || !supabaseAnonKey) return false
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return { authorized: false, error: { code: 'UNAUTHORIZED', message: 'Supabase not configured' } }
+  }
 
   // Request に cookies メソッドがない場合はスキップ (非ブラウザリクエスト)
   if (!('cookies' in request) || typeof (request as unknown as { cookies: unknown }).cookies !== 'object') {
-    return false
+    return { authorized: false, error: { code: 'UNAUTHORIZED', message: 'No session cookie' } }
   }
 
   try {
@@ -105,10 +111,23 @@ async function validateSupabaseSession(request: Request): Promise<boolean> {
     })
 
     const { data: { user } } = await supabase.auth.getUser()
-    return !!user
+    if (!user) {
+      return { authorized: false, error: { code: 'UNAUTHORIZED', message: 'No valid session' } }
+    }
+
+    // ロールチェック: admin ロール or 許可メールリスト
+    const allowedEmails = process.env.ADMIN_ALLOWED_EMAILS?.split(',').map(e => e.trim()) ?? []
+    const isAdminRole = user.app_metadata?.role === 'admin'
+    const isAllowedEmail = allowedEmails.length > 0 && user.email && allowedEmails.includes(user.email)
+
+    if (!isAdminRole && !isAllowedEmail) {
+      return { authorized: false, error: { code: 'FORBIDDEN', message: 'Insufficient permissions' } }
+    }
+
+    return { authorized: true }
   } catch (err) {
     console.error('[AdminAuth] Supabase session validation error:', err)
-    return false
+    return { authorized: false, error: { code: 'UNAUTHORIZED', message: 'Session validation failed' } }
   }
 }
 
@@ -139,10 +158,15 @@ export async function validateAdminAuth(request: Request): Promise<AuthResult> {
     }
   }
 
-  // 2. Supabase Auth セッション (Cookie) による認証
-  const hasValidSession = await validateSupabaseSession(request)
-  if (hasValidSession) {
+  // 2. Supabase Auth セッション (Cookie) による認証（ロールチェック込み）
+  const sessionResult = await validateSupabaseSession(request)
+  if (sessionResult.authorized) {
     return { authorized: true }
+  }
+
+  // セッションがFORBIDDEN（ユーザーは存在するが権限不足）の場合はそのまま返す
+  if (sessionResult.error?.code === 'FORBIDDEN') {
+    return sessionResult
   }
 
   // 認証失敗: API キーもセッションも無効

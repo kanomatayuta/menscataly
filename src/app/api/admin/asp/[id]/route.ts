@@ -120,7 +120,7 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
-  const rateLimited = withRateLimit(request, 'admin:asp:put')
+  const rateLimited = await withRateLimit(request, 'admin:asp:put')
   if (rateLimited) return rateLimited
 
   const auth = await validateAdminAuth(request)
@@ -324,7 +324,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
-  const rateLimited = withRateLimit(request, 'admin:asp:delete')
+  const rateLimited = await withRateLimit(request, 'admin:asp:delete')
   if (rateLimited) return rateLimited
 
   const auth = await validateAdminAuth(request)

@@ -204,7 +204,7 @@ interface InsertLinksResponse {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const rateLimited = withRateLimit(request, 'admin:internal-links:post')
+  const rateLimited = await withRateLimit(request, 'admin:internal-links:post')
   if (rateLimited) return rateLimited
 
   const auth = await validateAdminAuth(request)

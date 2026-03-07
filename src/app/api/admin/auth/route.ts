@@ -13,7 +13,7 @@ import { withRateLimit } from '@/lib/admin/rate-limit'
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   // ログイン試行にはレート制限を適用 (ブルートフォース対策)
-  const rateLimited = withRateLimit(request, 'admin:auth:login')
+  const rateLimited = await withRateLimit(request, 'admin:auth:login')
   if (rateLimited) return rateLimited
 
   // 環境変数の存在チェック

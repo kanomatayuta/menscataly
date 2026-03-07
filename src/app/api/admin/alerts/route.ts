@@ -43,7 +43,7 @@ interface AlertActionRequest {
 }
 
 export async function PATCH(request: NextRequest): Promise<NextResponse> {
-  const rateLimited = withRateLimit(request, 'admin:alerts:patch')
+  const rateLimited = await withRateLimit(request, 'admin:alerts:patch')
   if (rateLimited) return rateLimited
 
   const auth = await validateAdminAuth(request)

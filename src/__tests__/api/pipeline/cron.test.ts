@@ -37,8 +37,40 @@ vi.mock('@/lib/pipeline/executor', () => {
     PipelineExecutor: MockPipelineExecutor,
     getDailyPipelineSteps: vi.fn().mockResolvedValue([]),
     getPDCAPipelineSteps: vi.fn().mockResolvedValue([]),
+    getRunningPipelineIds: vi.fn().mockReturnValue([]),
   }
 })
+
+// Supabase client モック (DB lock check)
+vi.mock('@/lib/supabase/client', () => ({
+  createServerSupabaseClient: vi.fn(() => ({
+    from: vi.fn(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+        })),
+      })),
+      insert: vi.fn().mockResolvedValue({ error: null }),
+    })),
+  })),
+}))
+
+// next/server の after() をモック
+vi.mock('next/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('next/server')>()
+  return {
+    ...actual,
+    after: vi.fn((fn: () => void) => { fn() }),
+  }
+})
+
+// automation-config モック
+vi.mock('@/app/api/admin/automation-config/route', () => ({
+  getAutomationConfig: vi.fn().mockResolvedValue({
+    dailyPipeline: true,
+    pdcaBatch: true,
+  }),
+}))
 
 // Pipeline スケジューラーのモック
 vi.mock('@/lib/pipeline/scheduler', () => ({

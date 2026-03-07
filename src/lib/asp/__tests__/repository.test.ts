@@ -13,6 +13,11 @@ import type { AspProgramRow } from '@/types/database'
 // モック設定
 // ============================================================
 
+// next/server の connection() をモック (テスト環境ではリクエストスコープが存在しない)
+vi.mock('next/server', () => ({
+  connection: vi.fn().mockResolvedValue(undefined),
+}))
+
 // Supabase client モック
 const mockFrom = vi.fn()
 const mockSelect = vi.fn()

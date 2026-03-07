@@ -33,7 +33,7 @@ const createArticle = (overrides: Partial<Article> = {}): Article => ({
   title: 'AGA治療の費用ガイド',
   slug: 'aga-treatment-cost',
   lead: 'AGA治療にかかる費用について解説します。',
-  content: '<h2>AGA治療の費用</h2><p>AGA治療の費用について詳しく解説します。</p>',
+  content: '<h2>AGA治療の費用</h2><p>AGA治療の費用について詳しく解説します。AGA治療にはフィナステリドやミノキシジルなどの薬物療法があり、費用はクリニックによって異なります。一般的な月額費用は5,000円から30,000円程度です。</p>',
   sections: [
     {
       heading: 'AGA治療の費用',

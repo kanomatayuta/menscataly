@@ -11,7 +11,7 @@ import { ReportSyncOrchestrator } from '@/lib/asp/reports/sync-orchestrator'
 
 export async function POST(request: Request) {
   // レート制限
-  const rateLimited = withRateLimit(request, 'admin:revenue:import')
+  const rateLimited = await withRateLimit(request, 'admin:revenue:import')
   if (rateLimited) return rateLimited
 
   // 認証

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import type { ReviewStatus } from "@/types/admin";
-import { sanitizeHtml } from "@/components/article/ArticleBody";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 // ------------------------------------------------------------------
 // Preview article type

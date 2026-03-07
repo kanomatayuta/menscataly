@@ -133,7 +133,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
-  const rateLimited = withRateLimit(request, 'admin:articles:review:post')
+  const rateLimited = await withRateLimit(request, 'admin:articles:review:post')
   if (rateLimited) return rateLimited
 
   const auth = await validateAdminAuth(request)
@@ -287,7 +287,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
-  const rateLimited = withRateLimit(request, 'admin:articles:review:patch')
+  const rateLimited = await withRateLimit(request, 'admin:articles:review:patch')
   if (rateLimited) return rateLimited
 
   const auth = await validateAdminAuth(request)

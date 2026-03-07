@@ -29,7 +29,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
-  const rateLimited = withRateLimit(request, 'admin:articles:publish')
+  const rateLimited = await withRateLimit(request, 'admin:articles:publish')
   if (rateLimited) return rateLimited
 
   const auth = await validateAdminAuth(request)

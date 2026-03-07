@@ -1,11 +1,17 @@
 /**
  * レート制限 基盤
- * インメモリのスライディングウィンドウ方式
+ * アダプターパターンによる分散レート制限対応
  *
  * Phase 3b:
  * - IP or APIキー単位でのレート制限
  * - デフォルト: 60リクエスト/分
  * - Admin APIルートで使用可能なミドルウェアヘルパー
+ *
+ * Phase 9 (インフラ・セキュリティ):
+ * - RateLimitStore インターフェース導入 (アダプターパターン)
+ * - MemoryRateLimitStore: インメモリ実装 (デフォルト)
+ * - UpstashRateLimitStore: Upstash Redis スタブ (将来導入)
+ * - getRateLimitStore() ファクトリ関数
  */
 
 import { NextResponse } from 'next/server'
@@ -35,6 +41,16 @@ export interface RateLimitResult {
 }
 
 // ============================================================
+// RateLimitStore インターフェース (アダプターパターン)
+// ============================================================
+
+/** レート制限ストアのインターフェース */
+export interface RateLimitStore {
+  /** キーに対するリクエスト数を記録し、制限超過なら true を返す */
+  isRateLimited(key: string, limit: number, windowMs: number): Promise<boolean>
+}
+
+// ============================================================
 // スライディングウィンドウ エントリ
 // ============================================================
 
@@ -44,7 +60,124 @@ interface WindowEntry {
 }
 
 // ============================================================
-// RateLimiter クラス
+// MemoryRateLimitStore (インメモリ実装)
+// ============================================================
+
+/**
+ * インメモリのスライディングウィンドウ方式レート制限ストア
+ *
+ * 注意: Vercel サーバーレス環境ではインスタンスがリクエストごとにリセットされるため、
+ * 実質的にレート制限が機能しない。本番環境では UpstashRateLimitStore への移行を推奨。
+ */
+export class MemoryRateLimitStore implements RateLimitStore {
+  private windows: Map<string, WindowEntry> = new Map()
+  private cleanupInterval: ReturnType<typeof setInterval> | null = null
+
+  constructor() {
+    // 5分ごとに古いエントリをクリーンアップ
+    if (typeof setInterval !== 'undefined') {
+      this.cleanupInterval = setInterval(() => this.cleanup(), 5 * 60_000)
+      // Node.js 環境でプロセス終了を妨げない
+      if (this.cleanupInterval && 'unref' in this.cleanupInterval) {
+        this.cleanupInterval.unref()
+      }
+    }
+  }
+
+  async isRateLimited(key: string, limit: number, windowMs: number): Promise<boolean> {
+    const now = Date.now()
+    const windowStart = now - windowMs
+
+    let entry = this.windows.get(key)
+    if (!entry) {
+      entry = { timestamps: [] }
+      this.windows.set(key, entry)
+    }
+
+    // ウィンドウ外のタイムスタンプを削除
+    entry.timestamps = entry.timestamps.filter(ts => ts > windowStart)
+
+    if (entry.timestamps.length >= limit) {
+      return true // 制限超過
+    }
+
+    // リクエストを記録
+    entry.timestamps.push(now)
+    return false
+  }
+
+  /**
+   * 古いエントリをクリーンアップする
+   */
+  private cleanup(): void {
+    const now = Date.now()
+    // 最大ウィンドウ幅（10分）より古いエントリを削除
+    const maxWindowMs = 10 * 60_000
+    const cutoff = now - maxWindowMs
+
+    for (const [key, entry] of this.windows.entries()) {
+      entry.timestamps = entry.timestamps.filter(ts => ts > cutoff)
+      if (entry.timestamps.length === 0) {
+        this.windows.delete(key)
+      }
+    }
+  }
+
+  /**
+   * クリーンアップインターバルを停止する
+   */
+  destroy(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval)
+      this.cleanupInterval = null
+    }
+    this.windows.clear()
+  }
+}
+
+// ============================================================
+// UpstashRateLimitStore (スタブ — 将来実装)
+// ============================================================
+
+/** シングルトンのメモリストア (Upstash フォールバック用) */
+const memoryStoreFallback = new MemoryRateLimitStore()
+
+/**
+ * Upstash Redis ベースのレート制限ストア
+ *
+ * TODO: @upstash/ratelimit パッケージ導入後に実装
+ * 環境変数 UPSTASH_REDIS_REST_URL と UPSTASH_REDIS_REST_TOKEN が必要
+ */
+export class UpstashRateLimitStore implements RateLimitStore {
+  async isRateLimited(key: string, limit: number, windowMs: number): Promise<boolean> {
+    // TODO: @upstash/ratelimit パッケージ導入後に実装
+    // 現在はフォールバックとしてインメモリを使用
+    console.warn('[RateLimit] Upstash not yet implemented, falling back to memory store')
+    return memoryStoreFallback.isRateLimited(key, limit, windowMs)
+  }
+}
+
+// ============================================================
+// ファクトリ関数
+// ============================================================
+
+/**
+ * 環境変数に応じて適切なレート制限ストアを返す
+ * - UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN が設定されていれば Upstash
+ * - それ以外はインメモリ
+ */
+function getRateLimitStore(): RateLimitStore {
+  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+    return new UpstashRateLimitStore()
+  }
+  return new MemoryRateLimitStore()
+}
+
+/** アプリケーション全体で使用するレート制限ストアのシングルトン */
+const rateLimitStore = getRateLimitStore()
+
+// ============================================================
+// RateLimiter クラス (既存互換)
 // ============================================================
 
 export class RateLimiter {
@@ -334,11 +467,14 @@ export function addRateLimitHeaders(
 }
 
 // ============================================================
-// withRateLimit ヘルパー
+// withRateLimit ヘルパー (RateLimitStore 統合)
 // ============================================================
 
 /**
  * Admin API ルートに簡易にレート制限を適用するヘルパー関数
+ *
+ * RateLimitStore アダプターを使用し、環境に応じて
+ * インメモリまたは Upstash Redis でレート制限を実施する。
  *
  * レート制限を超過した場合は 429 NextResponse を返す。
  * 超過していない場合は null を返すため、呼び出し元で early return として使用する。
@@ -354,38 +490,64 @@ export function addRateLimitHeaders(
  * import { withRateLimit } from '@/lib/admin/rate-limit'
  *
  * export async function POST(request: NextRequest) {
- *   const rateLimited = withRateLimit(request, 'admin:asp:post')
+ *   const rateLimited = await withRateLimit(request, 'admin:asp:post')
  *   if (rateLimited) return rateLimited
  *   // ... 通常の処理
  * }
  * ```
  */
-export function withRateLimit(
+export async function withRateLimit(
   request: Request,
   identifier?: string,
-  limiter: RateLimiter = defaultAdminLimiter
-): NextResponse | null {
+  limiter?: RateLimiter
+): Promise<NextResponse | null> {
   const baseKey = extractRateLimitKey(request)
   const key = identifier ? `${identifier}:${baseKey}` : baseKey
-  const result = limiter.check(key)
 
-  if (!result.allowed) {
+  // RateLimitStore アダプター経由でチェック
+  const isLimited = await rateLimitStore.isRateLimited(key, 60, 60_000)
+
+  if (isLimited) {
     return NextResponse.json(
       {
         error: 'Too Many Requests',
-        message: `レート制限超過: ${result.limit}リクエスト/${defaultAdminLimiter === limiter ? '分' : 'ウィンドウ'}`,
-        retryAfterSeconds: result.retryAfterSeconds,
+        message: 'レート制限超過: 60リクエスト/分',
+        retryAfterSeconds: 60,
       },
       {
         status: 429,
         headers: {
-          'Retry-After': String(result.retryAfterSeconds ?? 60),
-          'X-RateLimit-Limit': String(result.limit),
+          'Retry-After': '60',
+          'X-RateLimit-Limit': '60',
           'X-RateLimit-Remaining': '0',
-          'X-RateLimit-Reset': String(Math.ceil(Date.now() / 1000 + (result.resetMs / 1000))),
+          'X-RateLimit-Reset': String(Math.ceil(Date.now() / 1000 + 60)),
         },
       }
     )
+  }
+
+  // 既存の RateLimiter も併用 (詳細なヘッダー情報のため)
+  if (limiter) {
+    const activeLimiter = limiter
+    const result = activeLimiter.check(key)
+    if (!result.allowed) {
+      return NextResponse.json(
+        {
+          error: 'Too Many Requests',
+          message: `レート制限超過: ${result.limit}リクエスト/ウィンドウ`,
+          retryAfterSeconds: result.retryAfterSeconds,
+        },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(result.retryAfterSeconds ?? 60),
+            'X-RateLimit-Limit': String(result.limit),
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': String(Math.ceil(Date.now() / 1000 + (result.resetMs / 1000))),
+          },
+        }
+      )
+    }
   }
 
   return null

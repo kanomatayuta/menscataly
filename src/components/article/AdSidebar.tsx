@@ -1,28 +1,7 @@
 import { Suspense } from "react";
 import { collectSidebarBannerCreatives } from "@/lib/asp/banner-injector";
+import { sanitizeBannerHtml } from "@/lib/sanitize";
 import type { ContentCategory } from "@/types/content";
-
-/**
- * ASP発行HTMLからscriptタグを除去するサニタイズ関数
- */
-function sanitizeBannerHtml(html: string): string {
-  let sanitized = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
-  sanitized = sanitized.replace(/<script\b[^>]*\/>/gi, "");
-  sanitized = sanitized.replace(
-    /\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi,
-    ""
-  );
-  // javascript: URLs
-  sanitized = sanitized.replace(/href\s*=\s*["']?\s*javascript:/gi, 'href="');
-  sanitized = sanitized.replace(/src\s*=\s*["']?\s*javascript:/gi, 'src="');
-  // data: URLs (except safe images)
-  sanitized = sanitized.replace(/src\s*=\s*["']?\s*data:(?!image\/(?:png|jpeg|gif|webp))/gi, 'src="');
-  // SVG内のscript
-  sanitized = sanitized.replace(/<svg[\s\S]*?<\/svg>/gi, (match) => {
-    return match.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
-  });
-  return sanitized;
-}
 
 interface AdSidebarProps {
   category: string;

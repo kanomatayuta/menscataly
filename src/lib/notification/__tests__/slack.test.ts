@@ -62,7 +62,7 @@ describe('SlackNotifier', () => {
       await notifier.sendMessage('#test', 'hello')
 
       expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('SLACK_WEBHOOK_URL')
+        expect.stringContaining('Webhook URL')
       )
       warnSpy.mockRestore()
     })

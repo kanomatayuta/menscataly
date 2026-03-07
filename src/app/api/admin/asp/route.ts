@@ -145,7 +145,7 @@ interface CreateAspProgramRequest {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const rateLimited = withRateLimit(request, 'admin:asp:post')
+  const rateLimited = await withRateLimit(request, 'admin:asp:post')
   if (rateLimited) return rateLimited
 
   const auth = await validateAdminAuth(request)

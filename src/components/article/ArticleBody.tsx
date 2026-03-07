@@ -17,6 +17,7 @@
  */
 
 import { useMemo } from "react";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 // ============================================================
 // 軽量 Markdown → HTML 変換
@@ -568,29 +569,6 @@ function normalizeContent(content: string): string {
 
   // 後処理: 見出しタグに id 属性を自動付与（TOCアンカーリンク対応）
   return ensureHeadingIds(result);
-}
-
-// ============================================================
-// HTMLサニタイズ (XSS対策)
-// ============================================================
-
-/**
- * HTMLからXSSリスクのある要素を除去する
- * dangerouslySetInnerHTML に渡す前に必ず適用する
- */
-export function sanitizeHtml(html: string): string {
-  let s = html;
-  // script tags
-  s = s.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
-  s = s.replace(/<script\b[^>]*\/>/gi, '');
-  // event handlers (on*)
-  s = s.replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
-  // javascript: URLs
-  s = s.replace(/href\s*=\s*["']?\s*javascript:/gi, 'href="');
-  s = s.replace(/src\s*=\s*["']?\s*javascript:/gi, 'src="');
-  // data: URLs in src (potential XSS via SVG) — allow safe image types
-  s = s.replace(/src\s*=\s*["']?\s*data:(?!image\/(?:png|jpeg|gif|webp|svg\+xml))/gi, 'src="');
-  return s;
 }
 
 // ============================================================

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import type { AspName, AspProgram, AdCreative, AdCreativeType, RewardTier } from "@/types/asp-config";
 import type { ContentCategory } from "@/types/content";
-import { sanitizeHtml } from "@/components/article/ArticleBody";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 // ------------------------------------------------------------------
 // Types

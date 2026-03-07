@@ -37,7 +37,7 @@ function sanitizeViewportWidth(v: unknown): number {
 
 export async function POST(req: NextRequest) {
   // レート制限 (DoS対策: 認証なしエンドポイント)
-  const rateLimited = withRateLimit(req, 'public:heatmap')
+  const rateLimited = await withRateLimit(req, 'public:heatmap')
   if (rateLimited) return rateLimited
 
   try {
