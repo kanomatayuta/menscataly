@@ -232,14 +232,14 @@ export function AutomationDashboard() {
               </div>
               <div>
                 <p className={`text-lg font-bold ${isAutoEnabled ? "text-emerald-800" : "text-slate-700"}`}>
-                  {isAutoEnabled ? "自動運転 ON" : "自動運転 OFF"}
+                  {isAutoEnabled ? "自動モード" : "手動モード"}
                 </p>
                 <p className="text-xs text-slate-500">
                   {isAutoEnabled
                     ? "毎日 06:00 に記事生成、23:00 に分析を自動実行"
                     : isPartial
                       ? "一部のジョブのみ有効（詳細設定を確認）"
-                      : "すべて停止中 — 手動で実行してください"}
+                      : "手動で実行ボタンを押して実行してください"}
                 </p>
               </div>
             </div>
@@ -347,7 +347,7 @@ export function AutomationDashboard() {
               {/* Daily Pipeline */}
               <div className="flex items-center justify-between py-2">
                 <div>
-                  <p className="text-sm font-medium text-slate-800">日次パイプライン</p>
+                  <p className="text-sm font-medium text-slate-800">記事生成パイプライン</p>
                   <p className="text-xs text-slate-500">毎日 06:00 JST — トレンド分析 → 記事生成 → コンプラチェック</p>
                 </div>
                 <button
@@ -367,7 +367,7 @@ export function AutomationDashboard() {
               {/* PDCA Batch */}
               <div className="flex items-center justify-between py-2">
                 <div>
-                  <p className="text-sm font-medium text-slate-800">PDCAバッチ</p>
+                  <p className="text-sm font-medium text-slate-800">分析パイプライン</p>
                   <p className="text-xs text-slate-500">毎日 23:00 JST — アナリティクス → 収益分析 → アラート</p>
                 </div>
                 <button
@@ -388,7 +388,7 @@ export function AutomationDashboard() {
               <div className={`flex items-center justify-between py-2 pl-6 border-l-2 ${config.pdcaBatch ? "border-emerald-200" : "border-slate-200 opacity-50"}`}>
                 <div>
                   <p className="text-sm font-medium text-slate-700">自動リライト</p>
-                  <p className="text-xs text-slate-400">PDCAバッチ内でヘルススコア低下記事を自動リライト</p>
+                  <p className="text-xs text-slate-400">分析パイプライン内でヘルススコア低下記事を自動リライト</p>
                 </div>
                 <button
                   type="button"
