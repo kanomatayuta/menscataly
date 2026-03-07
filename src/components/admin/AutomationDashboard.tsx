@@ -11,6 +11,8 @@ interface AutomationConfig {
   pdcaBatch: boolean;
   autoRewrite: boolean;
   enabledCategories: string[];
+  dailyPipelineTime?: string; // "HH:MM" format, default "06:00"
+  pdcaBatchTime?: string;     // "HH:MM" format, default "23:00"
 }
 
 interface CategoryItem {
@@ -236,7 +238,7 @@ export function AutomationDashboard() {
                 </p>
                 <p className="text-xs text-slate-500">
                   {isAutoEnabled
-                    ? "毎日 06:00 に記事生成、23:00 に分析を自動実行"
+                    ? `毎日 ${config.dailyPipelineTime ?? "06:00"} に記事生成、${config.pdcaBatchTime ?? "23:00"} に分析を自動実行`
                     : isPartial
                       ? "一部のジョブのみ有効（詳細設定を確認）"
                       : "手動で実行ボタンを押して実行してください"}
@@ -345,47 +347,69 @@ export function AutomationDashboard() {
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">スケジュールジョブ</p>
 
               {/* Daily Pipeline */}
-              <div className="flex items-center justify-between py-2">
-                <div>
+              <div className="space-y-1.5 py-2">
+                <div className="flex items-center justify-between">
                   <p className="text-sm font-medium text-slate-800">記事生成パイプライン</p>
-                  <p className="text-xs text-slate-500">
-                    {config.dailyPipeline ? "毎日 06:00 JST — " : ""}トレンド分析 → 記事生成 → コンプラチェック
-                  </p>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={config.dailyPipeline}
+                    disabled={saving}
+                    onClick={() => updateToggle("dailyPipeline", !config.dailyPipeline)}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 disabled:opacity-50 ${
+                      config.dailyPipeline ? "bg-emerald-500" : "bg-slate-300"
+                    }`}
+                  >
+                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ${config.dailyPipeline ? "translate-x-5" : "translate-x-0"}`} />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={config.dailyPipeline}
-                  disabled={saving}
-                  onClick={() => updateToggle("dailyPipeline", !config.dailyPipeline)}
-                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 disabled:opacity-50 ${
-                    config.dailyPipeline ? "bg-emerald-500" : "bg-slate-300"
-                  }`}
-                >
-                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ${config.dailyPipeline ? "translate-x-5" : "translate-x-0"}`} />
-                </button>
+                <p className="text-xs text-slate-500">トレンド分析 → 記事生成 → コンプラチェック</p>
+                {config.dailyPipeline && (
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="text-xs text-slate-500">実行時刻</span>
+                    <input
+                      type="time"
+                      value={config.dailyPipelineTime ?? "06:00"}
+                      disabled={saving}
+                      onChange={(e) => saveConfig({ ...config, dailyPipelineTime: e.target.value })}
+                      className="rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400 disabled:opacity-50"
+                    />
+                    <span className="text-xs text-slate-400">JST</span>
+                  </div>
+                )}
               </div>
 
               {/* PDCA Batch */}
-              <div className="flex items-center justify-between py-2">
-                <div>
+              <div className="space-y-1.5 py-2">
+                <div className="flex items-center justify-between">
                   <p className="text-sm font-medium text-slate-800">分析パイプライン</p>
-                  <p className="text-xs text-slate-500">
-                    {config.pdcaBatch ? "毎日 23:00 JST — " : ""}アナリティクス → 収益分析 → アラート
-                  </p>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={config.pdcaBatch}
+                    disabled={saving}
+                    onClick={() => updateToggle("pdcaBatch", !config.pdcaBatch)}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 disabled:opacity-50 ${
+                      config.pdcaBatch ? "bg-emerald-500" : "bg-slate-300"
+                    }`}
+                  >
+                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ${config.pdcaBatch ? "translate-x-5" : "translate-x-0"}`} />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={config.pdcaBatch}
-                  disabled={saving}
-                  onClick={() => updateToggle("pdcaBatch", !config.pdcaBatch)}
-                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 disabled:opacity-50 ${
-                    config.pdcaBatch ? "bg-emerald-500" : "bg-slate-300"
-                  }`}
-                >
-                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ${config.pdcaBatch ? "translate-x-5" : "translate-x-0"}`} />
-                </button>
+                <p className="text-xs text-slate-500">アナリティクス → 収益分析 → アラート</p>
+                {config.pdcaBatch && (
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="text-xs text-slate-500">実行時刻</span>
+                    <input
+                      type="time"
+                      value={config.pdcaBatchTime ?? "23:00"}
+                      disabled={saving}
+                      onChange={(e) => saveConfig({ ...config, pdcaBatchTime: e.target.value })}
+                      className="rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400 disabled:opacity-50"
+                    />
+                    <span className="text-xs text-slate-400">JST</span>
+                  </div>
+                )}
               </div>
 
               {/* Auto Rewrite (nested under PDCA) */}
