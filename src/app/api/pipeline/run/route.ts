@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PipelineExecutor, getDailyPipelineSteps, getPDCAPipelineSteps } from '@/lib/pipeline/executor'
 import { getPipelineConfig } from '@/lib/pipeline/scheduler'
-import { validatePipelineAuth, validateAdminAuth, validateCronAuth, getAuthErrorStatus } from '@/lib/admin/auth'
+import { validatePipelineAuth, validateAdminAuth, getAuthErrorStatus } from '@/lib/admin/auth'
 import type { PipelineType, PipelineRunResponse } from '@/lib/pipeline/types'
 
 // ============================================================
@@ -146,17 +146,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
 // Vercel Cron Jobs サポート (GET リクエスト)
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  // Cron認証チェック (Authorization: Bearer <CRON_SECRET>)
-  // validatePipelineAuth も CRON_SECRET を受け付けるため、こちらを使用
+  // Cron認証チェック: PIPELINE_API_KEY or CRON_SECRET (validatePipelineAuth が両方チェック)
   const auth = validatePipelineAuth(request)
   if (!auth.authorized) {
-    // フォールバック: validateCronAuth でも試行
-    if (!validateCronAuth(request)) {
-      return NextResponse.json(
-        { error: auth.error ?? { code: 'UNAUTHORIZED', message: 'Unauthorized' } },
-        { status: getAuthErrorStatus(auth.error ?? { code: 'UNAUTHORIZED', message: 'Unauthorized' }) }
-      )
-    }
+    return NextResponse.json(
+      { error: auth.error },
+      { status: getAuthErrorStatus(auth.error!) }
+    )
   }
 
   // クエリパラメータから type を取得

@@ -69,7 +69,15 @@ export async function ensureAppConfigTable(): Promise<boolean> {
   }
 }
 
-export async function GET(): Promise<NextResponse> {
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  const auth = await validateAdminAuth(request);
+  if (!auth.authorized) {
+    return NextResponse.json(
+      { error: auth.error },
+      { status: getAuthErrorStatus(auth.error!) }
+    );
+  }
+
   const config = await getAutomationConfig();
   return NextResponse.json(config);
 }
@@ -98,8 +106,11 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
     // テーブル存在チェック
     const tableExists = await ensureAppConfigTable();
     if (!tableExists) {
-      console.warn("[automation-config] app_config table does not exist — saving to response only");
-      return NextResponse.json(newConfig);
+      console.error("[automation-config] app_config table does not exist");
+      return NextResponse.json(
+        { error: "app_config table does not exist. Run migrations/004-app-config.sql" },
+        { status: 500 }
+      );
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
